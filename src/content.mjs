@@ -1,160 +1,114 @@
+// Public content only. Do not expose private family, client, or clinical records.
 export const projects = [
   {
-    slug: "ideaflow",
-    title: "IdeaFlow",
-    category: "software",
-    label: "Ideas & collaboration",
-    status: "In development",
-    icon: "flow",
-    summary: "Give a good conversation somewhere to go.",
+    slug: "writing",
+    title: "Books & writing",
+    category: "creative",
+    label: "Fiction & manuscripts",
+    status: "Writing in progress",
+    role: "Writer",
+    icon: "notes",
+    summary: "Books and stories I'm working to finish and publish.",
     description:
-      "A workspace for capturing ideas and working through them together. The current development work brings conversation, presentation, and idea capture into one place.",
+      "I'm writing fiction and developing longer stories. The manuscripts are works in progress, not published books being presented as finished products.",
     detail:
-      "The useful question is what happens after the meeting: which ideas matter, what needs clarification, and what is worth doing next. IdeaFlow is being developed around that handoff.",
+      "Writing is a priority alongside raising my family. I work on the pages, the characters, and the worlds behind them. Some of that storytelling also connects to ANEVUM.",
     boundary:
-      "The working application is private. This is a public overview; meeting rooms, recordings, and transcripts are not shared here.",
-    tags: ["Collaboration", "Capture", "Software"],
-    next: "Keep testing the core meeting and presentation experience before expanding it.",
-  },
-  {
-    slug: "devonstation",
-    title: "DevonStation",
-    category: "software",
-    label: "Personal systems",
-    status: "Private · in development",
-    icon: "station",
-    summary: "A home base for work, thinking, and making.",
-    description:
-      "My private operating workspace for keeping projects, ideas, and the next practical step in view.",
-    detail:
-      "The problem is not a shortage of ideas. It is remembering what has already been decided, seeing what is actually ready, and getting back to the work without starting over. DevonStation explores that problem with a personal workspace.",
-    boundary:
-      "DevonStation is an owner-only application. Its interface, records, infrastructure, and access links stay private.",
-    tags: ["Personal tools", "Continuity", "Systems"],
-    next: "Improve reliability and the daily workflow before adding more moving parts.",
+      "Unpublished drafts and private family material stay private. I'll share finished work and publication links when they're actually ready.",
+    tags: ["Writing", "Books", "Fiction"],
+    next: "Finish drafts, revise them, and bring completed work to publication.",
   },
   {
     slug: "anevum",
     title: "ANEVUM",
     category: "creative",
-    label: "Worlds & interactive work",
-    status: "Ongoing creative project",
+    label: "Family creative project",
+    status: "Ongoing project",
+    role: "Founder & creator",
     icon: "anevum",
-    summary: "Stories, strange places, and worlds worth exploring.",
+    summary: "A creative world for stories, games, and things I make with my boys.",
     description:
-      "An independent family creative project for fictional worlds, stories, games, and experiments in interactive storytelling.",
+      "ANEVUM is my independent creative project, built around fiction, worldbuilding, and games. It is something I want to keep creating and growing with my sons.",
     detail:
-      "ANEVUM is a place to explore how a world feels, how its rules fit together, and what it is like to be inside it. The writing and the interactive work inform each other. It is an ongoing creative practice, with its own home at anevum.com.",
+      "The writing and the interactive work share a world, but the larger ideas are not finished products. My aim is to turn that work into readable stories and playable experiences, one release at a time.",
     boundary:
-      "Only released public material belongs in this showcase. Unpublished manuscripts, private canon, and family information remain private.",
+      "Only material that has been made public belongs here. Unpublished manuscripts, private creative notes, and family information remain private.",
     tags: ["Fiction", "Worldbuilding", "Games"],
     url: "https://anevum.com",
-    next: "Finish small, playable and readable pieces of the larger world.",
+    urlLabel: "Visit ANEVUM",
+    next: "Finish smaller stories and playable pieces instead of endlessly expanding the plans.",
   },
   {
-    slug: "field-instruments",
-    title: "Field instruments",
-    category: "experiments",
-    label: "Interactive experiments",
-    status: "Explore here",
-    icon: "orbit",
-    summary: "Change one thing. See what happens.",
+    slug: "ideaflow",
+    title: "IdeaFlow",
+    category: "software",
+    label: "Collaboration software",
+    status: "In development",
+    role: "Developer",
+    icon: "flow",
+    summary: "A meeting and idea-capture tool built for a real workflow.",
     description:
-      "Small browser experiments in waves, orbital motion, and better questions. Built to make an idea tangible.",
+      "I'm developing IdeaFlow to support conversations, meetings, presentations, and the work that follows them.",
     detail:
-      "These are deliberately small models. Move a control, observe the response, and ask what the model leaves out. The wave instrument demonstrates superposition; the orbital sketch demonstrates how eccentricity changes a path.",
+      "Its purpose is practical: make a meeting easier to run and capture what was decided without losing the next step. The application is still being developed and tested.",
     boundary:
-      "These experiments run in your browser. They do not collect input, call an AI service, or claim to simulate a complete physical system.",
-    tags: ["Waves", "Geometry", "Learning"],
-    url: "/lab/",
-    next: "Keep each experiment focused on one clear question.",
+      "Private meetings, recordings, transcripts, and business records are not part of this public website.",
+    tags: ["Software", "Meetings", "In progress"],
+    next: "Test the core meeting and presenter experience, then improve reliability.",
+  },
+  {
+    slug: "devonstation",
+    title: "DevonStation",
+    category: "software",
+    label: "Personal workspace",
+    status: "Private · in development",
+    role: "Developer",
+    icon: "station",
+    summary: "The private workspace I use to organize my projects and next actions.",
+    description:
+      "DevonStation is a personal operating workspace for keeping current projects, decisions, and practical next steps together.",
+    detail:
+      "I use it to reduce repeated planning and make it easier to get back to work. The application is owner-only, and its development is ongoing.",
+    boundary:
+      "The private application, records, configuration, and access details are not publicly available.",
+    tags: ["Software", "Organization", "Private"],
+    next: "Keep improving the reliability of daily tasks and project continuity.",
   },
 ];
-export const notes = [
-  {
-    slug: "start-with-what-exists",
-    category: "Making",
-    title: "Start with what exists.",
-    excerpt: "The first useful step is often a closer look.",
-    body: [
-      "Before I build a new system, I want to understand the one that is already there. What works? Where does it break? Which part is actually asking to change?",
-      "A fresh start can feel like progress because everything is possible again. But it also throws away the knowledge stored in an awkward prototype, an old decision, or a workaround that exists for a reason.",
-      "I try to make the next change small enough to inspect. Keep the useful parts. State the problem plainly. Change one thing that matters, then check whether it helped.",
-      "The point is to make something useful and understand it well enough to keep improving it.",
-    ],
-  },
-  {
-    slug: "a-model-is-a-question",
-    category: "Learning",
-    title: "A model is a question you can move.",
-    excerpt: "What changing a simple wave can teach us about a bigger system.",
-    body: [
-      "A wave on a screen is not the ocean. It is a deliberately incomplete description of motion. That limitation is useful when it lets us isolate something we want to understand.",
-      "Take two waves. At each point, add their displacements. Sometimes they reinforce each other. Sometimes they cancel. Change the phase and the pattern changes, even though the individual waves are still there.",
-      "The wave instrument in the Lab is built around that one relationship. It uses a sine wave and a second harmonic. Their sum is plotted directly, without a claim that the drawing is a full physical simulation.",
-      "A useful model makes its assumptions visible. It gives you a way to test an intuition, and a reason to ask what you left out.",
-    ],
-  },
-  {
-    slug: "leave-a-trail",
-    category: "Process",
-    title: "Leave a trail back to the work.",
-    excerpt: "A good note makes it easier to begin again tomorrow.",
-    body: [
-      "A project is easier to return to when its last decision is easy to find. I do not need a perfect history of everything I tried. I need to know what is true now.",
-      "A useful checkpoint says what changed, what was checked, what remains uncertain, and which small action comes next. It separates a finished piece from an interesting possibility.",
-      "That is also why an experiment needs an honest label. A sketch can be valuable as a sketch. Calling it finished makes it harder to see what still needs work.",
-      "I want the things I make to carry enough context that I can stop, be present elsewhere, and return without rebuilding the whole project in my head.",
-    ],
-  },
-];
+
 export const pages = [
   {
     path: "/",
     key: "home",
-    title: "Devon Akins — I build things to understand them.",
+    title: "Devon Akins — Father, writer, builder",
     description:
-      "Software, useful systems, fictional worlds, and experiments. A personal workshop by Devon Akins.",
+      "I'm a father, writer, and software builder. My work includes books, ANEVUM, practical software, and family business operations.",
   },
   {
     path: "/work/",
     key: "work",
     title: "Work — Devon Akins",
     description:
-      "Honest project notes on IdeaFlow, DevonStation, ANEVUM, and browser experiments.",
-  },
-  {
-    path: "/lab/",
-    key: "lab",
-    title: "The Lab — Devon Akins",
-    description:
-      "Explore wave superposition, orbital geometry, and useful questions in a hands-on browser Lab.",
+      "The books, creative projects, and software Devon Akins is actually working on, with their current status.",
   },
   {
     path: "/source/",
     key: "source",
     title: "Open source — Devon Akins",
     description:
-      "Public source, contribution information, and the boundary between open code and private data.",
-  },
-  {
-    path: "/notes/",
-    key: "notes",
-    title: "Notes — Devon Akins",
-    description:
-      "Short notes on making things, learning through models, and keeping useful continuity.",
+      "Source code and information about the open-source projects Devon Akins chooses to share.",
   },
   {
     path: "/about/",
     key: "about",
     title: "About — Devon Akins",
     description:
-      "A little about how I think, what I make, and why I keep asking questions.",
+      "Devon Akins is a stay-at-home father, writer, and software builder helping improve real workflows and developing ANEVUM.",
   },
   {
     path: "/contact/",
     key: "contact",
     title: "Contact — Devon Akins",
-    description: "A direct way to get in touch with Devon Akins.",
+    description: "Get in touch with Devon Akins.",
   },
 ];
