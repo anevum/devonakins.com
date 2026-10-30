@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { pages, projects, notes } from "../src/content.mjs";
+import { pages, projects } from "../src/content.mjs";
 import { icon } from "../src/icons.mjs";
 import { fallbackEnvironment } from "../src/identity.mjs";
 import * as views from "../src/views.mjs";
@@ -19,13 +19,6 @@ const all = [
     title: p.title + " — Devon Akins",
     description: p.summary,
     content: views.project(p),
-  })),
-  ...notes.map((n) => ({
-    path: `/notes/${n.slug}/`,
-    key: "notes",
-    title: n.title + " — Devon Akins",
-    description: n.excerpt,
-    content: views.note(n),
   })),
   {
     path: "/404/",
