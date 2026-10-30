@@ -1,0 +1,64 @@
+name: Prepare DevonAkins deployment assets
+on:
+  push:
+    branches:
+      - deploy/devonakins-content-2026-10-29
+    paths:
+      - .github/workflows/prepare-personal-release.yml
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+          npm test
+      - name: Prepare compact release patch
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          src = Path(".release/assets.mjs").read_text(encoding="utf-8")
+          assert src.startswith("export default ")
+          assets = json.loads(src[len("export default "):].rstrip().removesuffix(";"))
+          wanted = {
+              key: value for key, value in assets.items()
+              if key.endswith("/index.html")
+              or key == "/sitemap.xml"
+              or (key.startswith("/assets/") and (key.endswith(".js") or key.endswith(".css")))
+          }
+          assert "/index.html" in wanted
+          assert "/work/writing/index.html" in wanted
+          assert "/lab/index.html" not in wanted
+          assert all("gzip" in v and "etag" in v for v in wanted.values())
+          out = Path("deploy-payload")
+          out.mkdir(exist_ok=True)
+          (out / "assets.json").write_text(json.dumps(wanted, separators=(",", ":")) + "\n", encoding="utf-8")
+          meta = {
+              "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "asset_count": len(wanted),
+              "asset_keys": sorted(wanted.keys()),
+              "release": "DevonAkins 1.0.1 - real work content",
+          }
+          (out / "manifest.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(meta, indent=2))
+          PY
+      - name: Store release payload on isolated deployment branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f deploy-payload/assets.json deploy-payload/manifest.json
+          git commit -m "stage compiled website release payload [skip ci]"
+          git push origin HEAD:deploy/devonakins-content-2026-10-29
