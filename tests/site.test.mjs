@@ -1,47 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { waveAt, orbitAt, makeQuestion } from "../src/lab-model.mjs";
 import { createHandler } from "../src/worker.mjs";
 import assets from "../.release/assets.mjs";
 const site = createHandler(assets, { version: "test", commit: "synthetic" });
 const get = (path, options = {}) =>
   site.fetch(new Request("https://devonakins.com" + path, options));
-test("wave superposition is pointwise addition, and a full phase cycle is periodic", () => {
-  for (let x = -10; x <= 10; x += 0.13) {
-    const a = waveAt(x, 1.2, 2, 0.7),
-      b = waveAt(x, 1.2, 2, 0.7 + Math.PI * 2);
-    assert.ok(Math.abs(a.sum - a.base - a.harmonic) < 1e-12);
-    assert.ok(Math.abs(a.sum - b.sum) < 1e-12);
-  }
-});
-test("ellipse points satisfy the focus-centred ellipse equation at supported eccentricities", () => {
-  for (const e of [0, 0.35, 0.85])
-    for (let t = 0; t < Math.PI * 2; t += 0.11) {
-      const p = orbitAt(t, e);
-      assert.ok(Math.abs((p.x + e) ** 2 + p.y ** 2 / (1 - e * e) - 1) < 1e-12);
-    }
-});
-test("question generator uses known constraints and treats unknown values as defaults", () => {
-  assert.match(
-    makeQuestion("software", "visible"),
-    /everyday tool.*hidden assumptions/,
-  );
-  assert.doesNotMatch(makeQuestion("<script>", "<img>"), /<script>|<img>/);
-});
 test("all public pages have genuine server-rendered content and canonical metadata", async () => {
   for (const path of [
     "/",
     "/work/",
-    "/lab/",
     "/source/",
-    "/notes/",
     "/about/",
     "/contact/",
+    "/work/writing/",
     "/work/ideaflow/",
     "/work/devonstation/",
     "/work/anevum/",
-    "/notes/a-model-is-a-question/",
   ]) {
     const response = await get(path);
     assert.equal(response.status, 200, path);
@@ -58,6 +33,10 @@ test("all public pages have genuine server-rendered content and canonical metada
       /frame-ancestors 'none'/,
     );
   }
+});
+test("removed demo content is not published", async () => {
+  for (const path of ["/lab/", "/work/field-instruments/", "/notes/a-model-is-a-question/"]) assert.equal((await get(path)).status,404,path);
+  for (const path of ["/", "/work/", "/about/"]) { const text = await (await get(path)).text(); assert.doesNotMatch(text,/FIELD INSTRUMENT|Wave interference|Question machine|Superposition/i); }
 });
 test("www and HTTP redirect to the canonical HTTPS origin without losing path or query", async () => {
   const r = await site.fetch(
