@@ -1,10 +1,9 @@
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
-import { pages, projects, notes } from "./src/content.mjs";
+import { pages, projects } from "./src/content.mjs";
 const paths = [
   ...pages.map((p) => p.path),
   ...projects.map((p) => `/work/${p.slug}/`),
-  ...notes.map((p) => `/notes/${p.slug}/`),
   "/404/",
 ];
 export default defineConfig({
