@@ -1,6 +1,21 @@
 // Public content only. Do not expose private family, client, or clinical records.
 export const projects = [
   {
+    slug: "operations",
+    title: "Business operations",
+    category: "business",
+    label: "Family ventures",
+    status: "Active work",
+    role: "Operations & technology",
+    icon: "work",
+    summary: "Helping family businesses work better behind the scenes.",
+    description: "I help improve the day-to-day systems supporting family businesses, from planning and operations to technology and clearer workflows.",
+    detail: "The work is about practical problems: organizing decisions, reducing repetitive administration, improving tools, and making important work easier to follow through on.",
+    boundary: "Clients, patients, partners, financial records, internal tools, and private operational details are not published here.",
+    tags: ["Operations", "Technology", "Workflows"],
+    next: "Continue improving the processes and tools that the businesses actually use.",
+  },
+  {
     slug: "writing",
     title: "Books & writing",
     category: "creative",
