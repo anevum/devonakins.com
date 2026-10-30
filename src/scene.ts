@@ -573,7 +573,12 @@ void main(){float crater=fbm(vPos*1.2)+noise(vPos*8.)*.12;float light=pow(max(do
       resize();
     },
     turn() {
-      if (!motion) return;
+      if (!motion) {
+        turnOffset += Math.PI / 5;
+        turnTarget = turnOffset;
+        render();
+        return;
+      }
       turnTarget += tau;
     },
     dispose() {

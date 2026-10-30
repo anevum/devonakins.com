@@ -38,8 +38,9 @@ question generator. Model limitations are written next to the instruments.
   found no document horizontal overflow. These are Chromium frame viewports,
   not physical iPhone/Safari acceptance.
 - Home mobile axe-core scan: zero automated violations, 40 passes and two
-  incomplete checks requiring judgment. Further page scans are recorded with
-  the deployment handoff.
+  incomplete checks requiring judgment. Work mobile: zero automated violations,
+  40 passes and one incomplete check after correcting its heading order. The
+  project category filter was also verified in the 390 px viewport.
 
 ## Performance design
 
