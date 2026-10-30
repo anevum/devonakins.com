@@ -1,6 +1,5 @@
 import { icon } from "./icons.mjs";
 import { projects, pages } from "./content.mjs";
-import { initLab } from "./lab";
 
 type SceneHandle = {
   setMotion: (value: boolean) => void;
@@ -143,8 +142,6 @@ const searchItems = [
         ? "Home"
         : p.key === "source"
           ? "Open source"
-          : p.key === "lab"
-            ? "The Lab"
             : p.key[0].toUpperCase() + p.key.slice(1),
     href: p.path,
     kind: "Page",
@@ -170,7 +167,7 @@ function renderSearch(query: string) {
           `<a class="search-result" href="${item.href}">${icon(item.icon)}<span>${item.title}</span><small>${item.kind}</small></a>`,
       )
       .join("") ||
-    '<p class="search-empty">No matches. Try “Lab”, “Work”, or a project name.</p>';
+    '<p class="search-empty">No matches. Try “Work” or a project name.</p>';
 }
 searchInput.addEventListener("input", () => renderSearch(searchInput.value));
 searchDialog.addEventListener("keydown", (e) => {
@@ -238,8 +235,6 @@ if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
     });
   });
 }
-if (document.querySelector("#wave-canvas"))
-  initLab({ motionAllowed, toast, copy });
 const container = document.querySelector<HTMLElement>("#scene");
 if (container) {
   const fallback = () => {
