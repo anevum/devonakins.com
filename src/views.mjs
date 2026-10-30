@@ -1,6 +1,6 @@
 import { icon } from "./icons.mjs";
 import { markSVG } from "./identity.mjs";
-import { projects, notes } from "./content.mjs";
+import { projects } from "./content.mjs";
 const arrow = icon("arrow");
 export const button = (href, text, primary = false, ic = "arrow") =>
   `<a class="button ${primary ? "primary" : ""}" href="${href}">${text}${icon(ic)}</a>`;
