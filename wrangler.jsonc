@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "devonakins-personal",
+  "main": ".release/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "devonakins.com", "custom_domain": true },
+    { "pattern": "www.devonakins.com", "custom_domain": true },
+  ],
+  "build": { "command": "npm run build" },
+  "observability": { "enabled": false },
+}
