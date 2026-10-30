@@ -1,0 +1,21 @@
+{
+  "source_commit": "c4c0d8452ce00504ff14edd22e78f96d4f348c57",
+  "asset_count": 14,
+  "asset_keys": [
+    "/404/index.html",
+    "/about/index.html",
+    "/assets/main-DgQv_NqU.js",
+    "/assets/scene-vrtEQAaF.js",
+    "/assets/style-m7aiAsTW.css",
+    "/contact/index.html",
+    "/index.html",
+    "/sitemap.xml",
+    "/source/index.html",
+    "/work/anevum/index.html",
+    "/work/devonstation/index.html",
+    "/work/ideaflow/index.html",
+    "/work/index.html",
+    "/work/writing/index.html"
+  ],
+  "release": "DevonAkins 1.0.1 - real work content"
+}
