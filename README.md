@@ -113,6 +113,9 @@ belong in the public repository or deployed assets.
 ## License and dependencies
 
 Site code and original vector assets: MIT, copyright Devon Akins.
+The standalone Git-history scanner and its tests in `scripts/security/` retain the
+Apache-2.0 license of their source repository (`anevum/brandle`); see
+[`scripts/security/LICENSE`](scripts/security/LICENSE).
 Names and personal identity are not a grant of trademark rights or endorsement.
 Three.js and its included addons: MIT. TypeScript, Vite, sharp, and axe-core are
 build or verification dependencies under their respective open-source licenses;

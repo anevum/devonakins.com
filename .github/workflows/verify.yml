@@ -9,6 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Fetch current remote branches for targeted credential scan
+        run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+      - name: Test targeted Git history scanner
+        run: python3 -m unittest scripts/security/test_scan_git_history.py
+      - name: Scan reachable Git history
+        run: python3 scripts/security/scan-git-history.py
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
