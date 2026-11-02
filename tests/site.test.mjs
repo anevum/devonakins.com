@@ -189,7 +189,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
-  const mainHtml = await (await get("/")).text();
+  const mainHtml = await (await get("/about/")).text();
   assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
   const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
   assert.ok(legacyCss.length > 0, "legacy stylesheet should still be present");
@@ -199,4 +199,25 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.doesNotMatch(await response.text(), /\.interface-shell/, "preview CSS must not inflate legacy CSS");
   }
   assert.equal((await get("/v2")).status, 308);
+});
+
+test("canonical homepage publishes the portrait, not the noindex preview", async () => {
+  const response = await get("/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<link rel="canonical" href="https:\/\/devonakins\.com\/">/);
+  assert.match(html, /Devon Alan Akins — Father, Author and Developer/);
+  assert.match(html, /id="interface-shell"/);
+  assert.match(html, /class="portrait-figure"/);
+  assert.match(html, /\/v2\/crossed-arms\.webp/);
+  assert.match(html, /href="\/v2\/terminal\.css"/);
+  assert.match(html, /\/ ORIGINAL WORKS/);
+  assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
+  assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
+  for (const path of ["/about/", "/work/", "/contact/", "/source/"])
+    assert.equal((await get(path)).status, 200, path);
+  const preview = await (await get("/v2/")).text();
+  assert.match(preview, /name="robots" content="noindex,nofollow"/);
+  assert.match(preview, /V2 PREVIEW/);
+  assert.doesNotMatch(preview, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
 });

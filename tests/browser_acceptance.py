@@ -161,6 +161,33 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                   }));
                 }""")
                 assert not violations, f"Axe WCAG violations: {violations}"
+            if origin:
+                # Exercise the canonical public homepage as well as the preview.
+                root_response = page.goto(origin + "/", wait_until="load")
+                assert root_response and root_response.status == 200
+                root_html = page.content()
+                assert 'rel="canonical" href="https://devonakins.com/"' in root_html
+                assert 'name="robots" content="noindex' not in root_html
+                assert "V2 PREVIEW" not in root_html
+                page.locator("#panel-home").wait_for(state="visible")
+                assert page.locator(".portrait-figure").evaluate(
+                    "el => el.complete && el.naturalWidth > 0"
+                ), "public homepage portrait failed to decode"
+                check_overflow("published-home")
+                page.locator("#tab-writing").click()
+                assert page.locator("#panel-writing").is_visible()
+                if axe_source:
+                    page.add_script_tag(content=axe_source)
+                    root_violations = page.evaluate("""async () => {
+                      const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];
+                      const report = await axe.run(document, {
+                        runOnly: {type:'tag', values:tags}
+                      });
+                      return report.violations.map(v => ({
+                        id:v.id, nodes:v.nodes.map(n=>n.target).slice(0,5)
+                      }));
+                    }""")
+                    assert not root_violations, f"Canonical home axe violations: {root_violations}"
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",

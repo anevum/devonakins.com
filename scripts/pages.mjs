@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { promotePortraitHome } from "../src/portrait-home.mjs";
 import { pages, projects } from "../src/content.mjs";
 import { icon } from "../src/icons.mjs";
 import { fallbackEnvironment } from "../src/identity.mjs";
@@ -47,6 +48,9 @@ for (const p of all) {
   await mkdir(dir, { recursive: true });
   await writeFile(dir + "index.html", html);
 }
+// Publish the portrait interface at the canonical homepage.
+// Older project/about pages and the V2 preview continue to be generated.
+await writeFile("index.html", promotePortraitHome(await readFile("v2/index.html", "utf8")));
 await writeFile(
   "public/sitemap.xml",
   '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
