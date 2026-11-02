@@ -94,9 +94,25 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator("#motion-toggle").is_disabled(), "reduced motion ignored"
             # Public stats are an owner-reported dated snapshot, not a live API or follower total.
             if origin:
-                page.wait_for_function(
-                    'document.querySelector("#usage-value").textContent.includes("2.6B")'
-                )
+                try:
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                    )
+                except Exception as error:
+                    diagnostic = page.evaluate("""async () => {
+                      let details = {};
+                      try {
+                        const response = await fetch('/v2/usage-snapshot.json', {cache:'no-store'});
+                        details = {http:response.status, type:response.headers.get('content-type'), text:(await response.text()).slice(0,350)};
+                      } catch (e) { details = {fetchError:String(e)}; }
+                      return {
+                        value:document.querySelector('#usage-value')?.textContent,
+                        status:document.querySelector('#usage-status')?.textContent,
+                        date:document.querySelector('#usage-date')?.textContent,
+                        details
+                      };
+                    }""")
+                    raise AssertionError(f"Snapshot unavailable in compiled {label}: {diagnostic}") from error
                 assert page.locator("#usage-value").inner_text() == "≈2.6B"
                 assert "Not live" in page.locator("#usage-status").inner_text()
                 assert "Nov 2, 2026" in page.locator("#usage-date").inner_text()
