@@ -218,7 +218,7 @@ test("V2 public ChatGPT stats are explicitly approximate, source-labeled and sep
   assert.equal(value.attestation, "owner-published");
   assert.match(value.source, /owner-reported/i);
   const client = await readFile("src/terminal.ts", "utf8");
-  assert.match(client, /void checkUsage\(\)/);
+  assert.match(client, /^void checkUsage\(\);$/m, "initial activity refresh must actually run, not be commented out");
   assert.match(client, /snapshot\.approximate|record\.approximate/);
   assert.match(client, /Not live/);
   assert.match(client, /credentials: "omit"/);
