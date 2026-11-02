@@ -120,3 +120,24 @@ or hijack navigation. Both desktop and mobile lighting controls share the same
 three-stage portrait palette, update their accessible labels, and announce the
 selected state. Mobile navigation tabs retain a minimum 44px tall hit target (except the short-landscape rail at 44px due to its fixed display geometry). The mobile portrait-light control has a 44×44px tap target at all viewport widths, including landscape. This is still not
 a substitute for physical iPhone VoiceOver/Safari acceptance.
+
+## Automated compiled-preview browser acceptance
+
+Draft PR verification installs pinned Python Playwright 1.57.0 and the Chromium and
+WebKit browser engines on GitHub Actions, then runs
+`python3 tests/browser_acceptance.py --axe --out browser-qa` against the
+exact Vite-built `dist/` artifact. The suite exercises mobile, tablet,
+landscape and desktop viewports, primary navigation, browser Back handling,
+keyboard focus, panel overflow, portrait presence, reduced motion and the
+44×44 mobile light target. It also runs axe-core 4.14 against WCAG 2.0/2.1/
+2.2 A/AA tags and fails on automated violations. This gate runs on PRs, not
+push builds, to avoid redundant browser downloads. Failing snapshots and the
+browser QA report are attached to the CI run; no external service is visited
+and no private data is collected.
+
+The suite injects the compiled CSS and JavaScript into a document rather than
+using a live origin, due to some sandboxed browser environments blocking
+loopback navigation. Therefore it checks rendered interface behavior but does
+not replace a hosted-endpoint, CSP, or physical iPhone VoiceOver/Safari test.
+A passing Linux WebKit run is evidence for the browser engine, not proof of
+mobile Safari/device acceptance. Keep production unmodified pending approval.

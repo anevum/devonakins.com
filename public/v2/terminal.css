@@ -392,7 +392,7 @@ h1, h2, p { margin-top: 0; }
 .interface-shell[data-light="teal"] .mobile-light-orb { background: radial-gradient(circle at 34% 28%, #daf6f1, #6aabb6 43%, #21445a 82%); box-shadow: 0 0 13px rgba(105, 205, 225, .46); }
 .interface-shell[data-light="violet"] .mobile-light-orb { background: radial-gradient(circle at 34% 28%, #efdef7, #9e7cc5 43%, #3a315b 82%); box-shadow: 0 0 13px rgba(176, 128, 217, .45); }
 @media(max-width: 960px) {
-  .mobile-light { display: flex; width: 42px; height: 42px; }
+  .mobile-light { display: flex; width: 44px; height: 44px; }
   .rail-tab { min-height: 44px; }
   .rail { flex-basis: 60px; }
 }
