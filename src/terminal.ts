@@ -250,7 +250,7 @@ const portraitLights = ["amber", "teal", "violet"] as const;
 function syncLightControls() {
   const current = interfaceShell.dataset.light ?? "amber";
   for (const button of lightButtons) {
-    button.setAttribute("aria-label", "Cycle portrait lighting. Current: " + current);
+    button.setAttribute("aria-label", (button.id === "shift-light" ? "Shift light. Current: " : "Cycle portrait lighting. Current: ") + current);
     button.title = "Portrait lighting: " + current;
   }
   if (engineStatus) engineStatus.textContent = current.toUpperCase() + " / EDITORIAL";

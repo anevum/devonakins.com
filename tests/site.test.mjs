@@ -187,7 +187,8 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /window\.addEventListener\("popstate", syncLocationView\)/);
   assert.match(client, /function viewFromLocation\(\)/);
   assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
-  assert.match(client, /button\.setAttribute\("aria-label", "Cycle portrait lighting/);
+  assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
+  assert.match(client, /"Cycle portrait lighting\. Current: "/);
   const mainHtml = await (await get("/")).text();
   assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
   const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
