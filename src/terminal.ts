@@ -107,7 +107,7 @@ activate(validView(location.hash.slice(1)) ? location.hash.slice(1) : "home", "n
 
 const navLayout = matchMedia("(max-width: 760px)");
 function syncOrientation() {
-  tablist.setAttribute("aria-orientation", navLayout.matches ? "horizontal" : "vertical");
+  tablist?.setAttribute("aria-orientation", navLayout.matches ? "horizontal" : "vertical");
 }
 syncOrientation();
 navLayout.addEventListener("change", syncOrientation);
@@ -291,7 +291,7 @@ function startScene() {
 if ("requestIdleCallback" in window)
   window.requestIdleCallback(startScene, { timeout: 1700 });
 else
-  window.setTimeout(startScene, 110);
+  setTimeout(startScene, 110);
 
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
