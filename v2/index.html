@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07090f">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="A private-preview interface for Devon Alan Akins: family, original writing, software, systems design, and research.">
+  <title>Devon Alan Akins — Immersive Interface V2 Preview</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/src/terminal.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div id="interface-shell" class="interface-shell" data-view="home" data-motion="on">
+    <div class="atmosphere" aria-hidden="true">
+      <div class="smoke smoke-amber"></div>
+      <div class="smoke smoke-cyan"></div>
+      <div class="smoke smoke-violet"></div>
+      <div class="grid-surface"></div>
+      <div class="grain"></div>
+    </div>
+    <div id="scene" class="v2-scene" data-status="fallback" aria-hidden="true">
+      <div class="vector-fallback"><span class="vector-ring"></span><img src="/brand-mark.svg" alt="" width="280" height="280"></div>
+    </div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Devon Akins — production website">
+        <span class="brand-mark"><img src="/brand-mark-mono.svg" alt="" width="35" height="32"></span>
+        <span class="brand-words"><strong>DEVON ALAN AKINS</strong><small>PERSONAL INTERFACE <span class="topbar-version">/ V2 PREVIEW</span></small></span>
+      </a>
+      <div class="topbar-center" aria-hidden="true"><span class="line"></span>EST. 1993<span class="line"></span></div>
+      <div class="topbar-right"><span class="system-dot" aria-hidden="true"></span><span class="system-word">SYSTEM ONLINE</span><time id="system-clock" aria-label="Local device time">--:--</time></div>
+    </header>
+    <div class="body-grid">
+      <nav class="rail" role="tablist" aria-label="Interface sections" aria-orientation="vertical">
+        <span class="rail-heading" aria-hidden="true">INDEX / 01–05</span>
+        <button class="rail-tab" id="tab-home" type="button" role="tab" aria-controls="panel-home" aria-selected="true" tabindex="0" data-view-target="home"><span class="rail-number">01</span><span class="rail-label">Home</span><span class="tab-dash"></span></button>
+        <button class="rail-tab" id="tab-work" type="button" role="tab" aria-controls="panel-work" aria-selected="false" tabindex="-1" data-view-target="work"><span class="rail-number">02</span><span class="rail-label">Work</span><span class="tab-dash"></span></button>
+        <button class="rail-tab" id="tab-writing" type="button" role="tab" aria-controls="panel-writing" aria-selected="false" tabindex="-1" data-view-target="writing"><span class="rail-number">03</span><span class="rail-label">Writing</span><span class="tab-dash"></span></button>
+        <button class="rail-tab" id="tab-research" type="button" role="tab" aria-controls="panel-research" aria-selected="false" tabindex="-1" data-view-target="research"><span class="rail-number">04</span><span class="rail-label">Research</span><span class="tab-dash"></span></button>
+        <button class="rail-tab" id="tab-contact" type="button" role="tab" aria-controls="panel-contact" aria-selected="false" tabindex="-1" data-view-target="contact"><span class="rail-number">05</span><span class="rail-label">Contact</span><span class="tab-dash"></span></button>
+        <div class="rail-end" aria-hidden="true"><span class="rail-line"></span><span>INDEPENDENT / PERSONAL</span></div>
+      </nav>
+      <main id="main" class="interface-main" tabindex="-1">
+        <section class="panel panel-home" id="panel-home" role="tabpanel" aria-labelledby="tab-home" tabindex="0" data-panel="home">
+          <div class="panel-inner hero-panel">
+            <div class="eyebrow"><span class="eyebrow-line"></span>THE WORK OF A HUMAN IN PROGRESS <span class="eyebrow-index">/ 001</span></div>
+            <p class="hero-overline">FATHER. AUTHOR. SYSTEMS DESIGNER.</p>
+            <h1>Devon<span class="title-secondary">Alan</span><span class="title-last">Akins<span class="title-period">.</span></span></h1>
+            <p class="hero-description">I raise two boys, write original worlds, and engineer useful systems. I believe the best technology gives people more room to be human.</p>
+            <div class="hero-actions">
+              <button type="button" class="action action-primary" data-view-target="work">Explore the work <span aria-hidden="true">↗</span></button>
+              <button type="button" class="action action-quiet" data-view-target="writing">Enter the worlds <span aria-hidden="true">→</span></button>
+            </div>
+            <div class="hero-foot"><span class="fine-rule"></span><span>WRITING / SOFTWARE / CREATIVE SYSTEMS</span></div>
+          </div>
+        </section>
+        <section class="panel" id="panel-work" role="tabpanel" aria-labelledby="tab-work" tabindex="0" data-panel="work" hidden>
+          <div class="panel-inner section-panel">
+            <div class="eyebrow"><span class="eyebrow-line"></span>SELECTED PRACTICE <span class="eyebrow-index">/ 002</span></div>
+            <h2>Systems with<br><em>intention.</em></h2>
+            <p class="section-intro">Practical software, responsible operations, and thoughtfully designed tools that address real problems.</p>
+            <div class="work-cards">
+              <a class="work-card" href="/work/operations/"><span class="card-number">01 / OPERATIONS</span><strong>Making complex work simpler</strong><small>Workflow architecture, organization and technology supporting family ventures.</small><span class="card-open">VIEW WORK <span aria-hidden="true">↗</span></span></a>
+              <a class="work-card" href="/work/ideaflow/"><span class="card-number">02 / SOFTWARE</span><strong>IdeaFlow</strong><small>Meeting and presentation software in active development.</small><span class="card-open">PROJECT DETAILS <span aria-hidden="true">↗</span></span></a>
+              <a class="work-card" href="/work/devonstation/"><span class="card-number">03 / PERSONAL TOOLS</span><strong>DevonStation</strong><small>A private operating environment. Development currently paused.</small><span class="card-open">PROJECT DETAILS <span aria-hidden="true">↗</span></span></a>
+            </div>
+            <a class="section-link" href="/work/">Complete project archive <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
+        <section class="panel" id="panel-writing" role="tabpanel" aria-labelledby="tab-writing" tabindex="0" data-panel="writing" hidden>
+          <div class="panel-inner section-panel">
+            <div class="eyebrow"><span class="eyebrow-line"></span>ORIGINAL WORKS <span class="eyebrow-index">/ 003</span></div>
+            <h2>Worlds that<br><em>stay with you.</em></h2>
+            <p class="section-intro">A published book entering revision. The Transcosmic universe returning. Stories first, with interactive experiences growing from them.</p>
+            <div class="world-card"><span class="world-orbit" aria-hidden="true"></span><div class="world-copy"><span class="world-kicker">AN EVOLVING ORIGINAL UNIVERSE</span><strong>Transcosmic</strong><p>Fiction, mythology, a rebuilt wiki, and glimpses of what lies beyond the page.</p><a href="https://anevum.com" target="_blank" rel="noopener noreferrer">Explore Anevum <span aria-hidden="true">↗</span></a></div></div>
+            <p class="section-note">Unreleased material remains private. Future books and games are not presented as finished releases.</p>
+          </div>
+        </section>
+        <section class="panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research" tabindex="0" data-panel="research" hidden>
+          <div class="panel-inner section-panel">
+            <div class="eyebrow"><span class="eyebrow-line"></span>CURIOSITY / DISCIPLINE <span class="eyebrow-index">/ 004</span></div>
+            <h2>Questions before<br><em>answers.</em></h2>
+            <p class="section-intro">Mathematics, physics, cognition, engineering, and how humans learn. Ongoing interests and study, not claims of original discoveries.</p>
+            <div class="research-matrix" aria-label="Research interests">
+              <div><span>01</span><strong>Mathematics</strong><small>Structure and proof</small></div>
+              <div><span>02</span><strong>Physics</strong><small>Space, time and matter</small></div>
+              <div><span>03</span><strong>Cognition</strong><small>Learning and reasoning</small></div>
+              <div><span>04</span><strong>Systems</strong><small>Design and emergence</small></div>
+            </div>
+            <a class="section-link" href="/about/">About the person behind the work <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
+        <section class="panel" id="panel-contact" role="tabpanel" aria-labelledby="tab-contact" tabindex="0" data-panel="contact" hidden>
+          <div class="panel-inner section-panel contact-panel">
+            <div class="eyebrow"><span class="eyebrow-line"></span>OPEN CHANNEL <span class="eyebrow-index">/ 005</span></div>
+            <h2>Start a<br><em>conversation.</em></h2>
+            <p class="section-intro">For books, open-source software, and meaningful collaborations, email remains the clearest route.</p>
+            <a class="contact-link" href="mailto:devon@anevum.com">devon@anevum.com <span aria-hidden="true">↗</span></a>
+            <button type="button" class="copy-button" id="copy-email">Copy email address <span aria-hidden="true">+</span></button>
+            <div class="contact-lower"><a href="https://github.com/anevum" target="_blank" rel="noopener noreferrer">GitHub / Public code <span aria-hidden="true">↗</span></a><a href="/contact/">Standard contact page <span aria-hidden="true">↗</span></a></div>
+          </div>
+        </section>
+      </main>
+      <aside class="telemetry" aria-label="Interface information">
+        <div class="telemetry-top"><span>OBSERVATORY <span class="muted">/ 01</span></span><span class="telemetry-cross" aria-hidden="true">+</span></div>
+        <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img src="/brand-mark-mono.svg" alt="" width="42" height="40"></div>
+        <div class="telemetry-readout"><span class="readout-kicker">PERSONAL DATA / OPTIONAL</span><h2>Usage signal</h2><p class="readout-value" id="usage-value">—</p><p class="readout-status" id="usage-status" role="status" aria-live="polite">No verified snapshot connected.</p><p class="readout-date" id="usage-date">No publication date</p><button type="button" id="refresh-usage" class="refresh-button">Check snapshot <span aria-hidden="true">↻</span></button></div>
+        <p class="telemetry-note">Only dated, owner-published figures appear here. This preview does not access private ChatGPT sessions or imply live account access.</p>
+        <div class="telemetry-bottom"><span>VISUAL ENGINE</span><button type="button" class="engine-button" id="turn-scene" aria-label="Rotate identity artwork">ROTATE MARK</button><span id="scene-caption" class="engine-status">VECTOR FALLBACK</span></div>
+      </aside>
+    </div>
+    <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>
+  </div>
+  <div id="announcement" class="announcement" role="status" aria-live="polite"></div>
+  <noscript><div class="nojs">JavaScript is required to switch preview panels. The <a href="/">current homepage</a> and <a href="/work/">work archive</a> remain usable.</div></noscript>
+  <script type="module" src="/src/terminal.ts"></script>
+</body>
+</html>

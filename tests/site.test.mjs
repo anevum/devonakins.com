@@ -129,3 +129,22 @@ test("manifest has correctly sized PNG assets and a single-origin scope", async 
     assert.equal(dv.getUint32(20), h);
   }
 });
+
+test("V2 immersive preview is a noindex, accessible, internal-origin-only page", async () => {
+  const response = await get("/v2/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
+  assert.match(html, /<nav class="rail" role="tablist"/);
+  assert.match(html, /id="interface-shell"/);
+  assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /<main id="main"/);
+  for (const view of ["home", "work", "writing", "research", "contact"]) {
+    assert.match(html, new RegExp('id="tab-' + view + '"'));
+    assert.match(html, new RegExp('id="panel-' + view + '"'));
+  }
+  assert.match(html, /No verified snapshot connected/);
+  assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
+  assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
+  assert.equal((await get("/v2")).status, 308);
+});

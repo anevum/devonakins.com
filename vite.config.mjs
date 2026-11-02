@@ -5,6 +5,7 @@ const paths = [
   ...pages.map((p) => p.path),
   ...projects.map((p) => `/work/${p.slug}/`),
   "/404/",
+  "/v2/", // Isolated immersive preview, not the production homepage.
 ];
 export default defineConfig({
   build: {
