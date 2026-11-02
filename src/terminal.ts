@@ -128,7 +128,6 @@ function syncMotion() {
     motionButton.disabled = reducedMotion.matches;
     motionButton.textContent = reducedMotion.matches ? "REDUCED MOTION" : enabled ? "MOTION ON" : "MOTION OFF";
     motionButton.setAttribute("aria-pressed", String(enabled));
-    motionButton.setAttribute("aria-label", "Toggle ambient motion");
     motionButton.title = reducedMotion.matches ? "System reduced-motion preference is respected" : "Toggle ambient animation";
   }
 }

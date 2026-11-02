@@ -138,6 +138,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /<nav class="rail" role="tablist"/);
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="brand" href="#home"/);
+  assert.doesNotMatch(html, /class="brand" href="#home" aria-label=/);
   assert.match(html, /Current public website/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
@@ -185,6 +186,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /history\.pushState\(null, "", "#" \+ name\)/);
   assert.match(client, /window\.addEventListener\("popstate", syncLocationView\)/);
   assert.match(client, /function viewFromLocation\(\)/);
+  assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
   assert.match(client, /button\.setAttribute\("aria-label", "Cycle portrait lighting/);
   const mainHtml = await (await get("/")).text();
   assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);

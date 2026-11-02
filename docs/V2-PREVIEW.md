@@ -141,3 +141,13 @@ loopback navigation. Therefore it checks rendered interface behavior but does
 not replace a hosted-endpoint, CSP, or physical iPhone VoiceOver/Safari test.
 A passing Linux WebKit run is evidence for the browser engine, not proof of
 mobile Safari/device acceptance. Keep production unmodified pending approval.
+
+## Accessible names and visible labels
+
+The preview's header-home link inherits its accessible name from its visible
+brand text, and the Motion toggle inherits its name from the displayed
+MOTION ON / MOTION OFF / REDUCED MOTION state. Do not override those with
+inconsistent `aria-label` values: axe-core's WCAG 2.5.3
+`label-content-name-mismatch` rule must pass. The lighting control remains
+labeled through a state-aware accessible name because it displays only an
+orb icon on mobile and explicit SHIFT LIGHT text on desktop.
