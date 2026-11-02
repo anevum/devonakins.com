@@ -214,8 +214,9 @@ function showUsage(snapshot: UsageSnapshot) {
     count.setAttribute("aria-label", "Approximately " + snapshot.count.toLocaleString("en-US") +
       " Work and Codex tokens, owner-reported as of " + observed);
   }
-  if (status) status.textContent = "As of " + observed + " · Not live";
-  if (date) date.textContent = "Owner-reported ChatGPT profile activity · " + snapshot.source.trim();
+  const shortDate = observed.replace(", " + snapshot.asOf.slice(0, 4), " ’" + snapshot.asOf.slice(2, 4));
+  if (status) status.textContent = shortDate + " · Not live";
+  if (date) date.textContent = "As of " + observed + " · " + snapshot.source.trim() + " · Approximate";
 }
 async function checkUsage() {
   if (polling) return;
