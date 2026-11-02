@@ -5,8 +5,9 @@
  */
 type UsageSnapshot = {
   version: 1;
-  metric: "tokens";
+  metric: "work-codex-tokens";
   count: number;
+  approximate: true;
   asOf: string;
   source: string;
   attestation: "owner-published";
@@ -177,8 +178,10 @@ function parseSnapshot(input: unknown): UsageSnapshot {
     throw new Error("Snapshot must be an object");
   const record = input as Record<string, unknown>;
   if (
+    Object.keys(record).sort().join(",") !== "approximate,asOf,attestation,count,metric,source,version" ||
     record.version !== 1 ||
-    record.metric !== "tokens" ||
+    record.metric !== "work-codex-tokens" ||
+    record.approximate !== true ||
     record.attestation !== "owner-published" ||
     typeof record.count !== "number" ||
     !Number.isSafeInteger(record.count) ||
@@ -200,15 +203,19 @@ function showUsage(snapshot: UsageSnapshot) {
   const count = document.querySelector<HTMLElement>("#usage-value");
   const status = document.querySelector<HTMLElement>("#usage-status");
   const date = document.querySelector<HTMLElement>("#usage-date");
+  const observed = new Date(snapshot.asOf + "T00:00:00Z").toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
   if (count) {
-    count.textContent = new Intl.NumberFormat("en-US", {
+    count.textContent = "≈" + new Intl.NumberFormat("en-US", {
       notation: "compact",
       maximumFractionDigits: 2,
     }).format(snapshot.count);
-    count.setAttribute("aria-label", snapshot.count.toLocaleString("en-US") + " owner-reported tokens");
+    count.setAttribute("aria-label", "Approximately " + snapshot.count.toLocaleString("en-US") +
+      " Work and Codex tokens, owner-reported as of " + observed);
   }
-  if (status) status.textContent = "Owner-published estimate, not live tracking.";
-  if (date) date.textContent = "As of " + snapshot.asOf + " · Source: " + snapshot.source.trim();
+  if (status) status.textContent = "As of " + observed + " · Not live";
+  if (date) date.textContent = "Owner-reported ChatGPT profile activity · " + snapshot.source.trim();
 }
 async function checkUsage() {
   if (polling) return;
@@ -243,7 +250,7 @@ async function checkUsage() {
   }
 }
 document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
-// Do not check automatically: no monitoring requests without a deliberate click.
+// Read only the owner-published public snapshot once per visit; no private API or telemetry.\nvoid checkUsage();
 
 // Lighting changes are a purely local visual preference. No network or GPU calls.
 const portraitLights = ["amber", "teal", "violet"] as const;
