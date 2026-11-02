@@ -96,7 +96,7 @@ window.addEventListener("hashchange", () => {
 });
 activate(validView(location.hash.slice(1)) ? location.hash.slice(1) : "home", "none", false);
 
-const navLayout = matchMedia("(max-width: 760px)");
+const navLayout = matchMedia("(max-width: 960px)");
 function syncOrientation() {
   tablist?.setAttribute("aria-orientation", navLayout.matches ? "horizontal" : "vertical");
 }

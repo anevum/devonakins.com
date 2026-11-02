@@ -1,20 +1,21 @@
 # DevonAkins.com — immersive interface V2 preview
 
 Status: **isolated source preview**. This is not the production homepage. The existing
-15-page site and Cloudflare Worker remain in place. Preview route: \`/v2/\`.
+11-page public site and Cloudflare Worker remain in place. Preview route: \`/v2/\`.
 
 ## Scope
 
 - Five tabbed views: Home, Work, Writing, Research, Contact.
 - Single-viewport shell on desktop; pane-local scrolling only when content
   requires it on narrow or short displays.
-- Responsive horizontal navigation on phones; vertical navigation on desktop.
+- Responsive horizontal navigation on phones and portrait tablets (960px and below); vertical navigation on wider screens.
+- A compact small-height layout ensures the main hero actions are visible at 320×568 CSS pixels without scrolling at default text settings.
 - Keyboard Arrow/Home/End navigation, visible focus, appropriate tab/tabpanel
   semantics, reduced-motion preference, skip link, and no-JavaScript escape.
 - Crossed-arms cinematic portrait replaces the large DA hero centerpiece; only the small
   original DA identity in the header remains. The portrait is a local compressed WebP.
 - CSS-only layered colored smoke, portrait halo and three-state lighting control
-  replace the preview WebGL background; the legacy site\u0027s Three.js scene remains untouched.
+  replace the preview WebGL background; the legacy site's Three.js scene remains untouched.
 - No external fonts, third-party trackers, credentials, analytics, or private
   integrations. This is a personal presentation, not an authenticated workspace.
 
@@ -58,7 +59,7 @@ npm test
 \`\`\`
 
 These must pass at the actual PR head. Follow up with a device/browser QA pass,
-including 320, 375, 390, 768, 1024, and 1440 px widths, iOS Safari safe
+including 320×568, 375, 390, 560, 760/761, 768, 820, 912, 1024 and 1440 px viewports, iOS Safari safe
 areas, keyboard panel switching, portrait visibility and contrast, reduced motion, lighting toggle, and tab focus.
 The browser's WebGL result is environment-dependent. No production release or
 reported Lighthouse metric is implied by green unit/CI tests.
@@ -70,3 +71,7 @@ CI, observing mobile/desktop visual rendering, and confirming the established
 Cloudflare release path. The outdated open visual PR #4 should not be merged on
 top of this design without reconciliation; its improvements are represented in
 merged PR #5. Retain an identified rollback version before any actual cutover.
+
+## Tablet/compact viewport acceptance
+
+The preview header logo selects the preview Home panel (rather than silently navigating to the existing public site); Contact includes an explicit link back to the public website. Navigation switches to a horizontal bottom rail at 960px and below and keeps matching `aria-orientation`. The layout has viewport-safe-area padding and an enhanced-contrast fallback. At 320×568 CSS pixels, the hero title, description, and both primary actions fit without inner-panel scrolling at the default text size. Accessibility settings and larger type may require accessible pane-local scrolling instead of clipping. Physical iOS Safari still needs on-device verification.

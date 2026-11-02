@@ -137,6 +137,8 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
   assert.match(html, /<nav class="rail" role="tablist"/);
   assert.match(html, /id="interface-shell"/);
+  assert.match(html, /class="brand" href="#home"/);
+  assert.match(html, /Current public website/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
   assert.match(html, /id="shift-light"/);
@@ -162,6 +164,13 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.equal(cssResponse.status, 200);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
   assert.match(await cssResponse.text(), /\.interface-shell/);
+  const v2css = await cssResponse.clone().text();
+  assert.match(v2css, /@media\(max-width: 960px\)/);
+  assert.match(v2css, /max-height: 640px/);
+  assert.match(v2css, /safe-area-inset-top/);
+  assert.match(v2css, /prefers-contrast: more/);
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /matchMedia\("\(max-width: 960px\)"\)/);
   const mainHtml = await (await get("/")).text();
   assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
   const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
