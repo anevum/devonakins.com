@@ -135,12 +135,15 @@ push builds, to avoid redundant browser downloads. Failing snapshots and the
 browser QA report are attached to the CI run; no external service is visited
 and no private data is collected.
 
-The suite injects the compiled CSS and JavaScript into a document rather than
-using a live origin, due to some sandboxed browser environments blocking
-loopback navigation. Therefore it checks rendered interface behavior but does
-not replace a hosted-endpoint, CSP, or physical iPhone VoiceOver/Safari test.
-A passing Linux WebKit run is evidence for the browser engine, not proof of
-mobile Safari/device acceptance. Keep production unmodified pending approval.
+CI serves the actual compiled `dist/` assets on a loopback-only HTTP origin
+and blocks every other browser request. This exercises real browser navigation,
+native Back/Forward history, static HTML, bundled scripts and media without
+contacting production. The explicit `--offline-document` fallback supports
+local sandboxes that block all loopback navigation; do not use that weaker
+mode for CI WebKit history acceptance. These tests do not replace a hosted
+production Worker/CSP check or physical iPhone VoiceOver/Safari acceptance.
+A passing Linux WebKit run is evidence for that engine, not proof of
+mobile Safari/device acceptance. Keep production unchanged pending approval.
 
 ## Accessible names and visible labels
 

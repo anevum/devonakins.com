@@ -10,7 +10,10 @@ import json
 import os
 import re
 import sys
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
@@ -42,7 +45,22 @@ def compiled_preview(dist: Path):
     return html, css, script
 
 
-def check(browser, engine, html, css, script, axe_source, output):
+class QuietStaticHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+
+def start_static_origin(dist: Path):
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        partial(QuietStaticHandler, directory=str(dist.resolve())),
+    )
+    Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_port}"
+
+
+def check(browser, engine, html, css, script, axe_source, output, origin):
+
     results = []
     for width, height in VIEWPORTS:
         context = browser.new_context(
@@ -52,12 +70,23 @@ def check(browser, engine, html, css, script, axe_source, output):
         page.set_default_timeout(7000)
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.route("**/*", lambda route: route.abort())
+        page.route(
+            "**/*",
+            (lambda route: route.continue_() if route.request.url.startswith(
+                origin + "/"
+            ) else route.abort()) if origin else (lambda route: route.abort()),
+        )
         label = f"{engine}-{width}x{height}"
         try:
-            page.set_content(html, wait_until="domcontentloaded")
-            page.add_style_tag(content=css)
-            page.add_script_tag(content=script)
+            if origin:
+                response = page.goto(origin + "/v2/", wait_until="load")
+                assert response and response.status == 200, "local preview did not load"
+            else:
+                # Local fallback for sandboxed browsers that prohibit all localhost
+                # navigation. CI uses a real HTTP origin for WebKit history fidelity.
+                page.set_content(html, wait_until="domcontentloaded")
+                page.add_style_tag(content=css)
+                page.add_script_tag(content=script)
             page.locator("#panel-home").wait_for(state="visible")
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
@@ -163,32 +192,45 @@ def main():
     )
     ap.add_argument("--axe", action="store_true")
     ap.add_argument(
+        "--offline-document", action="store_true",
+        help="Fallback for sandboxed local browsers; CI uses real loopback HTTP",
+    )
+    ap.add_argument(
         "--chromium-path", default=os.environ.get("CHROMIUM_EXECUTABLE")
     )
     ap.add_argument("--out", type=Path, default=Path("browser-qa"))
     args = ap.parse_args()
     html, css, script = compiled_preview(args.dist)
+    static_server = None
+    origin = None
+    if not args.offline_document:
+        static_server, origin = start_static_origin(args.dist)
     axe_source = None
     if args.axe:
         axe_source = Path("node_modules/axe-core/axe.min.js").read_text(
             encoding="utf-8"
         )
     all_results = []
-    with sync_playwright() as playwright:
-        for name in args.browsers:
-            kwargs = {"headless": True}
-            if name == "chromium" and args.chromium_path:
-                kwargs.update({
-                    "executable_path": args.chromium_path,
-                    "args": ["--no-sandbox"]
-                })
-            browser = getattr(playwright, name).launch(**kwargs)
-            try:
-                all_results.extend(
-                    check(browser, name, html, css, script, axe_source, args.out)
-                )
-            finally:
-                browser.close()
+    try:
+        with sync_playwright() as playwright:
+            for name in args.browsers:
+                kwargs = {"headless": True}
+                if name == "chromium" and args.chromium_path:
+                    kwargs.update({
+                        "executable_path": args.chromium_path,
+                        "args": ["--no-sandbox"]
+                    })
+                browser = getattr(playwright, name).launch(**kwargs)
+                try:
+                    all_results.extend(
+                        check(browser, name, html, css, script, axe_source, args.out, origin)
+                    )
+                finally:
+                    browser.close()
+    finally:
+        if static_server:
+            static_server.shutdown()
+            static_server.server_close()
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "results.json").write_text(
         json.dumps(all_results, indent=2), encoding="utf-8"
