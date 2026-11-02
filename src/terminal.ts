@@ -3,11 +3,6 @@
  * Public display only: no account credentials, private telemetry, analytics,
  * third-party requests, or implicit collection of browser data.
  */
-type SceneHandle = {
-  setMotion: (enabled: boolean) => void;
-  turn: () => void;
-  dispose: () => void;
-};
 type UsageSnapshot = {
   version: 1;
   metric: "tokens";
@@ -29,20 +24,16 @@ const tablist = document.querySelector<HTMLElement>(".rail[role='tablist']");
 const announcement = document.querySelector<HTMLElement>("#announcement");
 const motionButton = document.querySelector<HTMLButtonElement>("#motion-toggle");
 const clock = document.querySelector<HTMLTimeElement>("#system-clock");
-const renderContainer = document.querySelector<HTMLElement>("#scene");
+const lightButton = document.querySelector<HTMLButtonElement>("#shift-light");
 const engineStatus = document.querySelector<HTMLElement>("#scene-caption");
-const turnButton = document.querySelector<HTMLButtonElement>("#turn-scene");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-if (!shell || !tabs.length || !tablist || !renderContainer) {
+if (!shell || !tabs.length || !tablist) {
   throw new Error("V2 interface markup is incomplete");
 }
 
 const interfaceShell = shell;
-const sceneContainer = renderContainer;
-let scene: SceneHandle | undefined;
 let announcementTimer = 0;
-let fallbackRotation = 0;
 let motionWanted = true;
 let polling = false;
 
@@ -125,7 +116,6 @@ function syncMotion() {
     motionButton.setAttribute("aria-label", "Toggle ambient motion");
     motionButton.title = reducedMotion.matches ? "System reduced-motion preference is respected" : "Toggle ambient animation";
   }
-  scene?.setMotion(enabled);
 }
 syncMotion();
 motionButton?.addEventListener("click", () => {
@@ -241,61 +231,18 @@ async function checkUsage() {
 document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
 // Do not check automatically: no monitoring requests without a deliberate click.
 
-function turnFallback() {
-  fallbackRotation += 35;
-  const image = sceneContainer.querySelector<HTMLElement>(".vector-fallback img");
-  if (image) {
-    image.style.transform = "rotate(" + fallbackRotation + "deg)";
-    image.style.transition = motionAllowed() ? "transform .7s ease" : "none";
-  }
-}
-turnButton?.addEventListener("click", () => {
-  if (scene) scene.turn();
-  else turnFallback();
+// Lighting changes are a purely local visual preference. No network or GPU calls.
+const portraitLights = ["amber", "teal", "violet"] as const;
+lightButton?.addEventListener("click", () => {
+  const index = portraitLights.indexOf(interfaceShell.dataset.light as typeof portraitLights[number]);
+  const next = portraitLights[(index + 1) % portraitLights.length];
+  interfaceShell.dataset.light = next;
+  if (engineStatus) engineStatus.textContent = next.toUpperCase() + " / EDITORIAL";
+  announce("Portrait lighting: " + next + ".");
 });
-
-function fallback() {
-  sceneContainer.dataset.status = "fallback";
-  if (engineStatus) engineStatus.textContent = "VECTOR FALLBACK";
-  sceneContainer.querySelector("canvas")?.remove();
-}
-function startScene() {
-  if (new URLSearchParams(location.search).get("render") === "fallback") {
-    fallback();
-    return;
-  }
-  const canvas = document.createElement("canvas");
-  let context: WebGL2RenderingContext | null = null;
-  try {
-    context = canvas.getContext("webgl2", { antialias: false, powerPreference: "low-power" });
-  } catch {
-    // An unavailable or blocked GPU is a supported state.
-  }
-  if (!context) {
-    fallback();
-    return;
-  }
-  const validContext = context;
-  import("./scene").then(({ createScene }) => {
-    scene = createScene(sceneContainer, {
-      canvas,
-      context: validContext,
-      motion: motionAllowed(),
-      quality: "auto",
-      onFailure: fallback,
-    });
-    sceneContainer.dataset.status = "ready";
-    if (engineStatus) engineStatus.textContent = "REAL-TIME THREE.JS";
-  }).catch(fallback);
-}
-if ("requestIdleCallback" in window)
-  window.requestIdleCallback(startScene, { timeout: 1700 });
-else
-  setTimeout(startScene, 110);
 
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
   window.clearInterval(clockTimer);
   window.clearTimeout(announcementTimer);
-  scene?.dispose();
 });

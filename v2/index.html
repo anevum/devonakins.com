@@ -13,7 +13,7 @@
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <div id="interface-shell" class="interface-shell" data-view="home" data-motion="on">
+  <div id="interface-shell" class="interface-shell" data-view="home" data-motion="on" data-light="amber">
     <div class="atmosphere" aria-hidden="true">
       <div class="smoke smoke-amber"></div>
       <div class="smoke smoke-cyan"></div>
@@ -21,8 +21,11 @@
       <div class="grid-surface"></div>
       <div class="grain"></div>
     </div>
-    <div id="scene" class="v2-scene" data-status="fallback" aria-hidden="true">
-      <div class="vector-fallback"><span class="vector-ring"></span><img src="/brand-mark.svg" alt="" width="280" height="280"></div>
+    <div class="portrait-scene" id="portrait-scene">
+      <span class="portrait-halo" aria-hidden="true"></span>
+      <span class="portrait-orbit" aria-hidden="true"></span>
+      <img class="portrait-figure" src="/v2/crossed-arms.webp" width="520" height="505" fetchpriority="high" decoding="async" alt="Cinematic portrait of Devon Akins with his arms crossed">
+      <span class="portrait-vignette" aria-hidden="true"></span>
     </div>
     <header class="topbar">
       <a class="brand" href="/" aria-label="Devon Akins — production website">
@@ -105,10 +108,10 @@
       </main>
       <aside class="telemetry" aria-label="Interface information">
         <div class="telemetry-top"><span>OBSERVATORY <span class="muted">/ 01</span></span><span class="telemetry-cross" aria-hidden="true">+</span></div>
-        <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img src="/brand-mark-mono.svg" alt="" width="42" height="40"></div>
+        <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img class="portrait-mini" src="/v2/crossed-arms.webp" alt="" width="72" height="72" loading="lazy"></div>
         <div class="telemetry-readout"><span class="readout-kicker">PERSONAL DATA / OPTIONAL</span><h2>Usage signal</h2><p class="readout-value" id="usage-value">—</p><p class="readout-status" id="usage-status" role="status" aria-live="polite">No verified snapshot connected.</p><p class="readout-date" id="usage-date">No publication date</p><button type="button" id="refresh-usage" class="refresh-button">Check snapshot <span aria-hidden="true">↻</span></button></div>
         <p class="telemetry-note">Only dated, owner-published figures appear here. This preview does not access private ChatGPT sessions or imply live account access.</p>
-        <div class="telemetry-bottom"><span>VISUAL ENGINE</span><button type="button" class="engine-button" id="turn-scene" aria-label="Rotate identity artwork">ROTATE MARK</button><span id="scene-caption" class="engine-status">VECTOR FALLBACK</span></div>
+        <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" aria-label="Cycle portrait lighting">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
       </aside>
     </div>
     <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>

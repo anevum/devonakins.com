@@ -11,9 +11,10 @@ Status: **isolated source preview**. This is not the production homepage. The ex
 - Responsive horizontal navigation on phones; vertical navigation on desktop.
 - Keyboard Arrow/Home/End navigation, visible focus, appropriate tab/tabpanel
   semantics, reduced-motion preference, skip link, and no-JavaScript escape.
-- Reuses the original local Three.js DA scene behind the interface if WebGL2
-  is available. Fallback is local vector artwork; force it with
-  \`/v2/?render=fallback\`.
+- Crossed-arms cinematic portrait replaces the large DA hero centerpiece; only the small
+  original DA identity in the header remains. The portrait is a local compressed WebP.
+- CSS-only layered colored smoke, portrait halo and three-state lighting control
+  replace the preview WebGL background; the legacy site\u0027s Three.js scene remains untouched.
 - No external fonts, third-party trackers, credentials, analytics, or private
   integrations. This is a personal presentation, not an authenticated workspace.
 
@@ -58,7 +59,7 @@ npm test
 
 These must pass at the actual PR head. Follow up with a device/browser QA pass,
 including 320, 375, 390, 768, 1024, and 1440 px widths, iOS Safari safe
-areas, keyboard panel switching, WebGL fallback, reduced motion, and tab focus.
+areas, keyboard panel switching, portrait visibility and contrast, reduced motion, lighting toggle, and tab focus.
 The browser's WebGL result is environment-dependent. No production release or
 reported Lighthouse metric is implied by green unit/CI tests.
 

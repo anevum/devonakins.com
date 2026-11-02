@@ -137,6 +137,10 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
   assert.match(html, /<nav class="rail" role="tablist"/);
   assert.match(html, /id="interface-shell"/);
+  assert.match(html, /class="portrait-figure"/);
+  assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
+  assert.match(html, /id="shift-light"/);
+  assert.doesNotMatch(html, /id="scene"/);
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /<main id="main"/);
   for (const view of ["home", "work", "writing", "research", "contact"]) {
@@ -147,6 +151,13 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
+  const portrait = await get("/v2/crossed-arms.webp");
+  assert.equal(portrait.status, 200);
+  assert.equal(portrait.headers.get("Content-Type"), "image/webp");
+  const portraitBytes = new Uint8Array(await portrait.arrayBuffer());
+  assert.deepEqual([...portraitBytes.slice(0, 4)], [82, 73, 70, 70]);
+  assert.equal(new TextDecoder().decode(portraitBytes.slice(8, 12)), "WEBP");
+  assert.ok(portraitBytes.byteLength < 150000, "portrait must stay lightweight");
   const cssResponse = await get("/v2/terminal.css");
   assert.equal(cssResponse.status, 200);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
