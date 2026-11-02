@@ -146,5 +146,19 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /No verified snapshot connected/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
+
+  const cssResponse = await get("/v2/terminal.css");
+  assert.equal(cssResponse.status, 200);
+  assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
+  assert.match(await cssResponse.text(), /\.interface-shell/);
+  const mainHtml = await (await get("/")).text();
+  assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
+  const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
+  assert.ok(legacyCss.length > 0, "legacy stylesheet should still be present");
+  for (const match of legacyCss) {
+    const response = await get(match[1]);
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(await response.text(), /\.interface-shell/, "preview CSS must not inflate legacy CSS");
+  }
   assert.equal((await get("/v2")).status, 308);
 });
