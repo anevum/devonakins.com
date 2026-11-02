@@ -24,7 +24,7 @@ const tablist = document.querySelector<HTMLElement>(".rail[role='tablist']");
 const announcement = document.querySelector<HTMLElement>("#announcement");
 const motionButton = document.querySelector<HTMLButtonElement>("#motion-toggle");
 const clock = document.querySelector<HTMLTimeElement>("#system-clock");
-const lightButton = document.querySelector<HTMLButtonElement>("#shift-light");
+const lightButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-light-control]")];
 const engineStatus = document.querySelector<HTMLElement>("#scene-caption");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -55,6 +55,16 @@ function validView(name: string | undefined | null): name is string {
   return Boolean(name && panelByName.has(name) && tabs.some((tab) => tab.dataset.viewTarget === name));
 }
 
+// URL fragments are untrusted input. A malformed %-escape must not break navigation.
+function viewFromLocation(): string | null {
+  try {
+    const name = decodeURIComponent(location.hash.slice(1));
+    return validView(name) ? name : null;
+  } catch {
+    return null;
+  }
+}
+
 function activate(name: string, focus: "tab" | "panel" | "none" = "none", updateHash = true) {
   if (!validView(name)) return;
   interfaceShell.dataset.view = name;
@@ -65,7 +75,8 @@ function activate(name: string, focus: "tab" | "panel" | "none" = "none", update
   }
   for (const [key, panel] of panelByName) panel.hidden = key !== name;
   if (updateHash && location.hash !== "#" + name) {
-    history.replaceState(null, "", "#" + name);
+    // Preserve Back/Forward history when navigating between interface sections.
+    history.pushState(null, "", "#" + name);
   }
   if (focus === "tab") tabs.find((tab) => tab.dataset.viewTarget === name)?.focus();
   if (focus === "panel") panelByName.get(name)?.focus();
@@ -90,11 +101,15 @@ for (const tab of tabs) {
 document.querySelectorAll<HTMLButtonElement>(".action[data-view-target]").forEach((button) => {
   button.addEventListener("click", () => activate(button.dataset.viewTarget!, "panel"));
 });
-window.addEventListener("hashchange", () => {
-  const name = decodeURIComponent(location.hash.slice(1));
-  if (validView(name)) activate(name, "none", false);
-});
-activate(validView(location.hash.slice(1)) ? location.hash.slice(1) : "home", "none", false);
+function syncLocationView() {
+  const name = viewFromLocation();
+  if (name) activate(name, "none", false);
+  else if (!location.hash) activate("home", "none", false);
+  // Non-panel fragments, such as #main, remain valid native anchor targets.
+}
+window.addEventListener("hashchange", syncLocationView);
+window.addEventListener("popstate", syncLocationView);
+activate(viewFromLocation() ?? "home", "none", false);
 
 const navLayout = matchMedia("(max-width: 960px)");
 function syncOrientation() {
@@ -233,13 +248,24 @@ document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("c
 
 // Lighting changes are a purely local visual preference. No network or GPU calls.
 const portraitLights = ["amber", "teal", "violet"] as const;
-lightButton?.addEventListener("click", () => {
-  const index = portraitLights.indexOf(interfaceShell.dataset.light as typeof portraitLights[number]);
-  const next = portraitLights[(index + 1) % portraitLights.length];
-  interfaceShell.dataset.light = next;
-  if (engineStatus) engineStatus.textContent = next.toUpperCase() + " / EDITORIAL";
-  announce("Portrait lighting: " + next + ".");
-});
+function syncLightControls() {
+  const current = interfaceShell.dataset.light ?? "amber";
+  for (const button of lightButtons) {
+    button.setAttribute("aria-label", "Cycle portrait lighting. Current: " + current);
+    button.title = "Portrait lighting: " + current;
+  }
+  if (engineStatus) engineStatus.textContent = current.toUpperCase() + " / EDITORIAL";
+}
+syncLightControls();
+for (const button of lightButtons) {
+  button.addEventListener("click", () => {
+    const index = portraitLights.indexOf(interfaceShell.dataset.light as typeof portraitLights[number]);
+    const next = portraitLights[(index + 1) % portraitLights.length];
+    interfaceShell.dataset.light = next;
+    syncLightControls();
+    announce("Portrait lighting: " + next + ".");
+  });
+}
 
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;

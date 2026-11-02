@@ -33,7 +33,7 @@
         <span class="brand-words"><strong>DEVON ALAN AKINS</strong><small>PERSONAL INTERFACE <span class="topbar-version">/ V2 PREVIEW</span></small></span>
       </a>
       <div class="topbar-center" aria-hidden="true"><span class="line"></span>EST. 1993<span class="line"></span></div>
-      <div class="topbar-right"><span class="system-dot" aria-hidden="true"></span><span class="system-word">SYSTEM ONLINE</span><time id="system-clock" aria-label="Local device time">--:--</time></div>
+      <div class="topbar-right"><button type="button" class="mobile-light" id="mobile-light" data-light-control aria-label="Cycle portrait lighting. Current: amber" title="Portrait lighting"><span class="mobile-light-orb" aria-hidden="true"></span></button><span class="system-dot" aria-hidden="true"></span><span class="system-word">SYSTEM ONLINE</span><time id="system-clock" aria-label="Local device time">--:--</time></div>
     </header>
     <div class="body-grid">
       <nav class="rail" role="tablist" aria-label="Interface sections" aria-orientation="vertical">
@@ -111,7 +111,7 @@
         <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img class="portrait-mini" src="/v2/crossed-arms.webp" alt="" width="72" height="72" loading="lazy"></div>
         <div class="telemetry-readout"><span class="readout-kicker">PERSONAL DATA / OPTIONAL</span><h2>Usage signal</h2><p class="readout-value" id="usage-value">—</p><p class="readout-status" id="usage-status" role="status" aria-live="polite">No verified snapshot connected.</p><p class="readout-date" id="usage-date">No publication date</p><button type="button" id="refresh-usage" class="refresh-button">Check snapshot <span aria-hidden="true">↻</span></button></div>
         <p class="telemetry-note">Only dated, owner-published figures appear here. This preview does not access private ChatGPT sessions or imply live account access.</p>
-        <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" aria-label="Cycle portrait lighting">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
+        <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" data-light-control aria-label="Cycle portrait lighting. Current: amber">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
       </aside>
     </div>
     <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>

@@ -142,6 +142,8 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
   assert.match(html, /id="shift-light"/);
+  assert.match(html, /id="mobile-light" data-light-control/);
+  assert.match(html, /id="shift-light" data-light-control/);
   assert.doesNotMatch(html, /id="scene"/);
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /<main id="main"/);
@@ -173,9 +175,15 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(v2css, /\.hero-panel h1, \.section-panel h2, \.contact-link/);
   assert.doesNotMatch(v2css, /min-height:\s*390px/);
   assert.match(v2css, /prefers-contrast: more/);
+  assert.match(v2css, /\.mobile-light \{/);
+  assert.match(v2css, /\.rail-tab \{ min-height: 44px; \}/);
   assert.match(v2css, /\.hero-foot \{ max-width: 100%; flex-wrap: wrap;/);
   const client = await readFile("src/terminal.ts", "utf8");
   assert.match(client, /matchMedia\("\(max-width: 960px\)"\)/);
+  assert.match(client, /history\.pushState\(null, "", "#" \+ name\)/);
+  assert.match(client, /window\.addEventListener\("popstate", syncLocationView\)/);
+  assert.match(client, /function viewFromLocation\(\)/);
+  assert.match(client, /button\.setAttribute\("aria-label", "Cycle portrait lighting/);
   const mainHtml = await (await get("/")).text();
   assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
   const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];

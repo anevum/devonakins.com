@@ -384,3 +384,24 @@ h1, h2, p { margin-top: 0; }
 /* Keep the home descriptor in view when visitors enlarge text. */
 .hero-foot { max-width: 100%; flex-wrap: wrap; }
 .hero-foot > span { min-width: 0; overflow-wrap: anywhere; }
+
+
+/* The second portrait-light control keeps the same feature accessible on phones. */
+.mobile-light { display: none; border: 1px solid rgba(214, 198, 193, .26); background: rgba(29, 27, 34, .52); border-radius: 50%; cursor: pointer; padding: 0; align-items: center; justify-content: center; flex-shrink: 0; }
+.mobile-light-orb { display: block; width: 17px; height: 17px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #f2dccb, #bb8b72 39%, #5b3c43 73%); box-shadow: 0 0 13px rgba(218, 165, 125, .44); transition: background .2s, box-shadow .2s; }
+.interface-shell[data-light="teal"] .mobile-light-orb { background: radial-gradient(circle at 34% 28%, #daf6f1, #6aabb6 43%, #21445a 82%); box-shadow: 0 0 13px rgba(105, 205, 225, .46); }
+.interface-shell[data-light="violet"] .mobile-light-orb { background: radial-gradient(circle at 34% 28%, #efdef7, #9e7cc5 43%, #3a315b 82%); box-shadow: 0 0 13px rgba(176, 128, 217, .45); }
+@media(max-width: 960px) {
+  .mobile-light { display: flex; width: 42px; height: 42px; }
+  .rail-tab { min-height: 44px; }
+  .rail { flex-basis: 60px; }
+}
+@media(max-width: 460px) {
+  .topbar-right { gap: 5px; }
+  .rail { flex-basis: 54px; }
+  .mobile-light { width: 40px; height: 40px; }
+}
+@media(max-height: 380px) {
+  .rail { flex-basis: 47px; padding-block: 1px; }
+  .mobile-light { width: 36px; height: 36px; }
+}
