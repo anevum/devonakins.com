@@ -19,36 +19,50 @@ Status: **isolated source preview**. This is not the production homepage. The ex
 - No external fonts, third-party trackers, credentials, analytics, or private
   integrations. This is a personal presentation, not an authenticated workspace.
 
-## Optional usage-snapshot contract
+## Public ChatGPT activity observatory (owner-reported snapshot)
 
-There is **no live ChatGPT usage API connection** and **no figure is shipped**.
-The observatory begins with a dash and an honest unavailable status. On explicit
-click, it attempts a same-origin, optional static publication at
-\`/v2/usage-snapshot.json\`. A missing or malformed response is never displayed
-as a valid metric.
+The isolated V2 Observatory now displays an **approximately 2.6 billion lifetime
+Work/Codex tokens** value, as reported by Devon from his ChatGPT profile on
+November 2, 2026. This is **not** a measured live API total, a cumulative
+count of ordinary ChatGPT chat messages, a follower count or a measure of
+audience reach. It is intentionally marked approximate and dated.
 
-Only after Devon authorizes publication of a sourced public figure, an editor
-can add \`public/v2/usage-snapshot.json\` with this contract:
+The only source is the public, same-origin owner-published
+`public/v2/usage-snapshot.json` asset. The V2 preview retrieves it once on
+load and lets visitors explicitly refresh the file. It displays:
 
-\`\`\`json
+- the accessible **≈2.6B** result with the correct Work/Codex unit;
+- a visible abbreviated observation date and **Not live** status on phones;
+- the full date and source on larger displays.
+
+The actual public snapshot schema is:
+
+```json
 {
   "version": 1,
-  "metric": "tokens",
-  "count": 0,
+  "metric": "work-codex-tokens",
+  "count": 2600000000,
+  "approximate": true,
   "asOf": "2026-11-02",
-  "source": "Owner-maintained reporting record",
+  "source": "Owner-reported ChatGPT profile",
   "attestation": "owner-published"
 }
-\`\`\`
+```
 
-**This is a schema example, not a measurement.** \`count\` must be a
-nonnegative safe integer, \`asOf\` a real YYYY-MM-DD date not in the future,
-and \`source\` a short nonempty text (maximum 100 characters). User-supplied
-numbers should be identified as estimates. The UI explicitly states that
-the snapshot is not live tracking and makes no request until the button is
-pressed. Do not place API keys, account IDs, exports, or private metadata in
-the JSON or browser bundle. Do not scrape authenticated ChatGPT pages or use
-undocumented account endpoints.
+**Updating the number requires owner approval, a revised dated public JSON
+asset and a new site deployment.** Merely clicking Refresh reloads the latest
+published file; no counter increments between releases. The formatter
+requires known keys, a safe nonnegative integer, an actual date and the
+approximate marker. Missing/malformed/unavailable data restores an explicit
+unavailable state instead of showing stale numbers.
+
+No ChatGPT token, cookie, session identifier or account API is read from the
+visitor or the owner's browser. The site does not scrape a logged-in account.
+An official personal creator-profile stats API has not been verified and
+must not be inferred from OpenAI's separate developer API usage data.
+Future real social-platform public milestones need a separately sourced,
+consented, privacy-reviewed publication pipeline. No social metrics are
+fabricated in this increment.
 
 ## Build and tests
 
