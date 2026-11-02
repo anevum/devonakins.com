@@ -405,3 +405,8 @@ h1, h2, p { margin-top: 0; }
   .rail { flex-basis: 47px; padding-block: 1px; }
   .mobile-light { width: 44px; height: 44px; }
 }
+
+/* Public activity: a readable, dated owner-reported figure, never a faux-live gauge. */
+.telemetry-readout .readout-value { color: #f2c7a9; text-shadow: 0 0 34px rgba(225, 163, 126, .19); }
+.telemetry-readout .readout-date { overflow-wrap: anywhere; }
+.telemetry-readout .readout-kicker { color: #e4b594; }
