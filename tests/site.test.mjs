@@ -168,6 +168,10 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(v2css, /@media\(max-width: 960px\)/);
   assert.match(v2css, /max-height: 640px/);
   assert.match(v2css, /safe-area-inset-top/);
+  assert.match(v2css, /height: 100dvh; min-height: 0;/);
+  assert.match(v2css, /@media \(max-height: 380px\)/);
+  assert.match(v2css, /\.hero-panel h1, \.section-panel h2, \.contact-link/);
+  assert.doesNotMatch(v2css, /min-height:\s*390px/);
   assert.match(v2css, /prefers-contrast: more/);
   const client = await readFile("src/terminal.ts", "utf8");
   assert.match(client, /matchMedia\("\(max-width: 960px\)"\)/);

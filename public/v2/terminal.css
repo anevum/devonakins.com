@@ -22,7 +22,7 @@ button, a { touch-action: manipulation; }
 [hidden] { display: none !important; }
 .skip { position: absolute; top: -10rem; left: 1rem; z-index: 50; background: #fff; color: #111; padding: 12px 18px; }
 .skip:focus { top: 1rem; }
-.interface-shell { position: relative; width: 100%; height: 100vh; height: 100dvh; min-height: 390px; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: grid; grid-template-rows: 76px minmax(0, 1fr) 42px; overflow: hidden; isolation: isolate; background: radial-gradient(ellipse at 75% 50%, rgba(32, 38, 54, .47), transparent 45%), #07090f; }
+.interface-shell { position: relative; width: 100%; height: 100vh; height: 100dvh; min-height: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: grid; grid-template-rows: 76px minmax(0, 1fr) 42px; overflow: hidden; isolation: isolate; background: radial-gradient(ellipse at 75% 50%, rgba(32, 38, 54, .47), transparent 45%), #07090f; }
 .interface-shell::before { content: ""; position: absolute; z-index: 2; pointer-events: none; inset: 0; border: 1px solid rgba(211, 207, 215, .09); }
 .atmosphere { position: absolute; pointer-events: none; inset: 0; z-index: -1; overflow: hidden; }
 .smoke { position: absolute; width: 72vw; height: 90vh; min-width: 460px; min-height: 440px; border-radius: 50%; opacity: .52; filter: blur(64px); will-change: transform; animation: vapor-drift 24s ease-in-out infinite alternate; }
@@ -360,3 +360,23 @@ h1, h2, p { margin-top: 0; }
   .rail-tab { color: #f3f3f3; }
   .action-quiet { background: #202734; }
 }
+
+/* iOS landscape / extreme browser chrome heights: keep navigation visible. */
+@media (max-height: 380px) {
+  .interface-shell { grid-template-rows: 48px minmax(0, 1fr) 25px; }
+  .topbar { padding-inline: 12px; }
+  .rail { flex-basis: 43px; }
+  .telemetry { flex-basis: 46px; padding-block: 5px; }
+  .telemetry-readout h2, .readout-date { display: none; }
+  .telemetry-readout { align-content: center; }
+  .panel-inner { justify-content: flex-start; padding-block: 18px; }
+  .hero-overline { margin-top: 15px; }
+  .hero-foot { margin-top: 18px; }
+}
+/* Reflow long headings, contact details and cards within the active panel. */
+.panel-inner { min-width: 0; width: 100%; }
+.eyebrow { flex-wrap: wrap; }
+.hero-panel h1, .section-panel h2, .contact-link { max-width: 100%; overflow-wrap: anywhere; }
+.hero-description, .section-intro, .section-note, .work-card, .world-card, .research-matrix { min-width: 0; overflow-wrap: anywhere; }
+.hero-actions { max-width: 100%; }
+.action { min-width: 0; }

@@ -75,3 +75,38 @@ merged PR #5. Retain an identified rollback version before any actual cutover.
 ## Tablet/compact viewport acceptance
 
 The preview header logo selects the preview Home panel (rather than silently navigating to the existing public site); Contact includes an explicit link back to the public website. Navigation switches to a horizontal bottom rail at 960px and below and keeps matching `aria-orientation`. The layout has viewport-safe-area padding and an enhanced-contrast fallback. At 320×568 CSS pixels, the hero title, description, and both primary actions fit without inner-panel scrolling at the default text size. Accessibility settings and larger type may require accessible pane-local scrolling instead of clipping. Physical iOS Safari still needs on-device verification.
+
+## Very short viewports and browser zoom
+
+The interface uses `100dvh` without a 390px minimum. At usable viewport
+heights below 380px (for example, a phone in landscape with browser chrome),
+the navigation rail and footer remain inside the viewport and active content
+scrolls inside its panel. Headings, contact links, and cards reflow rather than
+requiring horizontal scrolling within the panel. Large text may require
+vertical scrolling; do not suppress it or shrink accessibility text globally.
+
+Verification target: 568×300, 667×320, 844×320, 320×320, 320×568,
+390×844, 761×900, and 1440×900 in an offline Chromium artifact. Test
+tab switches and the panel's scrollability. WebKit/Safari is a distinct
+unverified gate: the available local environment does not provide a WebKit
+browser binary. This must not be presented as physical iPhone acceptance.
+
+## Production rollback and cutover checklist
+
+Do not publish from this draft automatically. Record the **observed active**
+Cloudflare Worker deployment and 100%-active version in the private operations
+checkpoint, along with the source commit matching that version; these may
+change before cutover. On release day, re-query deployments and custom domains,
+confirm no unrelated worker changes, note the currently active version as the
+rollback candidate, and verify a prior version remains deployable. Prepare the
+release only from an exact green PR head after visual, accessibility and owner
+publication sign-off.
+
+After an approved deployment, validate `/`, `/work/`, `/v2/`, `/_health`,
+404, canonical `www` redirection, security response headers, and actual
+portrait/media assets over HTTPS. If the live site breaks, restore the
+**verified immediate prior active version** using the Cloudflare version
+deployment controls (not a guessed or unrelated version) and recheck those
+routes. Do not treat green CI, PR merge or a deploy request as proof of a
+successful production release. Never put credentials or private deployment
+inventory in the public repository.
