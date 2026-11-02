@@ -92,6 +92,35 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
             assert page.locator("#motion-toggle").is_disabled(), "reduced motion ignored"
+            # Public stats are an owner-reported dated snapshot, not a live API or follower total.
+            if origin:
+                page.wait_for_function(
+                    'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                )
+                assert page.locator("#usage-value").inner_text() == "≈2.6B"
+                assert "Not live" in page.locator("#usage-status").inner_text()
+                assert "Nov 2, 2026" in page.locator("#usage-date").inner_text()
+                assert "Work and Codex tokens" in (
+                    page.locator("#usage-value").get_attribute("aria-label") or ""
+                )
+                if width == 390:
+                    # Network outage / invalid load must never leave a stale public number.
+                    page.route("**/v2/usage-snapshot.json", lambda route: route.abort())
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "—"'
+                    )
+                    assert "No verified public snapshot" in page.locator("#usage-status").inner_text()
+                    page.unroute("**/v2/usage-snapshot.json")
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                    )
+            else:
+                page.wait_for_function(
+                    'document.querySelector("#usage-status").textContent.includes("No verified public snapshot")'
+                )
+                assert page.locator("#usage-value").inner_text() == "—"
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {
