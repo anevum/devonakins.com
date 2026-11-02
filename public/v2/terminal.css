@@ -410,3 +410,22 @@ h1, h2, p { margin-top: 0; }
 .telemetry-readout .readout-value { color: #f2c7a9; text-shadow: 0 0 34px rgba(225, 163, 126, .19); }
 .telemetry-readout .readout-date { overflow-wrap: anywhere; }
 .telemetry-readout .readout-kicker { color: #e4b594; }
+
+/* Observatory source selector. Original panel geometry and reduced motion remain intact. */
+.signal-sources { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 11px 0 7px; }
+.signal-sources button { min-height: 34px; padding: 7px 10px; background: rgba(12, 18, 28, .64); border: 1px solid rgba(194, 204, 218, .26); border-radius: 7px; color: #b6c1cc; font-size: 10px; cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.signal-sources button:hover { border-color: rgba(225, 177, 143, .8); }
+.signal-sources button[aria-pressed="true"] { border-color: rgba(228, 181, 149, .86); background: rgba(204, 139, 97, .17); color: #ffe0c8; }
+.signal-link { display: inline-flex; align-items: center; gap: 9px; margin-top: 12px; color: #e6b896; font-size: 10px; text-decoration: underline; text-underline-offset: 4px; }
+.telemetry-readout .readout-value { overflow-wrap: anywhere; }
+@media(max-width:960px) {
+  .signal-sources { grid-column: 1; grid-row: 1/3; align-self: center; gap: 4px; margin: 0; }
+  .signal-sources button { min-height: 44px; padding: 7px 9px; font-size: 10px; }
+  .telemetry-readout .readout-kicker, .telemetry-readout h2, .signal-link { display: none; }
+}
+@media(max-width:460px) {
+  .signal-sources button { padding-inline: 7px; font-size: 9px; }
+}
+@media(max-height:640px) {
+  .signal-sources button { min-height: 34px; padding-block: 4px; }
+}
