@@ -29,11 +29,12 @@ jobs:
       - run: npm run build
       - run: npm test
 
-      - name: Install pinned cross-browser test runtime (PR only)
+      - name: Install pinned Python Playwright package (PR only)
         if: github.event_name == 'pull_request'
-        run: |
-          python3 -m pip install --disable-pip-version-check playwright==1.57.0
-          python3 -m playwright install --with-deps chromium webkit
+        run: python3 -m pip install --disable-pip-version-check playwright==1.57.0
+      - name: Install Chromium and WebKit browser engines (PR only)
+        if: github.event_name == 'pull_request'
+        run: python3 -m playwright install --with-deps chromium webkit
       - name: Verify V2 navigation, touch targets and WCAG in Chromium and WebKit (PR only)
         if: github.event_name == 'pull_request'
         run: python3 tests/browser_acceptance.py --axe --out browser-qa
