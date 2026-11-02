@@ -251,7 +251,8 @@ async function checkUsage() {
   }
 }
 document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
-// Read only the owner-published public snapshot once per visit; no private API or telemetry.\nvoid checkUsage();
+// Read only the owner-published public snapshot once per visit; no private API or telemetry.
+void checkUsage();
 
 // Lighting changes are a purely local visual preference. No network or GPU calls.
 const portraitLights = ["amber", "teal", "violet"] as const;
