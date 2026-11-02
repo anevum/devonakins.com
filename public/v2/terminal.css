@@ -399,9 +399,9 @@ h1, h2, p { margin-top: 0; }
 @media(max-width: 460px) {
   .topbar-right { gap: 5px; }
   .rail { flex-basis: 54px; }
-  .mobile-light { width: 40px; height: 40px; }
+  .mobile-light { width: 44px; height: 44px; }
 }
 @media(max-height: 380px) {
   .rail { flex-basis: 47px; padding-block: 1px; }
-  .mobile-light { width: 36px; height: 36px; }
+  .mobile-light { width: 44px; height: 44px; }
 }

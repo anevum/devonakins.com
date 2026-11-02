@@ -118,6 +118,5 @@ previous tabs; a direct `#work` link remains supported. Malformed URL fragments
 and unrelated native anchors (such as `#main` for the skip link) do not throw
 or hijack navigation. Both desktop and mobile lighting controls share the same
 three-stage portrait palette, update their accessible labels, and announce the
-selected state. Mobile navigation tabs retain a minimum 44px tall hit target
-apart from the extreme short-landscape density adjustment. This is still not
+selected state. Mobile navigation tabs retain a minimum 44px tall hit target (except the short-landscape rail at 44px due to its fixed display geometry). The mobile portrait-light control has a 44×44px tap target at all viewport widths, including landscape. This is still not
 a substitute for physical iPhone VoiceOver/Safari acceptance.
