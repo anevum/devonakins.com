@@ -163,8 +163,8 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   const cssResponse = await get("/v2/terminal.css");
   assert.equal(cssResponse.status, 200);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
-  assert.match(await cssResponse.text(), /\.interface-shell/);
-  const v2css = await cssResponse.clone().text();
+  const v2css = await cssResponse.text();
+  assert.match(v2css, /\.interface-shell/);
   assert.match(v2css, /@media\(max-width: 960px\)/);
   assert.match(v2css, /max-height: 640px/);
   assert.match(v2css, /safe-area-inset-top/);
