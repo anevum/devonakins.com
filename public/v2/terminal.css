@@ -380,3 +380,7 @@ h1, h2, p { margin-top: 0; }
 .hero-description, .section-intro, .section-note, .work-card, .world-card, .research-matrix { min-width: 0; overflow-wrap: anywhere; }
 .hero-actions { max-width: 100%; }
 .action { min-width: 0; }
+
+/* Keep the home descriptor in view when visitors enlarge text. */
+.hero-foot { max-width: 100%; flex-wrap: wrap; }
+.hero-foot > span { min-width: 0; overflow-wrap: anywhere; }

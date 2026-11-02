@@ -173,6 +173,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(v2css, /\.hero-panel h1, \.section-panel h2, \.contact-link/);
   assert.doesNotMatch(v2css, /min-height:\s*390px/);
   assert.match(v2css, /prefers-contrast: more/);
+  assert.match(v2css, /\.hero-foot \{ max-width: 100%; flex-wrap: wrap;/);
   const client = await readFile("src/terminal.ts", "utf8");
   assert.match(client, /matchMedia\("\(max-width: 960px\)"\)/);
   const mainHtml = await (await get("/")).text();
