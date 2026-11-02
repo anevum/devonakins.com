@@ -12,6 +12,16 @@ type UsageSnapshot = {
   source: string;
   attestation: "owner-published";
 };
+type GitHubPublicSignal = {
+  version: 1;
+  account: "anevum";
+  metric: "public-repositories";
+  count: number;
+  asOf: string;
+  source: "GitHub REST API";
+  attestation: "public-provider-response";
+};
+type SignalSource = "chatgpt" | "github";
 
 const shell = document.querySelector<HTMLElement>("#interface-shell");
 const tabs = [...document.querySelectorAll<HTMLButtonElement>('.rail-tab[role="tab"]')];
@@ -36,7 +46,8 @@ if (!shell || !tabs.length || !tablist) {
 const interfaceShell = shell;
 let announcementTimer = 0;
 let motionWanted = true;
-let polling = false;
+let activeSignal: SignalSource = "chatgpt";
+let signalSequence = 0;
 
 try {
   motionWanted = localStorage.getItem("devon-v2-motion") !== "off";
@@ -218,40 +229,126 @@ function showUsage(snapshot: UsageSnapshot) {
   if (status) status.textContent = shortDate + " · Not live";
   if (date) date.textContent = "As of " + observed + " · " + snapshot.source.trim() + " · Approximate";
 }
-async function checkUsage() {
-  if (polling) return;
-  const button = document.querySelector<HTMLButtonElement>("#refresh-usage");
+function parseGitHubSignal(input: unknown): GitHubPublicSignal {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid GitHub public response");
+  const value = input as Record<string, unknown>;
+  if (
+    Object.keys(value).sort().join(",") !== "account,asOf,attestation,count,metric,source,version" ||
+    value.version !== 1 || value.account !== "anevum" ||
+    value.metric !== "public-repositories" ||
+    value.source !== "GitHub REST API" ||
+    value.attestation !== "public-provider-response" ||
+    typeof value.count !== "number" || !Number.isSafeInteger(value.count) ||
+    value.count < 0 || value.count > 1_000_000 ||
+    typeof value.asOf !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.asOf)
+  ) throw new Error("Invalid GitHub public response");
+  const timestamp = Date.parse(value.asOf);
+  if (!Number.isFinite(timestamp) || timestamp > Date.now() + 300_000 ||
+      Date.now() - timestamp > 3_900_000) throw new Error("Stale GitHub public response");
+  return value as GitHubPublicSignal;
+}
+function showGitHubSignal(snapshot: GitHubPublicSignal) {
+  const count = document.querySelector<HTMLElement>("#usage-value");
   const status = document.querySelector<HTMLElement>("#usage-status");
   const date = document.querySelector<HTMLElement>("#usage-date");
-  polling = true;
+  const observed = new Date(snapshot.asOf);
+  if (count) {
+    count.textContent = new Intl.NumberFormat("en-US").format(snapshot.count);
+    count.setAttribute("aria-label", snapshot.count.toLocaleString("en-US") +
+      " public repositories under the anevum GitHub account, observed " + snapshot.asOf);
+  }
+  const timeLabel = observed.toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+  });
+  if (status) status.textContent = timeLabel + " UTC · Cached";
+  if (date) date.textContent = "Updated " + observed.toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric", hour: "2-digit",
+    minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
+  }) + " · " + snapshot.source;
+}
+async function refreshSignal() {
+  const sequence = ++signalSequence;
+  const source = activeSignal;
+  const button = document.querySelector<HTMLButtonElement>("#refresh-usage");
+  const value = document.querySelector<HTMLElement>("#usage-value");
+  const status = document.querySelector<HTMLElement>("#usage-status");
+  const date = document.querySelector<HTMLElement>("#usage-date");
   if (button) button.disabled = true;
   try {
-    // Optional owner-maintained public file, never a private account API.
-    const response = await fetch("/v2/usage-snapshot.json", {
+    // A same-origin public file for ChatGPT, a first-party cached Worker for GitHub.
+    // Neither request includes private account credentials or browser session data.
+    const endpoint = source === "chatgpt" ?
+      "/v2/usage-snapshot.json" : "/v2/github-profile.json";
+    const response = await fetch(endpoint, {
       cache: "no-store",
       credentials: "omit",
-      headers: { Accept: "application/json" },
+      headers: {Accept: "application/json"},
     });
-    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json")) {
-      throw new Error("Snapshot unavailable");
-    }
-    const snapshot = parseSnapshot(await response.json());
-    showUsage(snapshot);
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json"))
+      throw new Error("Public signal unavailable");
+    const payload: unknown = await response.json();
+    const verified = source === "chatgpt" ? parseSnapshot(payload) : parseGitHubSignal(payload);
+    if (sequence !== signalSequence) return;
+    if (source === "chatgpt") showUsage(verified as UsageSnapshot);
+    else showGitHubSignal(verified as GitHubPublicSignal);
   } catch {
-    const count = document.querySelector<HTMLElement>("#usage-value");
-    if (count) {
-      count.textContent = "—";
-      count.removeAttribute("aria-label");
+    if (sequence !== signalSequence) return;
+    if (value) {
+      value.textContent = "—";
+      value.removeAttribute("aria-label");
     }
-    if (status) status.textContent = "No verified public snapshot available.";
-    if (date) date.textContent = "No tokens or account data were retrieved.";
+    if (status) status.textContent = source === "chatgpt" ?
+      "No verified public snapshot available." : "GitHub public data unavailable.";
+    if (date) date.textContent = source === "chatgpt" ?
+      "No tokens or account data were retrieved." :
+      "GitHub could not be reached or its public data was invalid.";
   } finally {
-    polling = false;
-    if (button) button.disabled = false;
+    if (sequence === signalSequence && button) button.disabled = false;
   }
 }
+function checkUsage() { return refreshSignal(); }
+function selectSignal(source: SignalSource) {
+  if (source === activeSignal) return;
+  activeSignal = source;
+  signalSequence++;
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-signal]"))
+    button.setAttribute("aria-pressed", String(button.dataset.signal === source));
+  const isGitHub = source === "github";
+  const kicker = document.querySelector<HTMLElement>("#signal-kicker");
+  const title = document.querySelector<HTMLElement>("#signal-title");
+  const status = document.querySelector<HTMLElement>("#usage-status");
+  const date = document.querySelector<HTMLElement>("#usage-date");
+  const value = document.querySelector<HTMLElement>("#usage-value");
+  const note = document.querySelector<HTMLElement>("#signal-note");
+  const link = document.querySelector<HTMLAnchorElement>("#signal-link");
+  const button = document.querySelector<HTMLButtonElement>("#refresh-usage");
+  if (kicker) kicker.textContent = isGitHub ? "GITHUB / OPEN SOURCE" : "CHATGPT / WORK + CODEX";
+  if (title) title.textContent = isGitHub ? "Public repositories" : "Activity in public";
+  if (note) note.textContent = isGitHub ?
+    "Public repositories on github.com/anevum. First-party proxy, hourly cache and visible observation time. No visitor data is sent to GitHub." :
+    "A dated, approximate Work/Codex token total from my ChatGPT profile—not a live feed, follower count, or measure of audience reach. No private account connection.";
+  if (link) link.hidden = !isGitHub;
+  if (button) {
+    button.disabled = false;
+    button.textContent = "Refresh snapshot ↻";
+  }
+  if (value) { value.textContent = "—"; value.removeAttribute("aria-label"); }
+  if (status) status.textContent = "Loading public " + (isGitHub ? "GitHub signal…" : "ChatGPT snapshot…");
+  if (date) date.textContent = isGitHub ? "Public repository count, not a contribution count." :
+    "Work and Codex tokens · owner-reported";
+  void refreshSignal();
+}
+document.querySelectorAll<HTMLButtonElement>("[data-signal]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.dataset.signal === "chatgpt" || button.dataset.signal === "github")
+      selectSignal(button.dataset.signal);
+  });
+});
 document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
-// Read only the owner-published public snapshot once per visit; no private API or telemetry.
+// Read only the owner-published public ChatGPT snapshot once per visit.
+// GitHub is fetched on demand; no third-party browser requests.
 void checkUsage();
 
 // Lighting changes are a purely local visual preference. No network or GPU calls.
