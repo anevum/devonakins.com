@@ -60,6 +60,7 @@ await writeFile(
   "export default " + JSON.stringify(assets) + ";\n",
 );
 await writeFile(".release/handler.mjs", await readFile("src/worker.mjs"));
+await writeFile(".release/public-github.mjs", await readFile("src/public-github.mjs"));
 await writeFile(
   ".release/worker.mjs",
   `import assets from './assets.mjs';import {createHandler} from './handler.mjs';export default createHandler(assets,${JSON.stringify(release)});\n`,
