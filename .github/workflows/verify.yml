@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Pinned: Playwright 1.57 browser builds do not support Ubuntu 26.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,3 +28,30 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+
+      - name: Install pinned Python Playwright package (PR only)
+        if: github.event_name == 'pull_request'
+        run: python3 -m pip install --disable-pip-version-check playwright==1.57.0
+      - name: Install Chromium and WebKit browser engines (PR only)
+        if: github.event_name == 'pull_request'
+        run: python3 -m playwright install --with-deps chromium webkit
+      - name: Verify V2 navigation, touch targets and WCAG in Chromium and WebKit (PR only)
+        if: github.event_name == 'pull_request'
+        run: python3 tests/browser_acceptance.py --axe --out browser-qa
+      - name: Attach browser QA report or failing screenshots (PR only)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-qa
+          path: browser-qa/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Attach built site for visual review (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

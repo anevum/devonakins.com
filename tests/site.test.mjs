@@ -129,3 +129,74 @@ test("manifest has correctly sized PNG assets and a single-origin scope", async 
     assert.equal(dv.getUint32(20), h);
   }
 });
+
+test("V2 immersive preview is a noindex, accessible, internal-origin-only page", async () => {
+  const response = await get("/v2/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
+  assert.match(html, /<nav class="rail" role="tablist"/);
+  assert.match(html, /id="interface-shell"/);
+  assert.match(html, /class="brand" href="#home"/);
+  assert.doesNotMatch(html, /class="brand" href="#home" aria-label=/);
+  assert.match(html, /Current public website/);
+  assert.match(html, /class="portrait-figure"/);
+  assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
+  assert.match(html, /id="shift-light"/);
+  assert.match(html, /id="mobile-light" data-light-control/);
+  assert.match(html, /id="shift-light" data-light-control/);
+  assert.doesNotMatch(html, /id="scene"/);
+  assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /<main id="main"/);
+  for (const view of ["home", "work", "writing", "research", "contact"]) {
+    assert.match(html, new RegExp('id="tab-' + view + '"'));
+    assert.match(html, new RegExp('id="panel-' + view + '"'));
+  }
+  assert.match(html, /No verified snapshot connected/);
+  assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
+  assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
+
+  const portrait = await get("/v2/crossed-arms.webp");
+  assert.equal(portrait.status, 200);
+  assert.equal(portrait.headers.get("Content-Type"), "image/webp");
+  const portraitBytes = new Uint8Array(await portrait.arrayBuffer());
+  assert.deepEqual([...portraitBytes.slice(0, 4)], [82, 73, 70, 70]);
+  assert.equal(new TextDecoder().decode(portraitBytes.slice(8, 12)), "WEBP");
+  assert.ok(portraitBytes.byteLength < 150000, "portrait must stay lightweight");
+  const cssResponse = await get("/v2/terminal.css");
+  assert.equal(cssResponse.status, 200);
+  assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
+  const v2css = await cssResponse.text();
+  assert.match(v2css, /\.interface-shell/);
+  assert.match(v2css, /@media\(max-width: 960px\)/);
+  assert.match(v2css, /max-height: 640px/);
+  assert.match(v2css, /safe-area-inset-top/);
+  assert.match(v2css, /height: 100dvh; min-height: 0;/);
+  assert.match(v2css, /@media \(max-height: 380px\)/);
+  assert.match(v2css, /\.hero-panel h1, \.section-panel h2, \.contact-link/);
+  assert.doesNotMatch(v2css, /min-height:\s*390px/);
+  assert.match(v2css, /prefers-contrast: more/);
+  assert.match(v2css, /\.mobile-light \{/);
+  assert.match(v2css, /\.rail-tab \{ min-height: 44px; \}/);
+  assert.match(v2css, /\.mobile-light \{ width: 44px; height: 44px; \}/);
+  assert.match(v2css, /\.mobile-light \{ display: flex; width: 44px; height: 44px; \}/);
+  assert.match(v2css, /\.hero-foot \{ max-width: 100%; flex-wrap: wrap;/);
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /matchMedia\("\(max-width: 960px\)"\)/);
+  assert.match(client, /history\.pushState\(null, "", "#" \+ name\)/);
+  assert.match(client, /window\.addEventListener\("popstate", syncLocationView\)/);
+  assert.match(client, /function viewFromLocation\(\)/);
+  assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
+  assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
+  assert.match(client, /"Cycle portrait lighting\. Current: "/);
+  const mainHtml = await (await get("/")).text();
+  assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
+  const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
+  assert.ok(legacyCss.length > 0, "legacy stylesheet should still be present");
+  for (const match of legacyCss) {
+    const response = await get(match[1]);
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(await response.text(), /\.interface-shell/, "preview CSS must not inflate legacy CSS");
+  }
+  assert.equal((await get("/v2")).status, 308);
+});
