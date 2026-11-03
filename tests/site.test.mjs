@@ -293,3 +293,13 @@ test("deep links cannot produce a misleading fragment URL for a different panel"
   assert.match(source, /data-initial-view=/);
   assert.match(source, /renderImmersiveRoute/);
 });
+
+test("rendered public source and contact routes contain only current GitHub identity", async () => {
+  for (const route of ["/source/", "/contact/"]) {
+    const response = await get(route);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.doesNotMatch(html, /https:\/\/github\.com\/anevum(?:\/|["?#])/i, route);
+    assert.match(html, /https:\/\/github\.com\/devonalanakins/i, route);
+  }
+});
