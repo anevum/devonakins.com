@@ -6,6 +6,7 @@
 const REQUIRED = [
   'Purpose',
   'Scope and boundaries',
+  'Risk tier',
   'Acceptance evidence',
   'Negative cases',
   'Risks and unknowns',
@@ -54,9 +55,13 @@ export function validateContract(input) {
     const substantive=content.replace(/^[-*\s]+/gm,'').replace(/\[[ xX]\]/g,'').trim();
     if (!substantive || /^(?:n\/?a|none|tbd|todo|pending|\.\.\.|\[.*?\]|<.*?>)$/i.test(substantive)) {
       errors.push(`Incomplete section: ${label}.`);
-    } else if (label !== 'Release intent' && substantive.length < 15) {
+    } else if (!['Release intent','Risk tier'].includes(label) && substantive.length < 15) {
       errors.push(`Section needs a specific explanation: ${label}.`);
     }
+  }
+  const tier = sections.get('risk tier');
+  if (tier !== undefined && !/^(R0|R1|R2|R3)$/.test(tier)) {
+    errors.push('Risk tier must be exactly R0, R1, R2, or R3.');
   }
   const decision=sections.get('release intent');
   if (decision!==undefined) {
