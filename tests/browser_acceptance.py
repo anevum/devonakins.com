@@ -218,7 +218,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
               return {display: style.display, decoration: style.textDecorationLine,
                       border: parseFloat(style.borderTopWidth)};
             }""")
-            assert card_style["display"] == "flex" and card_style["decoration"] == "none", (
+            assert card_style["display"] == "grid" and card_style["decoration"] == "none", (
                 label, "Unstyled project link", card_style
             )
             assert card_style["border"] >= 1, (label, "Project card border missing", card_style)
@@ -241,6 +241,9 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator(".hero-feature-link").count() == 2
             assert page.locator(".focus-heading h2").inner_text() == "Active development"
             assert page.locator(".focus-project-state").all_inner_texts() == ["Active", "Research"]
+            assert page.locator(".focus-project-state").first.evaluate(
+                "el => ['inline-flex', 'flex'].includes(getComputedStyle(el).display)"
+            ), "Project status must retain its inline indicator layout"
             assert "ACTIVE ENGINEERING" not in featured.inner_text()
             assert "LANGUAGE RESEARCH / PROPOSED" not in featured.inner_text()
             assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"

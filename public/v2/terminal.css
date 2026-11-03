@@ -835,7 +835,7 @@ h1, h2, p { margin-top: 0; }
   letter-spacing: .09em;
   line-height: 1.4;
 }
-.focus-project-state {
+.hero-feature .focus-project-state {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
