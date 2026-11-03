@@ -1,0 +1,25 @@
+name: AIEI review contract
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  review-contract:
+    # Draft PRs are free to iterate; reviewers receive a checked description.
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # pull_request_target is used strictly for metadata; NEVER checkout the PR head.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check required review evidence fields
+        env:
+          AIEI_PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/aiei-pr-contract.mjs
