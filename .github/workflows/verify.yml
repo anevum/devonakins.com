@@ -28,6 +28,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: node --check scripts/verify-live.mjs
 
       - name: Install pinned Python Playwright package (PR only)
         if: github.event_name == 'pull_request'
