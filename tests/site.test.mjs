@@ -37,8 +37,8 @@ test("all public pages have genuine server-rendered content and canonical metada
 test("public GitHub references use the current account", async () => {
   for (const path of ["src/immersive-routes.mjs", "src/views.mjs", "v2/index.html"]) {
     const source = await readFile(new URL("../" + path, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /github\\.com\\/anevum(?:\\/|["'?&#]|$)/, path);
-    assert.match(source, /github\\.com\\/devonalanakins/, path);
+    assert.equal(source.includes("github.com/anevum"), false, path);
+    assert.equal(source.includes("github.com/devonalanakins"), true, path);
   }
 });
 test("removed demo content is not published", async () => {
