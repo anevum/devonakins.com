@@ -130,8 +130,20 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 }""")
                 raise AssertionError("Smoke animation did not engage: " + str(details)) from error
             first_transform = smoke.evaluate("el => getComputedStyle(el).transform")
-            page.wait_for_timeout(300)
-            assert smoke.evaluate("el => getComputedStyle(el).transform") != first_transform, "smoke is visually static"
+            # Headless GPU scheduling can delay a rendered frame; verify real
+            # progression rather than assuming one appears within 300ms.
+            try:
+                page.wait_for_function("""previous => {
+                    const el = document.querySelector('.smoke-amber');
+                    return getComputedStyle(el).transform !== previous;
+                }""", arg=first_transform, timeout=3000)
+            except Exception as error:
+                state = smoke.evaluate("""el => ({
+                    transform: getComputedStyle(el).transform,
+                    animation: getComputedStyle(el).animationName,
+                    state: el.getAnimations().map(a => ({playState:a.playState, currentTime:a.currentTime}))
+                })""")
+                raise AssertionError("Smoke failed to advance its animated transform: " + str(state)) from error
             motion.click()
             assert shell.get_attribute("data-motion") == "off"
             assert smoke.evaluate("el => getComputedStyle(el).animationName") == "none"
