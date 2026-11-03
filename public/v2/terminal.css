@@ -429,3 +429,20 @@ h1, h2, p { margin-top: 0; }
 @media(max-height:640px) {
   .signal-sources button { min-height: 34px; padding-block: 4px; }
 }
+
+/* Keep the expanded Observatory entirely above the statusbar at desktop heights. */
+@media (min-width:961px) and (max-height:920px) {
+  .telemetry { padding-block: 18px; }
+  .telemetry-ring { width: min(100%, 128px); margin: 13px auto 16px; }
+  .telemetry-readout { padding-top: 9px; }
+  .telemetry-readout h2 { margin-block: 7px; }
+  .telemetry-readout .readout-value { font-size: clamp(33px, 3.5vw, 47px); }
+  .readout-status, .readout-date { line-height: 1.4; }
+  .signal-sources { margin: 7px 0 3px; }
+  .refresh-button { margin-top: 9px; padding: 8px 10px; }
+  .telemetry-note { margin-top: 10px; line-height: 1.5; }
+  .telemetry-bottom { padding-top: 9px; gap: 7px; }
+}
+@media (min-width:961px) and (max-height:700px) {
+  .telemetry-ring, .telemetry-note { display:none; }
+}
