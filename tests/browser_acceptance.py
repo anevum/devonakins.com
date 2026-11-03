@@ -105,7 +105,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             motion.click()
             assert shell.get_attribute("data-motion") == "on"
             smoke = page.locator(".smoke-amber")
-            assert "vapor-wander" in smoke.evaluate("el => getComputedStyle(el).animationName")
+            page.wait_for_function("""() => {
+                const el = document.querySelector('.smoke-amber');
+                return el && getComputedStyle(el).animationName.includes('vapor-wander');
+            }""", timeout=2500)
             first_transform = smoke.evaluate("el => getComputedStyle(el).transform")
             page.wait_for_timeout(300)
             assert smoke.evaluate("el => getComputedStyle(el).transform") != first_transform, "smoke is visually static"
