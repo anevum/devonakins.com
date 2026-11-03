@@ -170,6 +170,17 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "horizontal" if width <= 960 else "vertical"
                 ), observed
 
+            # The first screen must preserve both owner-requested public signals.
+            featured = page.locator(".hero-feature")
+            usage = page.locator(".hero-usage")
+            assert featured.is_visible(), "AIEI/ISL highlights not visible"
+            assert usage.is_visible(), "dated ChatGPT activity not visible"
+            assert page.locator(".hero-feature-link").count() == 2
+            assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
+            assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
+            assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
+            assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
+            assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
             check_overflow("home")
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
@@ -234,6 +245,18 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "el => el.complete && el.naturalWidth > 0"
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
+                assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
+                assert page.locator(".hero-usage").is_visible(), "canonical GPT activity missing"
+                assert page.locator("#home-usage-value").inner_text() == "≈2.6B"
+                page.wait_for_function("""() => {
+                    const text = document.querySelector('#usage-status')?.textContent ?? '';
+                    return text.includes('Owner-reported estimate');
+                }""", timeout=7000)
+                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+                report = page.request.get(origin + "/v2/usage-snapshot.json")
+                assert report.status == 200, "snapshot endpoint failed"
+                assert "application/json" in report.headers.get("content-type", "")
+                assert report.json()["count"] == 2600000000
                 page.locator("#tab-writing").click()
                 assert page.locator("#panel-writing").is_visible()
                 if axe_source:
@@ -256,6 +279,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "/work/", "/source/", "/about/", "/contact/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
+                    "/work/aiei/", "/work/isl/", "/work/phatcake/",
+                    "/work/brandicade/", "/work/rhen/",
                 ]:
                     response = page.goto(origin + route, wait_until="load")
                     assert response and response.status == 200, route
@@ -266,7 +291,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     ), "portrait decode: " + route
                     assert not page.locator(".site-header").count(), route
                     check_overflow("deep link " + route)
-                    if axe_source and route in ["/work/", "/work/ideaflow/", "/contact/"]:
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/aiei/", "/work/isl/", "/contact/"]:
                         page.add_script_tag(content=axe_source)
                         link_violations = page.evaluate("""async () => {
                           const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];
