@@ -267,7 +267,7 @@ test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on h
 test("production verifier requires the exact built version and public snapshot", async () => {
   const verifier = await readFile("scripts/verify-live.mjs", "utf8");
   const release = JSON.parse(await readFile(".release/release.json", "utf8"));
-  assert.match(release.version, /^\\d+\\.\\d+\\.\\d+$/);
+  assert.match(release.version, /^\d+\.\d+\.\d+$/);
   assert.match(release.commit, /^[a-f0-9]{40}$/);
   assert.ok(verifier.includes('../.release/release.json'));
   assert.ok(verifier.includes('assert.equal(release.commit, expectedCommit'));
