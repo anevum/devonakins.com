@@ -49,6 +49,10 @@ assert.match(markup, /class="portrait-figure"/);
 assert.match(markup, /id="interface-shell"/);
 assert.doesNotMatch(markup, /V2 PREVIEW|name="robots" content="noindex/);
 assert.match(markup, /id="home-usage-value"/, "GPT activity is present in homepage HTML");
+assert.match(markup, /class="hero-feature" role="group"/, "AIEI and ISL homepage highlights");
+for (const path of ["/work/aiei/", "/work/isl/"]) {
+  assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
+}
 
 // Compare the public snapshot to the exact static artifact included in this
 // build. This verifies both the content and the Worker JSON response type.
@@ -68,6 +72,32 @@ for (const path of ["/v2/", "/work/", "/about/", "/source/", "/contact/"]) {
     assert.match(await response.text(), /name="robots" content="noindex,nofollow"/);
   }
 }
+// Portfolio release-specific acceptance: public project pages must be live,
+// indexable, canonically linked, and powered by the same immersive shell.
+// These routes and research boundaries must survive an actual Worker deploy.
+const portfolio = [
+  ["/work/aiei/", "AIEI"],
+  ["/work/isl/", "Intent Specification Language"],
+  ["/work/phatcake/", "Phatcake"],
+  ["/work/brandicade/", "Brandicade"],
+  ["/work/rhen/", "RHEN"],
+];
+for (const [path, title] of portfolio) {
+  const response = await request(path, { cache: "no-store" });
+  assert.equal(response.status, 200, path + " production status");
+  assert.match(response.headers.get("content-type") || "", /text\/html/, path + " HTML MIME");
+  const page = await response.text();
+  assert.ok(page.includes('rel="canonical" href="https://devonakins.com' + path + '"'),
+    path + " canonical metadata");
+  assert.match(page, /class="route-content"/, path + " immersive route content");
+  assert.match(page, /data-route-page="true"/, path + " immersive route shell");
+  assert.ok(page.includes(title), path + " title");
+  assert.doesNotMatch(page, /name="robots" content="noindex"/, path + " must be indexable");
+  if (path === "/work/isl/") {
+    assert.match(page, /Research concept/, "ISL research status");
+    assert.match(page, /not been implemented or demonstrated/, "ISL non-release disclosure");
+  }
+}
 const image = await request("/v2/crossed-arms.webp");
 assert.equal(image.status, 200, "portrait asset");
 assert.match(image.headers.get("content-type") || "", /image\/webp/);
@@ -83,4 +113,4 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
-console.log("Passed: canonical portrait, dated GPT snapshot JSON, security headers, legacy pages, noindex preview, image, 404 and www redirect");
+console.log("Passed: canonical portrait, AIEI/ISL featured links, five project routes and disclosures, dated GPT JSON, security headers, preview, image, 404 and www redirect");
