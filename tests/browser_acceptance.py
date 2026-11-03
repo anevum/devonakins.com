@@ -105,10 +105,30 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             motion.click()
             assert shell.get_attribute("data-motion") == "on"
             smoke = page.locator(".smoke-amber")
-            page.wait_for_function("""() => {
-                const el = document.querySelector('.smoke-amber');
-                return el && getComputedStyle(el).animationName.includes('vapor-wander');
-            }""", timeout=2500)
+            try:
+                page.wait_for_function("""() => {
+                    const el = document.querySelector('.smoke-amber');
+                    return el && getComputedStyle(el).animationName.includes('vapor-wander');
+                }""", timeout=2500)
+            except Exception as error:
+                details = page.evaluate("""() => {
+                  const el = document.querySelector('.smoke-amber');
+                  const shell = document.querySelector('#interface-shell');
+                  const style = getComputedStyle(el);
+                  return {
+                    motion: shell.dataset.motion,
+                    className: el.className,
+                    animationName: style.animationName,
+                    animationDuration: style.animationDuration,
+                    opacity: style.opacity,
+                    background: style.backgroundImage,
+                    stylesheets: [...document.styleSheets].map(s => ({
+                      href: s.href, rules: s.cssRules?.length,
+                      hasVapor: [...s.cssRules].some(r => r.cssText.includes('vapor-wander'))
+                    }))
+                  };
+                }""")
+                raise AssertionError("Smoke animation did not engage: " + str(details)) from error
             first_transform = smoke.evaluate("el => getComputedStyle(el).transform")
             page.wait_for_timeout(300)
             assert smoke.evaluate("el => getComputedStyle(el).transform") != first_transform, "smoke is visually static"
