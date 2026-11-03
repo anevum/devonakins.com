@@ -1,20 +1,19 @@
 name: AIEI review contract
 on:
-  pull_request_target:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
 permissions:
   contents: read
 jobs:
   review-contract:
-    # Draft PRs are free to iterate; reviewers receive a checked description.
-    if: ${{ !github.event.pull_request.draft }}
+    # Never skip drafts: a future required check must always report a result.
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      # pull_request_target is used strictly for metadata; NEVER checkout the PR head.
+      # PR code is untrusted. This job has no secrets, writable token, or deploy
+      # capability. The existing website CI also tests this pull-request ref.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
