@@ -329,7 +329,7 @@ test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on h
 
 test("current engineering showcase is prominently linked and status-qualified", async () => {
   const home = await (await get("/")).text();
-  assert.match(home, /class="hero-feature"/);
+  assert.match(home, /class="hero-feature" role="group" aria-label="Featured current projects"/);
   assert.match(home, /href="\/work\/aiei\/"/);
   assert.match(home, /href="\/work\/isl\/"/);
   assert.match(home, /ACTIVE ENGINEERING \/ OPEN SOURCE/);
