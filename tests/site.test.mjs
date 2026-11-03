@@ -34,6 +34,13 @@ test("all public pages have genuine server-rendered content and canonical metada
     );
   }
 });
+test("public GitHub references use the current account", async () => {
+  for (const path of ["src/immersive-routes.mjs", "src/views.mjs", "v2/index.html"]) {
+    const source = await readFile(new URL("../" + path, import.meta.url), "utf8");
+    assert.equal(source.includes("github.com/anevum"), false, path);
+    assert.equal(source.includes("github.com/devonalanakins"), true, path);
+  }
+});
 test("removed demo content is not published", async () => {
   for (const path of ["/lab/", "/work/field-instruments/", "/notes/a-model-is-a-question/"]) assert.equal((await get(path)).status,404,path);
   for (const path of ["/", "/work/", "/about/"]) { const text = await (await get(path)).text(); assert.doesNotMatch(text,/FIELD INSTRUMENT|Wave interference|Question machine|Superposition/i); }
@@ -285,4 +292,14 @@ test("deep links cannot produce a misleading fragment URL for a different panel"
   const source = await readFile("src/immersive-routes.mjs", "utf8");
   assert.match(source, /data-initial-view=/);
   assert.match(source, /renderImmersiveRoute/);
+});
+
+test("rendered public source and contact routes contain only current GitHub identity", async () => {
+  for (const route of ["/source/", "/contact/"]) {
+    const response = await get(route);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.doesNotMatch(html, /https:\/\/github\.com\/anevum(?:\/|["?#])/i, route);
+    assert.match(html, /https:\/\/github\.com\/devonalanakins/i, route);
+  }
 });
