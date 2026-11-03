@@ -4,6 +4,10 @@
 ## Scope and boundaries
 <!-- Describe modified components, non-goals, data/identity boundaries and any relevant issue. -->
 
+## Risk tier
+<!-- R0 documentation, R1 reversible UI/helper, R2 persistent API/data, R3 sensitive/security/irreversible. Choose exactly R0, R1, R2 or R3. -->
+R1
+
 ## Acceptance evidence
 <!-- Include exact checks and results at the tested commit, plus anything not run. Claims need verifiable links or commands. -->
 
