@@ -9,7 +9,7 @@
   <meta name="description" content="A private-preview interface for Devon Alan Akins: family, original writing, software, systems design, and research.">
   <title>Devon Alan Akins — Immersive Interface V2 Preview</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/v2/terminal.css">
+  <link rel="stylesheet" href="/v2/terminal.css?v=1.2.2">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -116,8 +116,17 @@
       <aside class="telemetry" aria-label="Interface information">
         <div class="telemetry-top"><span>OBSERVATORY <span class="muted">/ 01</span></span><span class="telemetry-cross" aria-hidden="true">+</span></div>
         <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img class="portrait-mini" src="/v2/crossed-arms.webp" alt="" width="72" height="72" loading="lazy"></div>
-        <div class="telemetry-readout"><span class="readout-kicker">WORK / CODEX · SNAPSHOT</span><h2>Token activity</h2><p class="readout-value" id="usage-value">—</p><p class="readout-status" id="usage-status" role="status" aria-live="polite">Loading public snapshot.</p><p class="readout-date" id="usage-date">No publication date</p><button type="button" id="refresh-usage" class="refresh-button">Recheck snapshot <span aria-hidden="true">↻</span></button><a href="/gpt/" class="telemetry-profile-link">FULL GPT PROFILE <span aria-hidden="true">↗</span></a></div>
-        <p class="telemetry-note">Only dated, owner-published figures appear here. This site does not access private ChatGPT sessions or imply live account access.</p>
+        <div class="telemetry-readout" data-feed-state="loading">
+          <div class="feed-beam" aria-hidden="true"><span></span></div>
+          <span class="readout-kicker">GPT / ACTIVITY STREAM</span>
+          <h2>Token activity</h2>
+          <p class="readout-value" id="usage-value">—</p>
+          <p class="readout-status" id="usage-status" role="status" aria-live="polite">Reading profile snapshot</p>
+          <p class="readout-date" id="usage-date">SNAPSHOT / —</p>
+          <button type="button" id="refresh-usage" class="refresh-button">Refresh snapshot <span aria-hidden="true">↻</span></button>
+          <a href="/gpt/" class="telemetry-profile-link">GPT PROFILE <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="telemetry-note">A visual stream of dated GPT profile statistics. See the full profile for source and context.</p>
         <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" data-light-control aria-label="Cycle portrait lighting. Current: amber">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
       </aside>
     </div>
