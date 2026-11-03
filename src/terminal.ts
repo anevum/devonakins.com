@@ -33,6 +33,8 @@ if (!shell || !tabs.length || !tablist) {
 }
 
 const interfaceShell = shell;
+const isRoutePage = interfaceShell.dataset.routePage === "true";
+const routeInitialView = interfaceShell.dataset.initialView ?? "home";
 let announcementTimer = 0;
 let motionPreference: "auto" | "on" | "off" = "auto";
 let pointerFrame = 0;
@@ -84,8 +86,18 @@ function activate(name: string, focus: "tab" | "panel" | "none" = "none", update
   if (focus === "panel") panelByName.get(name)?.focus();
 }
 
+function navigateView(name: string, focus: "tab" | "panel") {
+  // A deep-linked project or article has its own canonical URL. The main
+  // navigation always returns to the actual immersive homepage sections,
+  // instead of showing an unrelated tab under the deep-link URL.
+  if (isRoutePage) {
+    if (validView(name)) location.assign("/#" + name);
+    return;
+  }
+  activate(name, focus);
+}
 for (const tab of tabs) {
-  tab.addEventListener("click", () => activate(tab.dataset.viewTarget!, "tab"));
+  tab.addEventListener("click", () => navigateView(tab.dataset.viewTarget!, "tab"));
   tab.addEventListener("keydown", (event) => {
     const horizontal = tablist.getAttribute("aria-orientation") === "horizontal";
     const previousKey = horizontal ? "ArrowLeft" : "ArrowUp";
@@ -97,13 +109,15 @@ for (const tab of tabs) {
     else if (event.key === "End") index = tabs.length - 1;
     else return;
     event.preventDefault();
-    activate(tabs[index].dataset.viewTarget!, "tab");
+    navigateView(tabs[index].dataset.viewTarget!, "tab");
   });
 }
 document.querySelectorAll<HTMLButtonElement>(".action[data-view-target]").forEach((button) => {
-  button.addEventListener("click", () => activate(button.dataset.viewTarget!, "panel"));
+  button.addEventListener("click", () => navigateView(button.dataset.viewTarget!, "panel"));
 });
 function syncLocationView() {
+  // #main and other native anchors must not replace deep-link content.
+  if (isRoutePage) return;
   const name = viewFromLocation();
   if (name) activate(name, "none", false);
   else if (!location.hash) activate("home", "none", false);
@@ -111,7 +125,7 @@ function syncLocationView() {
 }
 window.addEventListener("hashchange", syncLocationView);
 window.addEventListener("popstate", syncLocationView);
-activate(viewFromLocation() ?? "home", "none", false);
+activate(isRoutePage ? (validView(routeInitialView) ? routeInitialView : "home") : (viewFromLocation() ?? "home"), "none", false);
 
 const navLayout = matchMedia("(max-width: 960px)");
 function syncOrientation() {

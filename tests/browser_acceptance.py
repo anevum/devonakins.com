@@ -248,6 +248,37 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                       }));
                     }""")
                     assert not root_violations, f"Canonical home axe violations: {root_violations}"
+
+            if origin and (width, height) == (390, 844):
+                # All legacy deep links must render the cinematic shell,
+                # retain their own content, and return via the canonical tabs.
+                for route in [
+                    "/work/", "/source/", "/about/", "/contact/",
+                    "/work/operations/", "/work/writing/", "/work/anevum/",
+                    "/work/ideaflow/", "/work/devonstation/",
+                ]:
+                    response = page.goto(origin + route, wait_until="load")
+                    assert response and response.status == 200, route
+                    assert page.locator("#interface-shell").get_attribute("data-route-page") == "true", route
+                    assert page.locator(".route-content").is_visible(), route
+                    assert page.locator(".portrait-figure").evaluate(
+                        "el => el.complete && el.naturalWidth > 0"
+                    ), "portrait decode: " + route
+                    assert not page.locator(".site-header").count(), route
+                    check_overflow("deep link " + route)
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/contact/"]:
+                        page.add_script_tag(content=axe_source)
+                        link_violations = page.evaluate("""async () => {
+                          const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];
+                          const r = await axe.run(document, {
+                            runOnly: {type:'tag',values:tags}
+                          });
+                          return r.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target).slice(0,5)}));
+                        }""")
+                        assert not link_violations, f"{route}: {link_violations}"
+                    page.locator("#tab-home").click()
+                    page.wait_for_url(origin + "/#home")
+                    assert page.locator("#panel-home").is_visible(), route + " canonical navigation"
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",
