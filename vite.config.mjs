@@ -10,7 +10,9 @@ const paths = [
 export default defineConfig({
   build: {
     target: "es2022",
-    cssCodeSplit: false,
+    // Keep legacy site styles out of the portrait interface. Its global
+    // reduced-motion rules otherwise override visitor-selected animation.
+    cssCodeSplit: true,
     rollupOptions: {
       input: Object.fromEntries(
         paths.map((p, i) => ["page" + i, resolve("." + p + "index.html")]),

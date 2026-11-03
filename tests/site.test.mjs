@@ -140,6 +140,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(html, /class="brand" href="#home"/);
   assert.doesNotMatch(html, /class="brand" href="#home" aria-label=/);
   assert.match(html, /Current public website/);
+  assert.doesNotMatch(html, /href="\/assets\/[^"]+\.css"/, "portrait route must not include legacy global CSS");
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /alt="Cinematic portrait of Devon Akins with his arms crossed"/);
   assert.match(html, /id="shift-light"/);
