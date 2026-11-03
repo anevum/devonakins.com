@@ -89,6 +89,45 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.add_style_tag(content=css)
                 page.add_script_tag(content=script)
             page.locator("#panel-home").wait_for(state="visible")
+            if origin:
+                page.wait_for_function("""() => {
+                    const value = document.querySelector('#home-usage-value');
+                    const status = document.querySelector('#usage-status');
+                    return value?.textContent?.trim() === '≈2.6B' &&
+                        status?.textContent?.includes('Not live tracking.');
+                }""")
+                assert page.locator("#home-usage-date").inner_text().startswith(
+                    "AS OF 2026-11-02"
+                ), "dated activity snapshot missing"
+                if (width, height) == (390, 844):
+                    # Falsification: a malformed owner snapshot must clear BOTH
+                    # the sidebar and the prominent hero, then recover on refresh.
+                    snapshot_url = "**/v2/usage-snapshot.json"
+                    page.route(snapshot_url, lambda route: route.fulfill(
+                        status=200, content_type="application/json",
+                        body='{"version":1,"count":-1}'
+                    ))
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function("""() => {
+                        return document.querySelector('#home-usage-value')?.textContent?.trim() === '—' &&
+                          document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
+                          document.querySelector('#home-usage-date')?.textContent?.includes('NO VERIFIED PUBLIC SNAPSHOT');
+                    }""")
+                    page.unroute(snapshot_url)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function("""() =>
+                      document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B' &&
+                      document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'
+                    """)
+            else:
+                assert page.locator("#home-usage-value").inner_text().strip() == "—"
+                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
+            if (width, height) in [(390, 844), (1440, 900)]:
+                assert page.locator("#home-usage-value").evaluate("""el => {
+                  const box = el.getBoundingClientRect();
+                  return box.width > 0 && box.height > 0 &&
+                    box.top >= 0 && box.bottom <= innerHeight;
+                }"""), "home activity metric not in the initial viewport"
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
@@ -178,9 +217,13 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator(".hero-feature-link").count() == 2
             assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
             assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
-            assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
-            assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
-            assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+            if origin:
+                assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
+                assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
+                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+            else:
+                assert page.locator("#home-usage-value").inner_text().strip() == "—"
+                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
             check_overflow("home")
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
