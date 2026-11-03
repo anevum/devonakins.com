@@ -1,3 +1,5 @@
+import {createGitHubPublicSignal} from './public-github.mjs';
+
 export const securityHeaders = {
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
@@ -7,10 +9,11 @@ export const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
   "Strict-Transport-Security": "max-age=31536000",
 };
-export function createHandler(assets, release) {
+export function createHandler(assets, release, publicSignalDependencies = {}) {
   const decoded = new Map();
+  const githubPublicSignal = createGitHubPublicSignal(publicSignalDependencies);
   return {
-    async fetch(request) {
+    async fetch(request, env, ctx) {
       const url = new URL(request.url);
       const redirect = (target, status = 308) =>
         new Response(null, {
@@ -55,6 +58,30 @@ export function createHandler(assets, release) {
             },
           },
         );
+      if (url.pathname === "/v2/github-profile.json") {
+        if (url.search) {
+          return new Response(JSON.stringify({error:"unsupported_query"}), {
+            status: 400,
+            headers: {...securityHeaders, "Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store"},
+          });
+        }
+        const edgeCache = Object.hasOwn(publicSignalDependencies, "cache")
+          ? publicSignalDependencies.cache
+          : globalThis.caches?.default;
+        const snapshot = await githubPublicSignal.load(
+          edgeCache, ctx?.waitUntil?.bind(ctx)
+        );
+        return new Response(request.method === "HEAD" ? null :
+          JSON.stringify(snapshot ?? {error:"github_public_signal_unavailable"}), {
+          status: snapshot ? 200 : 503,
+          headers: {
+            ...securityHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": snapshot ? "public, max-age=300, must-revalidate" : "no-store",
+            ...(snapshot ? {} : {"Retry-After":"60"}),
+          },
+        });
+      }
       if (url.pathname === "/favicon.ico") return redirect("/favicon-32.png");
       let path;
       try {
