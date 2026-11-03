@@ -9,7 +9,7 @@
   <meta name="description" content="A private-preview interface for Devon Alan Akins: family, original writing, software, systems design, and research.">
   <title>Devon Alan Akins — Immersive Interface V2 Preview</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/v2/terminal.css?v=1.2.2">
+  <link rel="stylesheet" href="/v2/terminal.css?v=1.2.3">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -56,9 +56,22 @@
               <button type="button" class="action action-primary" data-view-target="work">Explore the work <span aria-hidden="true">↗</span></button>
               <button type="button" class="action action-quiet" data-view-target="writing">Enter the worlds <span aria-hidden="true">→</span></button>
             </div>
-            <div class="hero-feature" role="group" aria-label="Featured current projects">
-              <a class="hero-feature-link" href="/work/aiei/"><span>ACTIVE ENGINEERING / OPEN SOURCE</span><strong>AIEI</strong><small>Engineering evidence, rigorous tests, human judgment.</small></a>
-              <a class="hero-feature-link" href="/work/isl/"><span>LANGUAGE RESEARCH / PROPOSED</span><strong>ISL</strong><small>Specify intent before implementation.</small></a>
+            <div class="hero-feature" role="group" aria-label="Active development">
+              <div class="focus-heading"><h2>Active development</h2><span>SELECTED WORK / 02</span></div>
+              <div class="focus-grid">
+                <a class="hero-feature-link focus-project-aiei" href="/work/aiei/" aria-label="AIEI — trustworthy AI engineering, actively in development">
+                  <span class="focus-project-index" aria-hidden="true">01</span>
+                  <span class="focus-project-copy"><strong>AIEI</strong><small>Trustworthy AI engineering</small></span>
+                  <span class="focus-project-state focus-project-active">Active</span>
+                  <span class="focus-project-arrow" aria-hidden="true">↗</span>
+                </a>
+                <a class="hero-feature-link focus-project-isl" href="/work/isl/" aria-label="ISL — intent-first language research, proposed concept">
+                  <span class="focus-project-index" aria-hidden="true">02</span>
+                  <span class="focus-project-copy"><strong>ISL</strong><small>Intent-first language research</small></span>
+                  <span class="focus-project-state focus-project-research">Research</span>
+                  <span class="focus-project-arrow" aria-hidden="true">↗</span>
+                </a>
+              </div>
             </div>
             <div class="hero-foot"><span class="fine-rule"></span><span>ENGINEERING / WRITING / RESEARCH / FAMILY</span></div>
           </div>
@@ -124,7 +137,7 @@
           <p class="readout-status" id="usage-status" role="status" aria-live="polite">Reading profile snapshot</p>
           <p class="readout-date" id="usage-date">SNAPSHOT / —</p>
           <button type="button" id="refresh-usage" class="refresh-button">Refresh snapshot <span aria-hidden="true">↻</span></button>
-          <a href="/gpt/" class="telemetry-profile-link">GPT PROFILE <span aria-hidden="true">↗</span></a>
+          <a href="/gpt/" class="telemetry-profile-link" aria-label="View full GPT profile"><span class="telemetry-profile-label">View profile</span><span class="telemetry-profile-arrow" aria-hidden="true">↗</span></a>
         </div>
         <p class="telemetry-note">A visual stream of dated GPT profile statistics. See the full profile for source and context.</p>
         <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" data-light-control aria-label="Cycle portrait lighting. Current: amber">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>

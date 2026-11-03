@@ -251,6 +251,8 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   const html = await (await get("/")).text();
   assert.match(html, /id="usage-value"/);
   assert.match(html, /data-feed-state="loading"/);
+  assert.match(html, /aria-label="View full GPT profile"/);
+  assert.match(html, /<span class="telemetry-profile-label">View profile<\/span>/);
   assert.match(html, /class="feed-beam"/);
   assert.match(html, /Reading profile snapshot/);
   assert.doesNotMatch(html, /Owner-reported · Not live tracking\./);
@@ -389,11 +391,17 @@ test("rendered public source and contact routes contain only current GitHub iden
 
 test("current engineering showcase is prominently linked and status-qualified", async () => {
   const home = await (await get("/")).text();
-  assert.match(home, /class="hero-feature" role="group" aria-label="Featured current projects"/);
+  assert.match(home, /class="hero-feature" role="group" aria-label="Active development"/);
+  assert.match(home, /<h2>Active development<\/h2>/);
+  assert.match(home, /class="focus-grid"/);
+  assert.match(home, /class="focus-project-state focus-project-active">Active<\/span>/);
+  assert.match(home, /class="focus-project-state focus-project-research">Research<\/span>/);
+  assert.doesNotMatch(home, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/,
+    "old cramped metadata must not appear on the homepage");
   assert.match(home, /href="\/work\/aiei\/"/);
   assert.match(home, /href="\/work\/isl\/"/);
-  assert.match(home, /ACTIVE ENGINEERING \/ OPEN SOURCE/);
-  assert.match(home, /LANGUAGE RESEARCH \/ PROPOSED/);
+  assert.match(home, /Trustworthy AI engineering/);
+  assert.match(home, /Intent-first language research/);
   assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
   for (const slug of ["aiei", "isl", "phatcake", "brandicade", "rhen"]) {
@@ -418,8 +426,10 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(source, /ISL — language research/);
   const css = await (await get("/v2/terminal.css")).text();
   assert.match(css, /\.hero-feature-link:focus-visible/);
-  assert.match(css, /V1\.2\.2/);
+  assert.match(css, /V1\.2\.3/);
   assert.match(css, /\.telemetry-readout\[data-feed-state="ready"\]/);
+  assert.match(css, /\.focus-grid/);
+  assert.match(css, /\.focus-project-copy/);
   assert.match(css, /@media \(max-width: 460px\)/);
   assert.match(css, /@media \(max-width: 360px\)/);
 });

@@ -216,3 +216,21 @@ Preserve reduced-motion preferences. All required tests and a specific
 iPhone Safari visual review must pass before an approved release.
 Manual production deployment and exact-commit /_health verification remain
 separate from merging source.
+
+## V1.2.3 — editorial active-development polish (candidate)
+
+Replace the narrow, all-caps AIEI/ISL hero tiles with a concise, two-item
+“Active development” module. On phones, full-width stacked project rows
+carry legible titles, one-line descriptions, status and tap targets;
+desktop retains two editorial cards. AIEI is **Active**; ISL is explicitly
+**Research** rather than a released language. The persistent, dated GPT
+activity strip uses the human-readable “View profile” action instead of a
+raw technical label. No token totals, historical streaks, provider
+integrations, tracking or private data have changed.
+
+The stylesheet URL is versioned as `/v2/terminal.css?v=1.2.3` in the
+homepage and generated deep links, avoiding the stale iPhone stylesheet
+observed in v1.2.1. Release only after the exact-head build, Node tests,
+Chromium/WebKit mobile layouts, keyboard, reduced-motion and accessibility
+checks pass. Separately verify the deployed Worker and actual public route,
+keeping the prior Cloudflare version available for rollback.

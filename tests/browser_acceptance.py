@@ -229,6 +229,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             }""")
             # CSS grid blockifies inline-flex into flex; either is correct.
             assert profile_style["display"] in ["flex", "inline-flex"], (label, profile_style)
+            assert page.locator(".telemetry-profile-label").inner_text() == "View profile"
+            assert page.locator(".telemetry-profile-link").get_attribute("aria-label") == "View full GPT profile"
             assert profile_style["decoration"] == "none" and profile_style["border"] >= 1, (
                 label, "GPT profile action has stale/missing styles", profile_style
             )
@@ -237,6 +239,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             featured = page.locator(".hero-feature")
             assert featured.is_visible(), "AIEI/ISL highlights not visible"
             assert page.locator(".hero-feature-link").count() == 2
+            assert page.locator(".focus-heading h2").inner_text() == "Active development"
+            assert page.locator(".focus-project-state").all_inner_texts() == ["Active", "Research"]
+            assert "ACTIVE ENGINEERING" not in featured.inner_text()
+            assert "LANGUAGE RESEARCH / PROPOSED" not in featured.inner_text()
             assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
             assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
             assert page.locator(".hero-usage").count() == 0
@@ -246,15 +252,12 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             if (width, height) in [(390, 700), (390, 844), (1440, 900)]:
                 # Desktop stays above the fold. Phones may scroll their content
                 # panel, but the cards must be reachable without nav overlap.
-                if width <= 460 and (width, height) != (390, 700):
+                if width <= 460:
+                    # Compact portrait cards stack to prevent unreadable tiny labels.
+                    assert page.locator(".focus-grid").evaluate(
+                        "el => getComputedStyle(el).gridTemplateColumns.split(' ').length === 1"
+                    ), "Mobile cards must be in a single column"
                     featured.scroll_into_view_if_needed()
-                if (width, height) == (390, 700):
-                    # The compact short-iPhone layout should show both cards
-                    # above navigation without depending on a user scroll.
-                    scroll_extra = page.locator("#panel-home").evaluate(
-                        "el => el.scrollHeight - el.clientHeight"
-                    )
-                    assert scroll_extra <= 2, (label, "Short iPhone home requires scroll", scroll_extra)
                 feature_box = featured.bounding_box()
                 panel_box = page.locator("#panel-home").bounding_box()
                 assert feature_box and panel_box
@@ -341,6 +344,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
                 assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
+                assert page.locator(".focus-project-copy").count() == 2
                 assert page.locator(".hero-usage").count() == 0, "duplicate hero metric"
                 assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
                 page.wait_for_function(
