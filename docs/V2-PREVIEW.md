@@ -107,6 +107,38 @@ change to other DevonStation/Cristy/Anevum projects is included. Actual
 Cloudflare API reachability, its cache behavior under production traffic,
 and physical iPhone acceptance require separate verification before release.
 
+## Recent Public Code in the Work panel
+
+The existing Work panel now contains an optional **Recent public code**
+spotlight. It is a source-backed project link, not another invented
+engagement metric. This uses the same first-party GitHub signal as the
+Observatory when a visitor opens Work, rather than automatically exposing
+any private development record.
+
+The Worker makes an optional fixed, public, unauthenticated request to
+`GET https://api.github.com/users/anevum/repos?per_page=10&sort=pushed&type=owner`.
+Only records for the `anevum` owner that are public, original (not forks),
+nonarchived and enabled are eligible. It selects at most one valid repo,
+uses only its bounded name and normalized last-pushed timestamp, and constructs
+the GitHub URL itself. Untrusted URLs, descriptions, HTML, scripts, email,
+repository permissions, collaborators, private metadata and star counts are
+never copied to the site.
+
+The public signal schema is now version 2, with a nullable `recent` field
+containing `{name,pushedAt,url}`. Both server and browser validate its
+exact fields, canonical URL and timestamp. A missing, rejected or failed
+optional repository request keeps the supported public repository **count**
+available and displays a clear fallback in Work. The outer first-party
+source remains hourly cached; each GitHub provider fetch is bounded and
+rate-limit failures do not invent project updates.
+
+`pushedAt` is explicitly labeled **Last pushed**, never a verified
+release, public deploy, merged PR, or personal daily contribution count.
+The link opens the canonical public repo in a new tab. The feature remains
+source-only until the existing stacked PRs are reviewed and release
+approval is granted. No additional credentials, paid tooling, deployment,
+visitor tracking, or automatic changes to GitHub have been introduced.
+
 ## Build and tests
 
 \`\`\`sh
