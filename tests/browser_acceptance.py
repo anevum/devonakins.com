@@ -209,7 +209,39 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "horizontal" if width <= 960 else "vertical"
                 ), observed
 
+            # The first screen must preserve both owner-requested public signals.
+            featured = page.locator(".hero-feature")
+            usage = page.locator(".hero-usage")
+            assert featured.is_visible(), "AIEI/ISL highlights not visible"
+            assert usage.is_visible(), "dated ChatGPT activity not visible"
+            assert page.locator(".hero-feature-link").count() == 2
+            assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
+            assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
+            if origin:
+                # The module loads a first-party JSON snapshot asynchronously.
+                # Wait for validated data, not merely page load, on both engines.
+                page.wait_for_function(
+                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    timeout=7000,
+                )
+                assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
+                assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
+                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+            else:
+                assert page.locator("#home-usage-value").inner_text().strip() == "—"
+                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
             check_overflow("home")
+            # On normal portrait-phone and desktop viewports the featured project
+            # cards must be in the initial panel viewport, not clipped below it.
+            if (width, height) in [(390, 844), (1440, 900)]:
+                feature_box = featured.bounding_box()
+                panel_box = page.locator("#panel-home").bounding_box()
+                assert feature_box and panel_box
+                assert feature_box["y"] >= panel_box["y"], (label, feature_box, panel_box)
+                assert (feature_box["y"] + feature_box["height"]
+                        <= panel_box["y"] + panel_box["height"] - 8), (
+                    label, "Featured AIEI/ISL cards are below the fold", feature_box, panel_box
+                )
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
             assert light.is_visible(), "portrait lighting control missing"
@@ -273,6 +305,22 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "el => el.complete && el.naturalWidth > 0"
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
+                assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
+                assert page.locator(".hero-usage").is_visible(), "canonical GPT activity missing"
+                page.wait_for_function(
+                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    timeout=7000,
+                )
+                assert page.locator("#home-usage-value").inner_text() == "≈2.6B"
+                page.wait_for_function("""() => {
+                    const text = document.querySelector('#usage-status')?.textContent ?? '';
+                    return text.includes('Owner-reported estimate');
+                }""", timeout=7000)
+                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+                report = page.request.get(origin + "/v2/usage-snapshot.json")
+                assert report.status == 200, "snapshot endpoint failed"
+                assert "application/json" in report.headers.get("content-type", "")
+                assert report.json()["count"] == 2600000000
                 page.locator("#tab-writing").click()
                 assert page.locator("#panel-writing").is_visible()
                 if axe_source:
@@ -295,6 +343,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "/work/", "/source/", "/about/", "/contact/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
+                    "/work/aiei/", "/work/isl/", "/work/phatcake/",
+                    "/work/brandicade/", "/work/rhen/",
                 ]:
                     response = page.goto(origin + route, wait_until="load")
                     assert response and response.status == 200, route
@@ -305,7 +355,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     ), "portrait decode: " + route
                     assert not page.locator(".site-header").count(), route
                     check_overflow("deep link " + route)
-                    if axe_source and route in ["/work/", "/work/ideaflow/", "/contact/"]:
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/aiei/", "/work/isl/", "/contact/"]:
                         page.add_script_tag(content=axe_source)
                         link_violations = page.evaluate("""async () => {
                           const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];
