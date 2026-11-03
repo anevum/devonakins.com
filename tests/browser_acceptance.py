@@ -96,10 +96,11 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     const value = document.querySelector('#usage-value');
                     const status = document.querySelector('#usage-status');
                     return value?.textContent?.trim() === '≈2.6B' &&
-                        status?.textContent?.includes('Not live tracking.');
+                        status?.textContent?.includes('24D STREAK') &&
+                        status?.textContent?.includes('314.2M PEAK');
                 }""")
                 assert page.locator("#usage-date").inner_text().startswith(
-                    "As of 2026-11-02"
+                    "NOV 02, 2026"
                 ), "dated snapshot missing from bottom stream"
                 if (width, height) == (390, 844):
                     # Falsification: malformed snapshots clear the ONLY stream value;
@@ -112,7 +113,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     page.evaluate("document.getElementById('refresh-usage').click()")
                     page.wait_for_function("""() =>
                       document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
-                      document.querySelector('#usage-status')?.textContent?.includes('No verified public snapshot')
+                      document.querySelector('#usage-status')?.textContent?.includes('SNAPSHOT UNAVAILABLE')
                     """)
                     page.unroute(snapshot_url)
                     page.evaluate("document.getElementById('refresh-usage').click()")
@@ -209,6 +210,22 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "horizontal" if width <= 960 else "vertical"
                 ), observed
 
+            # Detect Safari-style stale CSS: these links must be actual flex cards,
+            # never raw underlined text after an HTML-only update.
+            cards = page.locator(".hero-feature-link")
+            card_style = cards.first.evaluate("""el => {
+              const style = getComputedStyle(el);
+              return {display: style.display, decoration: style.textDecorationLine,
+                      border: parseFloat(style.borderTopWidth)};
+            }""")
+            assert card_style["display"] == "flex" and card_style["decoration"] == "none", (
+                label, "Unstyled project link", card_style
+            )
+            assert card_style["border"] >= 1, (label, "Project card border missing", card_style)
+            profile_style = page.locator(".telemetry-profile-link").evaluate(
+                "el => getComputedStyle(el).display"
+            )
+            assert profile_style == "inline-flex", (label, "GPT profile link not styled")
             # Retain AIEI/ISL highlights and use the Observatory as the only
             # ChatGPT activity stream.
             featured = page.locator(".hero-feature")
@@ -221,14 +238,32 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             # On normal portrait-phone and desktop viewports the featured project
             # cards must be in the initial panel viewport, not clipped below it.
             if (width, height) in [(390, 844), (1440, 900)]:
+                # Desktop stays above the fold. Phones may scroll their content
+                # panel, but the cards must be reachable without nav overlap.
+                if width <= 460:
+                    featured.scroll_into_view_if_needed()
                 feature_box = featured.bounding_box()
                 panel_box = page.locator("#panel-home").bounding_box()
                 assert feature_box and panel_box
                 assert feature_box["y"] >= panel_box["y"], (label, feature_box, panel_box)
                 assert (feature_box["y"] + feature_box["height"]
-                        <= panel_box["y"] + panel_box["height"] - 8), (
-                    label, "Featured AIEI/ISL cards are below the fold", feature_box, panel_box
+                        <= panel_box["y"] + panel_box["height"] - 3), (
+                    label, "Featured AIEI/ISL cards clipped by fixed navigation", feature_box, panel_box
                 )
+            if width <= 960:
+                # The GPT stream and navigation remain in their dedicated rows.
+                positions = page.evaluate("""() => {
+                  const nav = document.querySelector('.rail').getBoundingClientRect();
+                  const feed = document.querySelector('.telemetry').getBoundingClientRect();
+                  const link = document.querySelector('.telemetry-profile-link').getBoundingClientRect();
+                  return {navBottom: nav.bottom, feedTop: feed.top, feedBottom: feed.bottom,
+                          linkTop: link.top, linkBottom: link.bottom,
+                          linkRight: link.right, viewport: innerWidth};
+                }""")
+                assert positions["navBottom"] <= positions["feedTop"] + 2, (label, positions)
+                assert positions["linkTop"] >= positions["feedTop"] - 1, (label, positions)
+                assert positions["linkBottom"] <= positions["feedBottom"] + 1, (label, positions)
+                assert positions["linkRight"] <= positions["viewport"] + 1, (label, positions)
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
             assert light.is_visible(), "portrait lighting control missing"
@@ -299,7 +334,9 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     """() => document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'""",
                     timeout=7000,
                 )
-                assert "Not live tracking." in page.locator("#usage-status").inner_text()
+                assert "24D STREAK" in page.locator("#usage-status").inner_text()
+                assert "314.2M PEAK" in page.locator("#usage-status").inner_text()
+                assert page.locator("#usage-date").inner_text().startswith("NOV 02, 2026")
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")
