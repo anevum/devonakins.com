@@ -286,3 +286,14 @@ test("deep links cannot produce a misleading fragment URL for a different panel"
   assert.match(source, /data-initial-view=/);
   assert.match(source, /renderImmersiveRoute/);
 });
+
+test("public GitHub links identify the current personal account", async () => {
+  for (const route of ["/source/", "/contact/"]) {
+    const html = await (await get(route)).text();
+    assert.doesNotMatch(html, /https:\/\/github\.com\/anevum(?:\/|["?#])/i, route);
+    assert.match(html, /https:\/\/github\.com\/devonalanakins/i, route);
+  }
+  const routeSource = await readFile("src/immersive-routes.mjs", "utf8");
+  assert.doesNotMatch(routeSource, /https:\/\/github\.com\/anevum(?:\/|["?#])/i);
+  assert.match(routeSource, /https:\/\/github\.com\/devonalanakins\/devonakins\.com/);
+});
