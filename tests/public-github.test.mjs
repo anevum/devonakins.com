@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {createHandler} from "../src/worker.mjs";
 import {
   GITHUB_SIGNAL_URL,
+  GITHUB_REPOS_URL,
+  normalizeRecentGitHubProject,
   GITHUB_SIGNAL_CACHE_KEY,
   GITHUB_SIGNAL_MAX_AGE_MS,
   createGitHubPublicSignal,
@@ -27,9 +29,9 @@ const request = (method="GET", suffix="") => new Request(url+suffix,{method});
 test("GitHub public normalization whitelists only observed repository statistics",()=>{
   const signal=normalizeGitHubProfile(identity,new Date(observed).toISOString());
   assert.deepEqual(signal,{
-    version:1, account:"anevum", metric:"public-repositories",
+    version:2, account:"anevum", metric:"public-repositories",
     count:12, asOf:"2026-11-02T18:15:00.000Z",
-    source:"GitHub REST API",attestation:"public-provider-response",
+    source:"GitHub REST API",attestation:"public-provider-response",recent:null,
   });
   assert(!JSON.stringify(signal).includes("email"));
   assert(!JSON.stringify(signal).includes("followers"));
@@ -56,6 +58,7 @@ test("first-party Worker fetches one fixed public GitHub endpoint, caches and re
   const handler=createHandler({}, {version:"test"}, {
     now:()=>now,
     cache:null,
+    fetchRecent:async(u)=>{assert.equal(u,GITHUB_REPOS_URL);return upstream([]);},
     fetchProfile:async(u,opts)=>{
       calls++;
       assert.equal(u,GITHUB_SIGNAL_URL);
@@ -97,6 +100,7 @@ test("edge snapshot persists across different Worker instances without leaking p
   let calls=0;
   const make=()=>createHandler({}, {version:"test"}, {
     now:()=>observed,cache,
+    fetchRecent:async(u)=>{assert.equal(u,GITHUB_REPOS_URL);return upstream([]);},
     fetchProfile:async()=>{calls++;return upstream();},
   });
   const one=await (await make().fetch(request())).json();
@@ -116,6 +120,7 @@ test("concurrent requests are coalesced and no traffic is proxied from a visitor
   const barrier=new Promise(r=>{resolve=r});
   const handler=createHandler({}, {version:"test"},{
     now:()=>observed,cache:null,
+    fetchRecent:async(u)=>{assert.equal(u,GITHUB_REPOS_URL);return upstream([]);},
     fetchProfile:async(u,opts)=>{calls++;assert.equal(u,GITHUB_SIGNAL_URL);assert(!opts.headers.Cookie);await barrier;return upstream();},
   });
   const pending=[handler.fetch(request()),handler.fetch(request()),handler.fetch(request())];
@@ -129,6 +134,7 @@ test("upstream failures, malformed responses and retry cooldown never manufactur
   let now=observed,calls=0,respond=()=>upstream({message:"API rate limit exceeded"},403);
   const handler=createHandler({}, {version:"test"},{
     now:()=>now,cache:null,
+    fetchRecent:async(u)=>{assert.equal(u,GITHUB_REPOS_URL);return upstream([]);},
     fetchProfile:async()=>{calls++;return respond();},
   });
   let result=await handler.fetch(request());
@@ -154,4 +160,59 @@ test("upstream failures, malformed responses and retry cooldown never manufactur
   result=await handler.fetch(request());
   assert.equal(result.status,200);
   assert.equal((await result.json()).count,0,"Verified zero is distinct from unavailable");
+});
+
+const repo = (name="devonakins.com",pushed="2026-11-02T18:11:00Z")=>({
+ name, pushed_at:pushed, private:false, fork:false, archived:false, disabled:false,
+ owner:{login:"anevum"}, html_url:"https://github.com/anevum/"+name,
+ stargazers_count:99999,email:"private-data",permissions:{admin:true}
+});
+test("recent public code only selects canonical original repos with a dated push",()=>{
+ const recent=normalizeRecentGitHubProject([
+  {...repo("secret"),private:true},
+  {...repo("upstream"),fork:true},
+  {...repo("old"),archived:true},
+  repo(),
+ ],"2026-11-02T18:15:00.000Z");
+ assert.deepEqual(recent,{name:"devonakins.com",url:"https://github.com/anevum/devonakins.com",pushedAt:"2026-11-02T18:11:00.000Z"});
+ assert(!JSON.stringify(recent).includes("stargazers"));
+ assert(!JSON.stringify(recent).includes("permissions"));
+ assert.equal(normalizeRecentGitHubProject([{...repo(),owner:{login:"someone-else"}}],"2026-11-02T18:15:00.000Z"),null);
+ for(const name of ["../evil",'evil" onclick="alert(1)',".",".."])assert.equal(normalizeRecentGitHubProject([repo(name)],"2026-11-02T18:15:00.000Z"),null);
+ assert.equal(normalizeRecentGitHubProject([repo("future","2040-01-01T00:00:00Z")],"2026-11-02T18:15:00.000Z"),null);
+ assert.throws(()=>normalizeRecentGitHubProject(Array.from({length:11},()=>repo()),"2026-11-02T18:15:00.000Z"));
+});
+test("optional recent code remains bounded, cached and free of private fields",async()=>{
+ let repoCalls=0,personCalls=0;
+ const handler=createHandler({}, {version:"test"},{
+  now:()=>observed,cache:null,
+  fetchProfile:async(u)=>{personCalls++;assert.equal(u,GITHUB_SIGNAL_URL);return upstream();},
+  fetchRecent:async(u,opts)=>{repoCalls++;assert.equal(u,GITHUB_REPOS_URL);assert.equal(opts.redirect,"error");return upstream([repo()]);}
+ });
+ const profile=await (await handler.fetch(request())).json();
+ assert.equal(profile.version,2);
+ assert.equal(profile.recent.name,"devonakins.com");
+ assert.equal(profile.recent.pushedAt,"2026-11-02T18:11:00.000Z");
+ assert(!JSON.stringify(profile).includes("private-data"));
+ assert(!JSON.stringify(profile).includes("permissions"));
+ assert(validGitHubSignal(profile,observed));
+ for(const recent of [
+ {...profile.recent,url:"javascript:alert(1)"},
+ {...profile.recent,name:"<script>"},
+ {...profile.recent,pushedAt:"2030-01-01T00:00:00.000Z"},
+ {...profile.recent,token:"secret"}
+ ])assert(!validGitHubSignal({...profile,recent},observed));
+ await handler.fetch(request());
+ assert.equal(personCalls,1);assert.equal(repoCalls,1);
+});
+test("failed optional repo listing leaves verified public count intact",async()=>{
+ const handler=createHandler({}, {version:"test"},{
+  now:()=>observed,cache:null,fetchProfile:async()=>upstream(),
+  fetchRecent:async()=>upstream({message:"rate limited"},403),
+ });
+ const result=await handler.fetch(request());
+ assert.equal(result.status,200);
+ const payload=await result.json();
+ assert.equal(payload.count,12);
+ assert.equal(payload.recent,null);
 });
