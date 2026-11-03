@@ -32,7 +32,25 @@ function visibleMarkdown(input) {
     }
     return line;
   });
-  return lines.join('\n').replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+  // Remove HTML comments only after fenced examples have been suppressed.
+  const uncommented = lines.join('\n').replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+  // Raw HTML pre/code blocks display literal text, not actual section headings.
+  // An unclosed block hides the remaining lines rather than counting them.
+  let rawBlock = null;
+  const visible = uncommented.split('\n').map(line => {
+    if (rawBlock) {
+      if (new RegExp(`</${rawBlock}\\s*>`, 'i').test(line)) rawBlock = null;
+      return '';
+    }
+    const open = line.match(/^ {0,3}<(pre|code)\b[^>]*>/i);
+    if (open) {
+      const tag = open[1].toLowerCase();
+      if (!new RegExp(`</${tag}\\s*>`, 'i').test(line.slice(open[0].length))) rawBlock = tag;
+      return '';
+    }
+    return line;
+  });
+  return visible.join('\n');
 }
 
 export function validateContract(input) {

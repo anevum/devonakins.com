@@ -89,3 +89,30 @@ test('uncompleted PR template blocks acceptance until risk tier is selected',asy
  const r=validateContract(template);
  assert(!r.ok && r.errors.some(x=>x.includes('Risk tier must')));
 });
+
+const contract = [
+  '## Purpose',
+  'This is a complete description only inside a raw HTML code example.',
+  '## Scope and boundaries',
+  'This change should not affect any persistent state or production behavior.',
+  '## Risk tier', 'R1',
+  '## Acceptance evidence',
+  'This mentions a supposed test that is not actually performed.',
+  '## Negative cases',
+  'This claims negative scenarios were tested but this is just an HTML example.',
+  '## Risks and unknowns',
+  'This pretends to disclose all relevant limitations and missing evidence.',
+  '## Release intent', 'REVIEW_ONLY',
+].join('\n');
+test('raw pre HTML literal is not treated as a valid PR description', () => {
+  const r = validateContract('<pre>\n' + contract.replace('## Release intent\nREVIEW_ONLY','') + '\n</pre>\n## Release intent\nREVIEW_ONLY');
+  assert.equal(r.ok, false, JSON.stringify(r));
+});
+test('raw code HTML literal is not treated as a valid PR description', () => {
+  const r = validateContract('<code>\n' + contract.replace('## Release intent\nREVIEW_ONLY','') + '\n</code>\n## Release intent\nREVIEW_ONLY');
+  assert.equal(r.ok, false, JSON.stringify(r));
+});
+test('raw HTML tags in a fenced example do not suppress a genuine review', () => {
+  const r = validateContract('```html\n<pre>\n```\n' + contract);
+  assert.equal(r.ok, true, JSON.stringify(r));
+});
