@@ -100,9 +100,9 @@ function contentFor(path, projects) {
       body: '<div class="route-blocks">' +
         block("THE PRINCIPLE", paragraph("I publish source so that implementation can be reviewed, learned from, and improved. Open-source code does not make private data, client records or personal systems public.")) +
         block("PUBLIC REPOSITORIES", '<div class="route-repos">' +
-          external("https://github.com/anevum/devonakins.com", "This website — source") +
-          external("https://github.com/anevum/anevum-web", "ANEVUM web") +
-          external("https://github.com/anevum", "All public repositories") + '</div>') +
+          external("https://github.com/devonalanakins/devonakins.com", "This website — source") +
+          external("https://github.com/devonalanakins/anevum-web", "ANEVUM web") +
+          external("https://github.com/devonalanakins", "All public repositories") + '</div>') +
         '</div><p class="route-fine-print">Check each repository for its own license, contribution guidelines and current development status.</p>',
       actions: link("/#research", "Return to research") + link("/work/", "Project archive"),
     };
@@ -118,7 +118,7 @@ function contentFor(path, projects) {
       body: '<div class="route-contact-address"><span>DIRECT EMAIL</span><a href="mailto:devon@anevum.com">devon@anevum.com<span aria-hidden="true"> ↗</span></a></div>' +
         '<div class="route-blocks">' +
         block("WORK & CREATIVE INQUIRIES", paragraph("Please include what you're interested in discussing. Client, family, clinical and other private details should not be sent through a public website.")) +
-        block("PUBLIC WORK", paragraph("You can review public source and project notes before getting in touch.") + external("https://github.com/anevum", "View my GitHub")) +
+        block("PUBLIC WORK", paragraph("You can review public source and project notes before getting in touch.") + external("https://github.com/devonalanakins", "View my GitHub")) +
         '</div><p class="route-fine-print">This website has no contact form, tracking cookies or public inbox that stores your message.</p>',
       actions: link("/#contact", "Return to contact") + link("/work/", "Project archive"),
     };

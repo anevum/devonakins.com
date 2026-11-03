@@ -34,6 +34,13 @@ test("all public pages have genuine server-rendered content and canonical metada
     );
   }
 });
+test("public GitHub references use the current account", async () => {
+  for (const path of ["src/immersive-routes.mjs", "src/views.mjs", "v2/index.html"]) {
+    const source = await readFile(new URL("../" + path, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /github\\.com\\/anevum(?:\\/|["'?&#]|$)/, path);
+    assert.match(source, /github\\.com\\/devonalanakins/, path);
+  }
+});
 test("removed demo content is not published", async () => {
   for (const path of ["/lab/", "/work/field-instruments/", "/notes/a-model-is-a-question/"]) assert.equal((await get(path)).status,404,path);
   for (const path of ["/", "/work/", "/about/"]) { const text = await (await get(path)).text(); assert.doesNotMatch(text,/FIELD INSTRUMENT|Wave interference|Question machine|Superposition/i); }

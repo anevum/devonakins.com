@@ -2,7 +2,7 @@
 
 The existing website verification workflow runs a **non-deploying** Git history
 credential guard before the Node build and tests. It uses the synthetic tests
-and selected credential patterns already proven in `anevum/brandle`.
+and selected credential patterns already proven in `devonalanakins/brandle`.
 
 The workflow checks out full Git history and explicitly fetches current remote
 branch heads before scanning text blobs reachable from local refs. A match
@@ -29,7 +29,7 @@ python3 scripts/security/scan-git-history.py
   process; do not paste values or private data into public issues, PRs or logs.
 - A passing check does **not** authorize Cloudflare deployment. Production
   remains under the existing separately controlled release process.
-- The scanner and tests are copied from `anevum/brandle`, licensed
+- The scanner and tests are copied from `devonalanakins/brandle`, licensed
   Apache-2.0; see `scripts/security/LICENSE`. The personal website remains
   MIT-licensed under its root license, except this explicitly licensed tool.
 
