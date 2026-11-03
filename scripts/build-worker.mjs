@@ -50,7 +50,7 @@ try {
   }).trim();
 } catch {}
 const release = {
-  version: "1.1.4",
+  version: "1.2.1",
   session: "DEVONAKINS.BUILD.2026-10-29.001",
   commit,
 };

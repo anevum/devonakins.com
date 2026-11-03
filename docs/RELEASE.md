@@ -159,3 +159,31 @@ links. Chromium/WebKit browser acceptance visits all nine old destinations
 on mobile and checks panel state, canonical navigation, reflow and selected
 automated WCAG cases. Capture rollback version before release and verify live
 Worker /_health, all URLs and assets afterward. No DNS or secrets changed.
+
+
+## V1.2.0 — AIEI / ISL personal portfolio (manual release candidate)
+
+The cinematic portrait homepage now features AIEI (open-source engineering
+integrity toolkit) and ISL (proposed Intent Specification Language research),
+alongside the dated, owner-reported ChatGPT activity snapshot already released
+in V1.1.3. ISL is a proposal, not a working compiler or released language.
+The expanded Work directory adds five publicly shareable project detail pages
+(AIEI, ISL, Phatcake, Brandicade, RHEN), with clear implementation maturity
+and confidentiality boundaries. DevonStation's public status reflects active
+development and the writing page distinguishes a published work under
+revision from unpublished manuscripts.
+
+The desktop 1440x900 portrait first-fold fit was corrected to show both
+featured research/engineering cards without obscuring them. The combined
+branch passed the targeted GitHub Actions build/Node tests and five viewports
+in Chromium and WebKit, plus automated axe accessibility checks; physical
+iPhone behavior remains separately unverified.
+
+This release bumps the Worker build version to 1.2.0. The manual production
+workflow must be dispatched from the *exact tested main SHA* only after release
+approval and must verify the live Worker /_health matches the built SHA/version.
+The post-deployment verifier additionally checks AIEI/ISL homepage features,
+five new canonical project pages, and ISL's explicit research-stage disclaimer,
+in addition to the public GPT JSON snapshot, security headers and existing
+canonical routes. Preserve the previously active Worker deployment as rollback.
+Do not treat a source merge as a live website release.
