@@ -235,7 +235,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /\/v2\/crossed-arms\.webp/);
-  assert.match(html, /href="\/v2\/terminal\.css"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(html, /\/ ORIGINAL WORKS/);
   assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
   assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
@@ -340,7 +340,7 @@ test("every canonical internal page uses the immersive portrait shell, never the
     assert.match(html, /data-route-page="true"/, path);
     assert.match(html, /class="portrait-figure"/, path);
     assert.match(html, /class="route-content"/, path);
-    assert.match(html, /href="\/v2\/terminal\.css"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/, path);
     assert.match(html, /href="\/v2\/routes\.css"/, path);
     assert.match(html, /class="rail" role="tablist"/, path);
     assert.match(html, /href="\/#home"/, path);
