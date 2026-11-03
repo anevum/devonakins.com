@@ -218,6 +218,12 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
             assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
             if origin:
+                # The module loads a first-party JSON snapshot asynchronously.
+                # Wait for validated data, not merely page load, on both engines.
+                page.wait_for_function(
+                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    timeout=7000,
+                )
                 assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
                 assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
                 assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
@@ -290,6 +296,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 check_overflow("canonical-home")
                 assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
                 assert page.locator(".hero-usage").is_visible(), "canonical GPT activity missing"
+                page.wait_for_function(
+                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    timeout=7000,
+                )
                 assert page.locator("#home-usage-value").inner_text() == "≈2.6B"
                 page.wait_for_function("""() => {
                     const text = document.querySelector('#usage-status')?.textContent ?? '';
