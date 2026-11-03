@@ -11,6 +11,7 @@ import os
 import re
 import sys
 from functools import partial
+from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -137,6 +138,60 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     'document.querySelector("#usage-status").textContent.includes("No verified public snapshot")'
                 )
                 assert page.locator("#usage-value").inner_text() == "—"
+
+            # A public GitHub REST response is simulated at the first-party Worker
+            # path. No Playwright test connects to an external provider.
+            if origin:
+                updated_at = datetime.now(timezone.utc).isoformat(
+                    timespec="milliseconds"
+                ).replace("+00:00", "Z")
+                github_payload = {
+                    "version": 1, "account": "anevum",
+                    "metric": "public-repositories", "count": 12,
+                    "asOf": updated_at, "source": "GitHub REST API",
+                    "attestation": "public-provider-response",
+                }
+                github_pattern = "**/v2/github-profile.json"
+                github_route = lambda route: route.fulfill(
+                    status=200, content_type="application/json",
+                    body=json.dumps(github_payload)
+                )
+                page.route(github_pattern, github_route)
+                page.locator('[data-signal="github"]').click()
+                page.wait_for_function(
+                    'document.querySelector("#usage-value").textContent === "12"'
+                )
+                assert page.locator('[data-signal="github"]').get_attribute("aria-pressed") == "true"
+                assert page.locator('[data-signal="chatgpt"]').get_attribute("aria-pressed") == "false"
+                assert "Cached" in page.locator("#usage-status").inner_text()
+                assert "public repositories" in (
+                    page.locator("#usage-value").get_attribute("aria-label") or ""
+                )
+                assert page.locator("#signal-link").get_attribute("href") == "https://github.com/anevum"
+                if width == 390:
+                    page.unroute(github_pattern, github_route)
+                    failure_route = lambda route: route.fulfill(
+                        status=503, content_type="application/json",
+                        body='{"error":"github_public_signal_unavailable"}'
+                    )
+                    page.route(github_pattern, failure_route)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "—"'
+                    )
+                    assert "unavailable" in page.locator("#usage-status").inner_text()
+                    page.unroute(github_pattern, failure_route)
+                    page.route(github_pattern, github_route)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "12"'
+                    )
+                page.locator('[data-signal="chatgpt"]').click()
+                page.wait_for_function(
+                    'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                )
+                assert page.locator('[data-signal="chatgpt"]').get_attribute("aria-pressed") == "true"
+                page.unroute(github_pattern, github_route)
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {
