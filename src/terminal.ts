@@ -15,7 +15,7 @@ type UsageSnapshot = {
 type PublicCode = {name:string; pushedAt:string; url:string};
 type GitHubPublicSignal = {
   version: 2;
-  account: "anevum";
+  account: "devonalanakins";
   metric: "public-repositories";
   count: number;
   asOf: string;
@@ -273,7 +273,7 @@ function validPublicCode(project: unknown, observedAt: unknown): project is Publ
   const p = project as Record<string,unknown>;
   if (typeof p.name !== "string" || p.name.length < 1 || p.name.length > 100 ||
       !/^[A-Za-z0-9_.-]+$/.test(p.name) || p.name === "." || p.name === ".." ||
-      p.url !== "https://github.com/anevum/" + encodeURIComponent(p.name) ||
+      p.url !== "https://github.com/devonalanakins/" + encodeURIComponent(p.name) ||
       typeof p.pushedAt !== "string" ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(p.pushedAt))
     return false;
@@ -292,7 +292,7 @@ function showRecentCode(recent: PublicCode | null, unavailable = false) {
     name.textContent = unavailable ? "Update unavailable" : "No eligible recent public project";
     status.textContent = unavailable ? "Could not confirm current public GitHub activity." :
       "No recent original public repository was returned.";
-    link.href = "https://github.com/anevum";
+    link.href = "https://github.com/devonalanakins";
     link.textContent = "Browse public repositories ↗";
     return;
   }
@@ -326,7 +326,7 @@ function parseGitHubSignal(input: unknown): GitHubPublicSignal {
   const value = input as Record<string, unknown>;
   if (
     Object.keys(value).sort().join(",") !== "account,asOf,attestation,count,metric,recent,source,version" ||
-    value.version !== 2 || value.account !== "anevum" ||
+    value.version !== 2 || value.account !== "devonalanakins" ||
     value.metric !== "public-repositories" ||
     value.source !== "GitHub REST API" ||
     value.attestation !== "public-provider-response" ||
@@ -349,7 +349,7 @@ function showGitHubSignal(snapshot: GitHubPublicSignal) {
   if (count) {
     count.textContent = new Intl.NumberFormat("en-US").format(snapshot.count);
     count.setAttribute("aria-label", snapshot.count.toLocaleString("en-US") +
-      " public repositories under the anevum GitHub account, observed " + snapshot.asOf);
+      " public repositories under the devonalanakins GitHub account, observed " + snapshot.asOf);
   }
   const timeLabel = observed.toLocaleTimeString("en-US", {
     hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
@@ -421,7 +421,7 @@ function selectSignal(source: SignalSource) {
   if (kicker) kicker.textContent = isGitHub ? "GITHUB / OPEN SOURCE" : "CHATGPT / WORK + CODEX";
   if (title) title.textContent = isGitHub ? "Public repositories" : "Activity in public";
   if (note) note.textContent = isGitHub ?
-    "Public repositories on github.com/anevum. First-party proxy, hourly cache and visible observation time. No visitor data is sent to GitHub." :
+    "Public repositories on github.com/devonalanakins. First-party proxy, hourly cache and visible observation time. No visitor data is sent to GitHub." :
     "A dated, approximate Work/Codex token total from my ChatGPT profile—not a live feed, follower count, or measure of audience reach. No private account connection.";
   if (link) link.hidden = !isGitHub;
   if (button) {
