@@ -277,6 +277,11 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
   assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
   assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
+  assert.ok(verifier.includes('class="hero-feature" role="group"'));
+  for (const path of ["/work/aiei/", "/work/isl/", "/work/phatcake/", "/work/brandicade/", "/work/rhen/"]) {
+    assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
+  }
+  assert.ok(verifier.includes('not been implemented or demonstrated'), "ISL concept disclosure checked live");
 });
 
 test("every canonical internal page uses the immersive portrait shell, never the old design", async () => {
