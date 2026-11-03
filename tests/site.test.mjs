@@ -176,6 +176,12 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(v2css, /\.hero-panel h1, \.section-panel h2, \.contact-link/);
   assert.doesNotMatch(v2css, /min-height:\s*390px/);
   assert.match(v2css, /prefers-contrast: more/);
+  assert.match(v2css, /@keyframes vapor-wander/);
+  assert.match(v2css, /@keyframes smoke-fold/);
+  assert.match(v2css, /@keyframes panel-arrive/);
+  assert.match(v2css, /\.interface-shell\[data-motion="off"\] \*/);
+  assert.doesNotMatch(v2css, /animation-duration: \.001ms !important/);
+  assert.match(html, /data-view="home" data-motion="off" data-light="amber"/);
   assert.match(v2css, /\.mobile-light \{/);
   assert.match(v2css, /\.rail-tab \{ min-height: 44px; \}/);
   assert.match(v2css, /\.mobile-light \{ width: 44px; height: 44px; \}/);
@@ -186,6 +192,10 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /history\.pushState\(null, "", "#" \+ name\)/);
   assert.match(client, /window\.addEventListener\("popstate", syncLocationView\)/);
   assert.match(client, /function viewFromLocation\(\)/);
+  assert.match(client, /motionPreference === "on"/);
+  assert.match(client, /requestAnimationFrame/);
+  assert.match(client, /window\.addEventListener\("pointermove"/);
+  assert.match(client, /syncMotion\(\)/);
   assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);

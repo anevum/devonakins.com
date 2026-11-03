@@ -92,7 +92,32 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
-            assert page.locator("#motion-toggle").is_disabled(), "reduced motion ignored"
+            motion = page.locator("#motion-toggle")
+            assert motion.is_enabled(), "explicit motion opt-in control should remain available"
+            shell = page.locator("#interface-shell")
+            assert shell.get_attribute("data-motion") == "off", "reduce-motion default ignored"
+            # In auto mode a device setting change follows the new preference.
+            page.emulate_media(reduced_motion="no-preference")
+            page.wait_for_function('document.querySelector("#interface-shell").dataset.motion === "on"')
+            page.emulate_media(reduced_motion="reduce")
+            page.wait_for_function('document.querySelector("#interface-shell").dataset.motion === "off"')
+            # An intentional on-site opt-in takes precedence for this site alone.
+            motion.click()
+            assert shell.get_attribute("data-motion") == "on"
+            smoke = page.locator(".smoke-amber")
+            assert "vapor-wander" in smoke.evaluate("el => getComputedStyle(el).animationName")
+            first_transform = smoke.evaluate("el => getComputedStyle(el).transform")
+            page.wait_for_timeout(300)
+            assert smoke.evaluate("el => getComputedStyle(el).transform") != first_transform, "smoke is visually static"
+            motion.click()
+            assert shell.get_attribute("data-motion") == "off"
+            assert smoke.evaluate("el => getComputedStyle(el).animationName") == "none"
+            motion.click()
+            assert shell.get_attribute("data-motion") == "on"
+            if origin:
+                page.reload(wait_until="load")
+                assert page.locator("#interface-shell").get_attribute("data-motion") == "on", "motion opt-in did not persist"
+
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {
