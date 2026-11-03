@@ -73,12 +73,12 @@ The V2 Observatory now offers two explicitly identified and separate sources:
 - **ChatGPT** — an approximate lifetime Work/Codex usage snapshot recorded
   November 2, 2026, published in a dated JSON file; not live.
 - **GitHub** — an opt-in, periodically refreshed **public repository count**
-  from the publicly documented GitHub REST `GET /users/anevum` endpoint;
+  from the publicly documented GitHub REST `GET /users/devonalanakins` endpoint;
   not followers, commits, contributions, stars, private repositories,
   published products, or verified ownership of every repository.
 
 Selecting GitHub causes the *website's own Worker* to request the exact fixed
-`https://api.github.com/users/anevum` public endpoint. No account token,
+`https://api.github.com/users/devonalanakins` public endpoint. No account token,
 OAuth grant, visitor IP address or visitor request metadata is intentionally
 sent from the browser to GitHub. Visitors only access the first-party
 `GET /v2/github-profile.json` endpoint.
@@ -118,8 +118,8 @@ Observatory when a visitor opens Work, rather than automatically exposing
 any private development record.
 
 The Worker makes an optional fixed, public, unauthenticated request to
-`GET https://api.github.com/users/anevum/repos?per_page=10&sort=pushed&type=owner`.
-Only records for the `anevum` owner that are public, original (not forks),
+`GET https://api.github.com/users/devonalanakins/repos?per_page=10&sort=pushed&type=owner`.
+Only records for the `devonalanakins` owner that are public, original (not forks),
 nonarchived and enabled are eligible. It selects at most one valid repo,
 uses only its bounded name and normalized last-pushed timestamp, and constructs
 the GitHub URL itself. Untrusted URLs, descriptions, HTML, scripts, email,
