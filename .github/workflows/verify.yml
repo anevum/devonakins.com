@@ -29,6 +29,9 @@ jobs:
       - run: npm run build
       - run: npm test
 
+      - name: Validate browser QA source compiles
+        run: python3 -m py_compile tests/browser_acceptance.py
+
       - name: Install pinned Python Playwright package (PR only)
         if: github.event_name == 'pull_request'
         run: python3 -m pip install --disable-pip-version-check playwright==1.57.0
