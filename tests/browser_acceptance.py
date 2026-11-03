@@ -18,7 +18,7 @@ from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
-VIEWPORTS = [(320, 568), (390, 844), (768, 900), (844, 320), (1440, 900)]
+VIEWPORTS = [(320, 568), (390, 844), (768, 900), (844, 320), (1440, 768), (1440, 900)]
 
 
 def compiled_preview(dist: Path):
@@ -216,6 +216,14 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             if mobile:
                 bounds = light.bounding_box()
                 assert bounds and bounds["width"] >= 44 and bounds["height"] >= 44, bounds
+            if not mobile:
+                light_bounds = light.bounding_box()
+                footer_bounds = page.locator(".statusbar").bounding_box()
+                assert light_bounds and footer_bounds
+                assert light_bounds["y"] + light_bounds["height"] <= footer_bounds["y"], (
+                    "Observatory lighting must not be overlapped by footer",
+                    light_bounds, footer_bounds
+                )
             light.click()
             assert page.locator("#interface-shell").get_attribute("data-light") == "teal"
             assert "teal" in light.get_attribute("aria-label")
