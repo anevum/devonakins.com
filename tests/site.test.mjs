@@ -243,8 +243,9 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
 test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on home", async () => {
   const html = await (await get("/")).text();
   assert.match(html, /class="hero-usage"/);
-  assert.match(html, /id="home-usage-value"[^>]*>≈2\.6B</);
-  assert.match(html, /AS OF 2026-11-02 · OWNER-REPORTED · NOT LIVE/);
+  assert.match(html, /id="home-usage-value"[^>]*>—</);
+  assert.match(html, /id="home-usage-date">PUBLIC SNAPSHOT NOT YET VERIFIED</);
+  assert.doesNotMatch(html, /≈2\.6B/, "unvalidated HTML must not display a statistic");
   const response = await get("/v2/usage-snapshot.json");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("Content-Type"), /application\/json/);
@@ -257,6 +258,9 @@ test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on h
   assert.match(client, /void checkUsage\(\)/);
   assert.match(client, /record\.metric !== "work-codex-tokens"/);
   assert.match(client, /record\.approximate !== true/);
+  assert.match(client, /NO VERIFIED PUBLIC SNAPSHOT AVAILABLE/);
+  assert.equal((client.match(/for \(const element of \[count, homeCount\]\)/g) || []).length, 2,
+    "both readouts must be populated and cleared together");
   assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
 });
 

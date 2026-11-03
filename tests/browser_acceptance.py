@@ -96,11 +96,32 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     return value?.textContent?.trim() === '≈2.6B' &&
                         status?.textContent?.includes('Not live tracking.');
                 }""")
+                assert page.locator("#home-usage-date").inner_text().startswith(
+                    "AS OF 2026-11-02"
+                ), "dated activity snapshot missing"
+                if (width, height) == (390, 844):
+                    # Falsification: a malformed owner snapshot must clear BOTH
+                    # the sidebar and the prominent hero, then recover on refresh.
+                    snapshot_url = "**/v2/usage-snapshot.json"
+                    page.route(snapshot_url, lambda route: route.fulfill(
+                        status=200, content_type="application/json",
+                        body='{"version":1,"count":-1}'
+                    ))
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function("""() => {
+                        return document.querySelector('#home-usage-value')?.textContent?.trim() === '—' &&
+                          document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
+                          document.querySelector('#home-usage-date')?.textContent?.includes('NO VERIFIED PUBLIC SNAPSHOT');
+                    }""")
+                    page.unroute(snapshot_url)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function("""() =>
+                      document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B' &&
+                      document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'
+                    """)
             else:
-                assert page.locator("#home-usage-value").inner_text().strip() == "≈2.6B"
-            assert page.locator("#home-usage-date").inner_text().startswith(
-                "AS OF 2026-11-02"
-            ), "dated activity snapshot missing"
+                assert page.locator("#home-usage-value").inner_text().strip() == "—"
+                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
             if (width, height) in [(390, 844), (1440, 900)]:
                 assert page.locator("#home-usage-value").evaluate("""el => {
                   const box = el.getBoundingClientRect();

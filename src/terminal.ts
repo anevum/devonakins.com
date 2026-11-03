@@ -285,13 +285,19 @@ async function checkUsage() {
     const snapshot = parseSnapshot(await response.json());
     showUsage(snapshot);
   } catch {
+    // Hide any previously displayed number when source data becomes unavailable.
+    // Never leave a stale claim in the visible homepage while the sidebar is empty.
     const count = document.querySelector<HTMLElement>("#usage-value");
-    if (count) {
-      count.textContent = "—";
-      count.removeAttribute("aria-label");
+    const homeCount = document.querySelector<HTMLElement>("#home-usage-value");
+    for (const element of [count, homeCount]) {
+      if (!element) continue;
+      element.textContent = "—";
+      element.removeAttribute("aria-label");
     }
     if (status) status.textContent = "No verified public snapshot available.";
     if (date) date.textContent = "No tokens or account data were retrieved.";
+    const homeDate = document.querySelector<HTMLElement>("#home-usage-date");
+    if (homeDate) homeDate.textContent = "NO VERIFIED PUBLIC SNAPSHOT AVAILABLE";
   } finally {
     polling = false;
     if (button) button.disabled = false;
