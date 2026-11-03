@@ -11,13 +11,14 @@ import os
 import re
 import sys
 from functools import partial
+from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
-VIEWPORTS = [(320, 568), (390, 844), (768, 900), (844, 320), (1440, 900)]
+VIEWPORTS = [(320, 568), (390, 844), (768, 900), (844, 320), (1440, 768), (1440, 900)]
 
 
 def compiled_preview(dist: Path):
@@ -153,6 +154,111 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.reload(wait_until="load")
                 assert page.locator("#interface-shell").get_attribute("data-motion") == "on", "motion opt-in did not persist"
 
+            # Public stats are an owner-reported dated snapshot, not a live API or follower total.
+            if origin:
+                try:
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                    )
+                except Exception as error:
+                    diagnostic = page.evaluate("""async () => {
+                      let details = {};
+                      try {
+                        const response = await fetch('/v2/usage-snapshot.json', {cache:'no-store'});
+                        details = {http:response.status, type:response.headers.get('content-type'), text:(await response.text()).slice(0,350)};
+                      } catch (e) { details = {fetchError:String(e)}; }
+                      return {
+                        value:document.querySelector('#usage-value')?.textContent,
+                        status:document.querySelector('#usage-status')?.textContent,
+                        date:document.querySelector('#usage-date')?.textContent,
+                        details
+                      };
+                    }""")
+                    raise AssertionError(f"Snapshot unavailable in compiled {label}: {diagnostic}") from error
+                assert page.locator("#usage-value").inner_text() == "≈2.6B"
+                assert "Not live" in page.locator("#usage-status").inner_text()
+                assert "Nov 2, 2026" in page.locator("#usage-date").inner_text()
+                assert "Work and Codex tokens" in (
+                    page.locator("#usage-value").get_attribute("aria-label") or ""
+                )
+                if width == 390:
+                    # Network outage / invalid load must never leave a stale public number.
+                    page.route("**/v2/usage-snapshot.json", lambda route: route.abort())
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "—"'
+                    )
+                    assert "No verified public snapshot" in page.locator("#usage-status").inner_text()
+                    page.unroute("**/v2/usage-snapshot.json")
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                    )
+            else:
+                page.wait_for_function(
+                    'document.querySelector("#usage-status").textContent.includes("No verified public snapshot")'
+                )
+                assert page.locator("#usage-value").inner_text() == "—"
+
+            # A public GitHub REST response is simulated at the first-party Worker
+            # path. No Playwright test connects to an external provider.
+            if origin:
+                updated_at = datetime.now(timezone.utc).isoformat(
+                    timespec="milliseconds"
+                ).replace("+00:00", "Z")
+                github_payload = {
+                    "version": 2, "account": "anevum",
+                    "metric": "public-repositories", "count": 12,
+                    "asOf": updated_at, "source": "GitHub REST API",
+                    "attestation": "public-provider-response",
+                    "recent": {
+                        "name": "devonakins.com",
+                        "pushedAt": updated_at,
+                        "url": "https://github.com/anevum/devonakins.com",
+                    },
+                }
+                github_pattern = "**/v2/github-profile.json"
+                github_route = lambda route: route.fulfill(
+                    status=200, content_type="application/json",
+                    body=json.dumps(github_payload)
+                )
+                page.route(github_pattern, github_route)
+                page.locator('[data-signal="github"]').click()
+                page.wait_for_function(
+                    'document.querySelector("#usage-value").textContent === "12"'
+                )
+                assert page.locator('[data-signal="github"]').get_attribute("aria-pressed") == "true"
+                assert page.locator('[data-signal="chatgpt"]').get_attribute("aria-pressed") == "false"
+                assert "Cached" in page.locator("#usage-status").inner_text()
+                assert "public repositories" in (
+                    page.locator("#usage-value").get_attribute("aria-label") or ""
+                )
+                assert page.locator("#signal-link").get_attribute("href") == "https://github.com/anevum"
+                if width == 390:
+                    page.unroute(github_pattern, github_route)
+                    failure_route = lambda route: route.fulfill(
+                        status=503, content_type="application/json",
+                        body='{"error":"github_public_signal_unavailable"}'
+                    )
+                    page.route(github_pattern, failure_route)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "—"'
+                    )
+                    assert "unavailable" in page.locator("#usage-status").inner_text()
+                    page.unroute(github_pattern, failure_route)
+                    page.route(github_pattern, github_route)
+                    page.locator("#refresh-usage").click()
+                    page.wait_for_function(
+                        'document.querySelector("#usage-value").textContent === "12"'
+                    )
+                page.locator('[data-signal="chatgpt"]').click()
+                page.wait_for_function(
+                    'document.querySelector("#usage-value").textContent.includes("2.6B")'
+                )
+                assert page.locator('[data-signal="chatgpt"]').get_attribute("aria-pressed") == "true"
+                # Keep the route active until the Work panel consumes the same
+                # owner-scoped, first-party public project signal.
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {
@@ -177,6 +283,14 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             if mobile:
                 bounds = light.bounding_box()
                 assert bounds and bounds["width"] >= 44 and bounds["height"] >= 44, bounds
+            if not mobile:
+                light_bounds = light.bounding_box()
+                footer_bounds = page.locator(".statusbar").bounding_box()
+                assert light_bounds and footer_bounds
+                assert light_bounds["y"] + light_bounds["height"] <= footer_bounds["y"], (
+                    "Observatory lighting must not be overlapped by footer",
+                    light_bounds, footer_bounds
+                )
             light.click()
             assert page.locator("#interface-shell").get_attribute("data-light") == "teal"
             assert "teal" in light.get_attribute("aria-label")
@@ -190,6 +304,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 "el => document.activeElement === el"
             ), "tab focus didn't follow selection"
             check_overflow("work")
+            if origin:
+                page.wait_for_function(
+                    'document.querySelector("#recent-code-name").textContent === "devonakins.com"'
+                )
+                assert page.locator("#recent-code-link").get_attribute("href") == "https://github.com/anevum/devonakins.com"
+                assert "Last pushed" in page.locator("#recent-code-status").inner_text()
+                assert "not a release" in page.locator("#recent-code-status").inner_text()
+                assert page.locator("#recent-code-link").is_visible()
+                page.unroute(github_pattern, github_route)
             page.locator("#tab-writing").click()
             assert page.locator("#panel-writing").is_visible()
             check_overflow("writing")

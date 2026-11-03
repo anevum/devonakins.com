@@ -508,3 +508,64 @@ h1, h2, p { margin-top: 0; }
   .smoke-cyan { right: -45%; top: 15%; }
   .smoke-violet { left: -12%; bottom: -48%; }
 }
+
+/* Public activity: a readable, dated owner-reported figure, never a faux-live gauge. */
+.telemetry-readout .readout-value { color: #f2c7a9; text-shadow: 0 0 34px rgba(225, 163, 126, .19); }
+.telemetry-readout .readout-date { overflow-wrap: anywhere; }
+.telemetry-readout .readout-kicker { color: #e4b594; }
+
+/* Observatory source selector. Original panel geometry and reduced motion remain intact. */
+.signal-sources { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 11px 0 7px; }
+.signal-sources button { min-height: 34px; padding: 7px 10px; background: rgba(12, 18, 28, .64); border: 1px solid rgba(194, 204, 218, .26); border-radius: 7px; color: #b6c1cc; font-size: 10px; cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.signal-sources button:hover { border-color: rgba(225, 177, 143, .8); }
+.signal-sources button[aria-pressed="true"] { border-color: rgba(228, 181, 149, .86); background: rgba(204, 139, 97, .17); color: #ffe0c8; }
+.signal-link { display: inline-flex; align-items: center; gap: 9px; margin-top: 12px; color: #e6b896; font-size: 10px; text-decoration: underline; text-underline-offset: 4px; }
+.telemetry-readout .readout-value { overflow-wrap: anywhere; }
+@media(max-width:960px) {
+  .signal-sources { grid-column: 1; grid-row: 1/3; align-self: center; gap: 4px; margin: 0; }
+  .signal-sources button { min-height: 44px; padding: 7px 9px; font-size: 10px; }
+  .telemetry-readout .readout-kicker, .telemetry-readout h2, .signal-link { display: none; }
+}
+@media(max-width:460px) {
+  .signal-sources button { padding-inline: 7px; font-size: 9px; }
+}
+@media(max-height:640px) {
+  .signal-sources button { min-height: 34px; padding-block: 4px; }
+}
+
+/* Keep the expanded Observatory entirely above the statusbar at desktop heights. */
+@media (min-width:961px) and (max-height:920px) {
+  .telemetry { padding-block: 18px; }
+  .telemetry-ring { width: min(100%, 128px); margin: 13px auto 16px; }
+  .telemetry-readout { padding-top: 9px; }
+  .telemetry-readout h2 { margin-block: 7px; }
+  .telemetry-readout .readout-value { font-size: clamp(33px, 3.5vw, 47px); }
+  .readout-status, .readout-date { line-height: 1.4; }
+  .signal-sources { margin: 7px 0 3px; }
+  .refresh-button { margin-top: 9px; padding: 8px 10px; }
+  .telemetry-note { margin-top: 10px; line-height: 1.5; }
+  .telemetry-bottom { padding-top: 9px; gap: 7px; }
+}
+@media (min-width:961px) and (max-height:700px) {
+  .telemetry-ring, .telemetry-note { display:none; }
+}
+
+/* Public-code spotlight uses the existing Work panel, not another page or overlay. */
+.recent-public-code { position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px 18px; align-items:center; max-width:890px; width:100%; margin-top:17px; padding:14px 17px; border:1px solid rgba(205,180,167,.23); background:linear-gradient(120deg,rgba(55,49,54,.32),rgba(10,20,28,.49)); border-radius:9px; }
+.recent-code-head { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:12px; color:#d4a98c; }
+.recent-code-head h3 { margin:0; font-size:11px; line-height:1.4; font-weight:650; letter-spacing:.06em; }
+.recent-code-head span { font-size:8px; letter-spacing:.16em; color:#839aaa; }
+.recent-code-details { min-width:0; }
+.recent-code-details strong { color:#f0e3d7; font-size:14px; font-weight:570; overflow-wrap:anywhere; }
+.recent-code-details p { color:#99a7b5; font-size:10px; line-height:1.55; margin:4px 0 0; max-width:60ch; }
+#recent-code-link { display:inline-flex; align-items:center; gap:8px; min-height:44px; color:#e7bea2; font-size:10px; text-decoration:underline; text-underline-offset:4px; white-space:normal; text-align:right; }
+#recent-code-link:hover { color:#fff; }
+@media(max-width:960px) {
+  .recent-public-code { grid-template-columns:minmax(0,1fr); gap:7px; margin-top:10px; padding:12px 13px; }
+  #recent-code-link { justify-self:start; text-align:left; }
+}
+@media(max-width:460px) and (max-height:640px) {
+  .recent-public-code { padding:10px 12px; margin-top:9px; }
+  .recent-code-head span { font-size:7px; }
+  .recent-code-details strong { font-size:12px; }
+}

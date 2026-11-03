@@ -1,7 +1,9 @@
 # DevonAkins.com — immersive interface V2 preview
 
-Status: **isolated source preview**. This is not the production homepage. The existing
-11-page public site and Cloudflare Worker remain in place. Preview route: \`/v2/\`.
+Status: **the portrait interface is the canonical 1.1.1 homepage in release source**;
+the independent `/v2/` route remains a noindex review preview. These Observatory
+features are source-only until their integration PR is approved and deployed.
+Previous project pages, accessible ambient motion controls, separated CSS and the guarded release process remain intact. The public Observatory is still a review-only source candidate, not deployed.
 
 ## Scope
 
@@ -19,36 +21,125 @@ Status: **isolated source preview**. This is not the production homepage. The ex
 - No external fonts, third-party trackers, credentials, analytics, or private
   integrations. This is a personal presentation, not an authenticated workspace.
 
-## Optional usage-snapshot contract
+## Public ChatGPT activity observatory (owner-reported snapshot)
 
-There is **no live ChatGPT usage API connection** and **no figure is shipped**.
-The observatory begins with a dash and an honest unavailable status. On explicit
-click, it attempts a same-origin, optional static publication at
-\`/v2/usage-snapshot.json\`. A missing or malformed response is never displayed
-as a valid metric.
+The isolated V2 Observatory now displays an **approximately 2.6 billion lifetime
+Work/Codex tokens** value, as reported by Devon from his ChatGPT profile on
+November 2, 2026. This is **not** a measured live API total, a cumulative
+count of ordinary ChatGPT chat messages, a follower count or a measure of
+audience reach. It is intentionally marked approximate and dated.
 
-Only after Devon authorizes publication of a sourced public figure, an editor
-can add \`public/v2/usage-snapshot.json\` with this contract:
+The only source is the public, same-origin owner-published
+`public/v2/usage-snapshot.json` asset. The V2 preview retrieves it once on
+load and lets visitors explicitly refresh the file. It displays:
 
-\`\`\`json
+- the accessible **≈2.6B** result with the correct Work/Codex unit;
+- a visible abbreviated observation date and **Not live** status on phones;
+- the full date and source on larger displays.
+
+The actual public snapshot schema is:
+
+```json
 {
   "version": 1,
-  "metric": "tokens",
-  "count": 0,
+  "metric": "work-codex-tokens",
+  "count": 2600000000,
+  "approximate": true,
   "asOf": "2026-11-02",
-  "source": "Owner-maintained reporting record",
+  "source": "Owner-reported ChatGPT profile",
   "attestation": "owner-published"
 }
-\`\`\`
+```
 
-**This is a schema example, not a measurement.** \`count\` must be a
-nonnegative safe integer, \`asOf\` a real YYYY-MM-DD date not in the future,
-and \`source\` a short nonempty text (maximum 100 characters). User-supplied
-numbers should be identified as estimates. The UI explicitly states that
-the snapshot is not live tracking and makes no request until the button is
-pressed. Do not place API keys, account IDs, exports, or private metadata in
-the JSON or browser bundle. Do not scrape authenticated ChatGPT pages or use
-undocumented account endpoints.
+**Updating the number requires owner approval, a revised dated public JSON
+asset and a new site deployment.** Merely clicking Refresh reloads the latest
+published file; no counter increments between releases. The formatter
+requires known keys, a safe nonnegative integer, an actual date and the
+approximate marker. Missing/malformed/unavailable data restores an explicit
+unavailable state instead of showing stale numbers.
+
+No ChatGPT token, cookie, session identifier or account API is read from the
+visitor or the owner's browser. The site does not scrape a logged-in account.
+An official personal creator-profile stats API has not been verified and
+must not be inferred from OpenAI's separate developer API usage data.
+Future real social-platform public milestones need a separately sourced,
+consented, privacy-reviewed publication pipeline. No social metrics are
+fabricated in this increment.
+
+## Public GitHub signal (proposed release addition)
+
+The V2 Observatory now offers two explicitly identified and separate sources:
+
+- **ChatGPT** — an approximate lifetime Work/Codex usage snapshot recorded
+  November 2, 2026, published in a dated JSON file; not live.
+- **GitHub** — an opt-in, periodically refreshed **public repository count**
+  from the publicly documented GitHub REST `GET /users/anevum` endpoint;
+  not followers, commits, contributions, stars, private repositories,
+  published products, or verified ownership of every repository.
+
+Selecting GitHub causes the *website's own Worker* to request the exact fixed
+`https://api.github.com/users/anevum` public endpoint. No account token,
+OAuth grant, visitor IP address or visitor request metadata is intentionally
+sent from the browser to GitHub. Visitors only access the first-party
+`GET /v2/github-profile.json` endpoint.
+
+The Worker validates the returned username, account type and nonnegative
+integer `public_repos`; only a narrow, explicitly whitelisted JSON envelope
+is returned. The upstream profile's email, follower/following totals and
+other fields are never forwarded. The connection has a 4.5-second timeout,
+64-KiB response limit, single-flight request deduplication and a one-minute
+failure cooldown. A successful result is cached in the warm Worker isolate
+for up to an hour and opportunistically in Cloudflare's Cache API when
+available. Different edge locations can refresh at different times. Browser
+responses can be cached for five minutes. On errors, the Worker returns a
+non-cacheable **503** with no fabricated zero or stale metric.
+
+The Observatory identifies this as **cached GitHub public data**, exposes its
+UTC observation time and links to the public GitHub profile. Source buttons
+remain local to the existing portrait/smoke V2 interface and are keyboard-
+and touch-operable. Unsupported values, future/stale timestamps and failure
+responses are hidden behind an explicit unavailable state. The ChatGPT
+snapshot still loads on site visit, and only selecting GitHub initiates a
+GitHub data request. The site makes no outbound provider request from the
+visitor's browser.
+
+This is a source-only increment. No production Cloudflare Worker deployment,
+paid service, new credential, analytics tracker, GitHub permission grant, or
+change to other DevonStation/Cristy/Anevum projects is included. Actual
+Cloudflare API reachability, its cache behavior under production traffic,
+and physical iPhone acceptance require separate verification before release.
+
+## Recent Public Code in the Work panel
+
+The existing Work panel now contains an optional **Recent public code**
+spotlight. It is a source-backed project link, not another invented
+engagement metric. This uses the same first-party GitHub signal as the
+Observatory when a visitor opens Work, rather than automatically exposing
+any private development record.
+
+The Worker makes an optional fixed, public, unauthenticated request to
+`GET https://api.github.com/users/anevum/repos?per_page=10&sort=pushed&type=owner`.
+Only records for the `anevum` owner that are public, original (not forks),
+nonarchived and enabled are eligible. It selects at most one valid repo,
+uses only its bounded name and normalized last-pushed timestamp, and constructs
+the GitHub URL itself. Untrusted URLs, descriptions, HTML, scripts, email,
+repository permissions, collaborators, private metadata and star counts are
+never copied to the site.
+
+The public signal schema is now version 2, with a nullable `recent` field
+containing `{name,pushedAt,url}`. Both server and browser validate its
+exact fields, canonical URL and timestamp. A missing, rejected or failed
+optional repository request keeps the supported public repository **count**
+available and displays a clear fallback in Work. The outer first-party
+source remains hourly cached; each GitHub provider fetch is bounded and
+rate-limit failures do not invent project updates.
+
+`pushedAt` is explicitly labeled **Last pushed**, never a verified
+release, public deploy, merged PR, or personal daily contribution count.
+The link opens the canonical public repo in a new tab. The feature remains
+source-only until the existing stacked PRs are reviewed and release
+approval is granted. No additional credentials, paid tooling, deployment,
+visitor tracking, or automatic changes to GitHub have been introduced.
 
 ## Build and tests
 

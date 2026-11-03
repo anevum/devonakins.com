@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "metric": "work-codex-tokens",
+  "count": 2600000000,
+  "approximate": true,
+  "asOf": "2026-11-02",
+  "source": "Owner-reported ChatGPT profile",
+  "attestation": "owner-published"
+}
