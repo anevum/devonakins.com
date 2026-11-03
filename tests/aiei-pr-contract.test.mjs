@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {validateContract} from '../scripts/aiei-pr-contract.mjs';
 
-const sample=`## Purpose\nMake the user's current page readable on narrow phones.\n\n## Scope and boundaries\nOnly the website stylesheet changes; no accounts, APIs, or deployments.\n\n## Acceptance evidence\nNode test output and screenshots for 320 and 390 pixel viewports; live iPhone not checked.\n\n## Negative cases\nEnsure reduced-motion preference still disables animated transitions and all links remain keyboard-accessible.\n\n## Risks and unknowns\nPhysical device test and source-to-production commit are unverified, so do not deploy.\n\n## Release intent\nREVIEW_ONLY\n`;
+const sample=`## Purpose\nMake the user's current page readable on narrow phones.\n\n## Scope and boundaries\nOnly the website stylesheet changes; no accounts, APIs, or deployments.\n\n## Risk tier\nR1\n\n## Acceptance evidence\nNode test output and screenshots for 320 and 390 pixel viewports; live iPhone not checked.\n\n## Negative cases\nEnsure reduced-motion preference still disables animated transitions and all links remain keyboard-accessible.\n\n## Risks and unknowns\nPhysical device test and source-to-production commit are unverified, so do not deploy.\n\n## Release intent\nREVIEW_ONLY\n`;
 test('accepts a specific review-only contract without asserting that evidence is true',()=>{
  assert.deepEqual(validateContract(sample),{ok:true,errors:[]});
 });
-test('requires all six sections',()=>{
+test('requires all seven sections',()=>{
  const r=validateContract(sample.replace('## Negative cases','## Another section'));
  assert(!r.ok && r.errors.some(x=>x.includes('Missing section: Negative cases')));
 });
@@ -67,4 +67,19 @@ test('AIEI workflow remains read-only and reports status for draft PRs',async()=
  assert.doesNotMatch(yml,/^    if:.*\.draft/m);
  assert.match(yml,/persist-credentials: false/);
  assert.doesNotMatch(yml,/\$\{\{\s*secrets\./);
+});
+
+test('requires an explicit risk tier even when other review fields are complete',()=>{
+ const r=validateContract(sample.replace('## Risk tier\nR1\n\n',''));
+ assert(!r.ok && r.errors.some(x=>x.includes('Missing section: Risk tier')));
+});
+test('rejects unknown, duplicate or embellished risk tier values',()=>{
+ for (const invalid of ['Unknown','R4','R3 - important','R1\nR2','r2','TBD']) {
+   const r=validateContract(sample.replace('## Risk tier\nR1','## Risk tier\n'+invalid));
+   assert(!r.ok && r.errors.some(x=>x.includes('Risk tier must')),invalid);
+ }
+});
+test('accepts high-risk R3 reviews without treating it as release approval',()=>{
+ const r=validateContract(sample.replace('## Risk tier\nR1','## Risk tier\nR3').replace('REVIEW_ONLY','RELEASE_NO_GO'));
+ assert.deepEqual(r,{ok:true,errors:[]});
 });
