@@ -51,7 +51,11 @@ assert.doesNotMatch(markup, /V2 PREVIEW|name="robots" content="noindex/);
 assert.match(markup, /id="usage-value"/, "compact GPT activity stream is present");
 assert.match(markup, /href="\/gpt\/"/, "home stream links to detailed GPT profile");
 assert.doesNotMatch(markup, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage metric");
-assert.match(markup, /class="hero-feature" role="group"/, "AIEI and ISL homepage highlights");
+assert.match(markup, /class="hero-feature" role="group" aria-label="Active development"/, "curated home development showcase");
+assert.match(markup, /<h2>Active development<\/h2>/, "development heading");
+assert.match(markup, /class="focus-grid"/, "responsive work grid");
+assert.doesNotMatch(markup, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/, "deprecated cramped copy removed");
+assert.match(markup, /aria-label="View profile — full GPT activity and skills"/, "GPT stream has an accessible profile action");
 for (const path of ["/work/aiei/", "/work/isl/"]) {
   assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
 }

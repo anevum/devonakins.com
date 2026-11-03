@@ -176,10 +176,10 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.equal(cssResponse.status, 200);
   assert.match(cssResponse.headers.get("Cache-Control") || "", /must-revalidate/,
     "Unversioned mutable CSS must revalidate to prevent iOS stale stylesheet rendering");
-  const freshCss = await get("/v2/terminal.css?v=1.2.2");
+  const freshCss = await get("/v2/terminal.css?v=1.2.3");
   assert.equal(freshCss.status, 200);
   assert.equal(freshCss.headers.get("ETag"), cssResponse.headers.get("ETag"));
-  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
   const v2css = await cssResponse.text();
   assert.match(v2css, /\.interface-shell/);
@@ -215,7 +215,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
   const routeHtml = await (await get("/about/")).text();
-  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(routeHtml, /href="\/v2\/routes\.css"/);
   assert.match(routeHtml, /data-route-page="true"/);
   assert.doesNotMatch(routeHtml, /href="\/assets\/[^"]+\.css"/,
@@ -235,7 +235,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /\/v2\/crossed-arms\.webp/);
-  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(html, /\/ ORIGINAL WORKS/);
   assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
   assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
@@ -251,6 +251,8 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   const html = await (await get("/")).text();
   assert.match(html, /id="usage-value"/);
   assert.match(html, /data-feed-state="loading"/);
+  assert.match(html, /aria-label="View profile — full GPT activity and skills"/);
+  assert.match(html, /<span class="telemetry-profile-label">View profile<\/span>/);
   assert.match(html, /class="feed-beam"/);
   assert.match(html, /Reading profile snapshot/);
   assert.doesNotMatch(html, /Owner-reported · Not live tracking\./);
@@ -340,7 +342,7 @@ test("every canonical internal page uses the immersive portrait shell, never the
     assert.match(html, /data-route-page="true"/, path);
     assert.match(html, /class="portrait-figure"/, path);
     assert.match(html, /class="route-content"/, path);
-    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/, path);
     assert.match(html, /href="\/v2\/routes\.css"/, path);
     assert.match(html, /class="rail" role="tablist"/, path);
     assert.match(html, /href="\/#home"/, path);
@@ -389,11 +391,17 @@ test("rendered public source and contact routes contain only current GitHub iden
 
 test("current engineering showcase is prominently linked and status-qualified", async () => {
   const home = await (await get("/")).text();
-  assert.match(home, /class="hero-feature" role="group" aria-label="Featured current projects"/);
+  assert.match(home, /class="hero-feature" role="group" aria-label="Active development"/);
+  assert.match(home, /<h2>Active development<\/h2>/);
+  assert.match(home, /class="focus-grid"/);
+  assert.match(home, /class="focus-project-state focus-project-active">Active<\/span>/);
+  assert.match(home, /class="focus-project-state focus-project-research">Research<\/span>/);
+  assert.doesNotMatch(home, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/,
+    "old cramped metadata must not appear on the homepage");
   assert.match(home, /href="\/work\/aiei\/"/);
   assert.match(home, /href="\/work\/isl\/"/);
-  assert.match(home, /ACTIVE ENGINEERING \/ OPEN SOURCE/);
-  assert.match(home, /LANGUAGE RESEARCH \/ PROPOSED/);
+  assert.match(home, /Trustworthy AI engineering/);
+  assert.match(home, /Intent-first language research/);
   assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
   for (const slug of ["aiei", "isl", "phatcake", "brandicade", "rhen"]) {
@@ -418,8 +426,10 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(source, /ISL — language research/);
   const css = await (await get("/v2/terminal.css")).text();
   assert.match(css, /\.hero-feature-link:focus-visible/);
-  assert.match(css, /V1\.2\.2/);
+  assert.match(css, /V1\.2\.3/);
   assert.match(css, /\.telemetry-readout\[data-feed-state="ready"\]/);
+  assert.match(css, /\.focus-grid/);
+  assert.match(css, /\.focus-project-copy/);
   assert.match(css, /@media \(max-width: 460px\)/);
   assert.match(css, /@media \(max-width: 360px\)/);
 });
