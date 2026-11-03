@@ -146,10 +146,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     timespec="milliseconds"
                 ).replace("+00:00", "Z")
                 github_payload = {
-                    "version": 1, "account": "anevum",
+                    "version": 2, "account": "anevum",
                     "metric": "public-repositories", "count": 12,
                     "asOf": updated_at, "source": "GitHub REST API",
                     "attestation": "public-provider-response",
+                    "recent": {
+                        "name": "devonakins.com",
+                        "pushedAt": updated_at,
+                        "url": "https://github.com/anevum/devonakins.com",
+                    },
                 }
                 github_pattern = "**/v2/github-profile.json"
                 github_route = lambda route: route.fulfill(
@@ -191,7 +196,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     'document.querySelector("#usage-value").textContent.includes("2.6B")'
                 )
                 assert page.locator('[data-signal="chatgpt"]').get_attribute("aria-pressed") == "true"
-                page.unroute(github_pattern, github_route)
+                # Keep the route active until the Work panel consumes the same
+                # owner-scoped, first-party public project signal.
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {
@@ -237,6 +243,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 "el => document.activeElement === el"
             ), "tab focus didn't follow selection"
             check_overflow("work")
+            if origin:
+                page.wait_for_function(
+                    'document.querySelector("#recent-code-name").textContent === "devonakins.com"'
+                )
+                assert page.locator("#recent-code-link").get_attribute("href") == "https://github.com/anevum/devonakins.com"
+                assert "Last pushed" in page.locator("#recent-code-status").inner_text()
+                assert "not a release" in page.locator("#recent-code-status").inner_text()
+                assert page.locator("#recent-code-link").is_visible()
+                page.unroute(github_pattern, github_route)
             page.locator("#tab-writing").click()
             assert page.locator("#panel-writing").is_visible()
             check_overflow("writing")
