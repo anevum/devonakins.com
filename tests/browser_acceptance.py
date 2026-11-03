@@ -222,10 +222,16 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 label, "Unstyled project link", card_style
             )
             assert card_style["border"] >= 1, (label, "Project card border missing", card_style)
-            profile_style = page.locator(".telemetry-profile-link").evaluate(
-                "el => getComputedStyle(el).display"
+            profile_style = page.locator(".telemetry-profile-link").evaluate("""el => {
+              const style = getComputedStyle(el);
+              return {display: style.display, decoration: style.textDecorationLine,
+                      border: parseFloat(style.borderTopWidth)};
+            }""")
+            # CSS grid blockifies inline-flex into flex; either is correct.
+            assert profile_style["display"] in ["flex", "inline-flex"], (label, profile_style)
+            assert profile_style["decoration"] == "none" and profile_style["border"] >= 1, (
+                label, "GPT profile action has stale/missing styles", profile_style
             )
-            assert profile_style == "inline-flex", (label, "GPT profile link not styled")
             # Retain AIEI/ISL highlights and use the Observatory as the only
             # ChatGPT activity stream.
             featured = page.locator(".hero-feature")
