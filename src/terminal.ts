@@ -34,11 +34,13 @@ if (!shell || !tabs.length || !tablist) {
 
 const interfaceShell = shell;
 let announcementTimer = 0;
-let motionWanted = true;
+let motionPreference: "auto" | "on" | "off" = "auto";
+let pointerFrame = 0;
 let polling = false;
 
 try {
-  motionWanted = localStorage.getItem("devon-v2-motion") !== "off";
+  const saved = localStorage.getItem("devon-v2-motion");
+  if (saved === "on" || saved === "off") motionPreference = saved;
 } catch {
   // Private browsing can restrict persistent storage.
 }
@@ -119,30 +121,60 @@ syncOrientation();
 navLayout.addEventListener("change", syncOrientation);
 
 function motionAllowed() {
-  return motionWanted && !reducedMotion.matches;
+  return motionPreference === "on" || (motionPreference === "auto" && !reducedMotion.matches);
+}
+function resetPointerDepth() {
+  if (pointerFrame) cancelAnimationFrame(pointerFrame);
+  pointerFrame = 0;
+  interfaceShell.style.setProperty("--scene-shift-x", "0px");
+  interfaceShell.style.setProperty("--scene-shift-y", "0px");
 }
 function syncMotion() {
   const enabled = motionAllowed();
   interfaceShell.dataset.motion = enabled ? "on" : "off";
+  if (!enabled) resetPointerDepth();
   if (motionButton) {
-    motionButton.disabled = reducedMotion.matches;
-    motionButton.textContent = reducedMotion.matches ? "REDUCED MOTION" : enabled ? "MOTION ON" : "MOTION OFF";
+    // A visitor can explicitly opt into motion even when iOS Reduce Motion is on.
+    // The default still follows the device's accessibility preference.
+    motionButton.disabled = false;
+    motionButton.textContent = enabled ? "MOTION ON" : "MOTION OFF";
     motionButton.setAttribute("aria-pressed", String(enabled));
-    motionButton.title = reducedMotion.matches ? "System reduced-motion preference is respected" : "Toggle ambient animation";
+    motionButton.title = reducedMotion.matches && motionPreference === "auto"
+      ? "System Reduce Motion is on. Activate to opt into ambient animation on this site."
+      : "Toggle ambient animation";
   }
 }
 syncMotion();
 motionButton?.addEventListener("click", () => {
-  if (reducedMotion.matches) return;
-  motionWanted = !motionWanted;
+  motionPreference = motionAllowed() ? "off" : "on";
   try {
-    localStorage.setItem("devon-v2-motion", motionWanted ? "on" : "off");
+    localStorage.setItem("devon-v2-motion", motionPreference);
   } catch {
     // The interface works without browser storage.
   }
   syncMotion();
+  announce(motionAllowed() ? "Ambient motion enabled." : "Ambient motion paused.");
 });
 reducedMotion.addEventListener("change", syncMotion);
+
+// Desktop-only portrait depth. Only compositor transforms change, at most
+// once per animation frame. Touch and reduced-motion sessions do no work.
+const finePointer = matchMedia("(hover: hover) and (pointer: fine)");
+window.addEventListener("pointermove", (event) => {
+  if (!motionAllowed() || !finePointer.matches || event.pointerType !== "mouse" || document.hidden || pointerFrame)
+    return;
+  const x = ((event.clientX / window.innerWidth) - .5) * -16;
+  const y = ((event.clientY / window.innerHeight) - .5) * -10;
+  pointerFrame = requestAnimationFrame(() => {
+    pointerFrame = 0;
+    interfaceShell.style.setProperty("--scene-shift-x", x.toFixed(1) + "px");
+    interfaceShell.style.setProperty("--scene-shift-y", y.toFixed(1) + "px");
+  });
+}, { passive: true });
+window.addEventListener("blur", resetPointerDepth);
+window.addEventListener("pointerout", (event) => {
+  if (!event.relatedTarget) resetPointerDepth();
+});
 
 function refreshClock() {
   if (!clock) return;
@@ -267,6 +299,7 @@ for (const button of lightButtons) {
 }
 
 window.addEventListener("pagehide", (event) => {
+  resetPointerDepth();
   if (event.persisted) return;
   window.clearInterval(clockTimer);
   window.clearTimeout(announcementTimer);

@@ -110,3 +110,28 @@ the noindex V2 preview, portrait asset, true 404, and www redirect.
 
 Workflows are source preparation until a manually dispatched run reports
 success and the intended live site is independently observed.
+
+
+## V1.1.1 ambient motion refinement — source candidate
+
+The original static-looking 24–35-second smoke gradients are replaced by
+three moving, layered colored vapor volumes and independently folding wisps.
+Translucent amber, cyan and violet drift is visible without adding video,
+WebGL, third-party services or permanent browser loops. Small movement extends
+to portrait halo/orbit, telemetry ring, status pulse and the entrance timing
+of newly selected panels. Desktop fine-pointer movement adds a small
+requestAnimationFrame-throttled portrait offset; touch does not incur it.
+
+The homepage HTML begins with data-motion="off" to prevent animation before
+the preference is read. In the absence of a site preference, motion follows
+prefers-reduced-motion. The MOTION ON/OFF button allows an **explicit visitor
+opt-in**, even if the device's Reduce Motion setting is enabled; motion OFF
+suppresses animations and transitions for the whole interface. Only the
+preference ("on" or "off") is stored locally and no telemetry is collected.
+
+Cross-browser PR acceptance must verify that reduced-motion defaults off,
+changing the simulated system preference updates the UI, deliberate opt-in
+enables genuinely changing smoke transforms, an off toggle removes animations,
+and site opt-in persists across reloads on the local test origin. Check the
+actual iPhone Safari appearance/performance separately before production
+release. This candidate is not live merely because code is committed.

@@ -92,7 +92,67 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
-            assert page.locator("#motion-toggle").is_disabled(), "reduced motion ignored"
+            motion = page.locator("#motion-toggle")
+            assert motion.is_enabled(), "explicit motion opt-in control should remain available"
+            shell = page.locator("#interface-shell")
+            assert shell.get_attribute("data-motion") == "off", "reduce-motion default ignored"
+            # In auto mode a device setting change follows the new preference.
+            page.emulate_media(reduced_motion="no-preference")
+            page.wait_for_function('document.querySelector("#interface-shell").dataset.motion === "on"')
+            page.emulate_media(reduced_motion="reduce")
+            page.wait_for_function('document.querySelector("#interface-shell").dataset.motion === "off"')
+            # An intentional on-site opt-in takes precedence for this site alone.
+            motion.click()
+            assert shell.get_attribute("data-motion") == "on"
+            smoke = page.locator(".smoke-amber")
+            try:
+                page.wait_for_function("""() => {
+                    const el = document.querySelector('.smoke-amber');
+                    return el && getComputedStyle(el).animationName.includes('vapor-wander');
+                }""", timeout=2500)
+            except Exception as error:
+                details = page.evaluate("""() => {
+                  const el = document.querySelector('.smoke-amber');
+                  const shell = document.querySelector('#interface-shell');
+                  const style = getComputedStyle(el);
+                  return {
+                    motion: shell.dataset.motion,
+                    className: el.className,
+                    animationName: style.animationName,
+                    animationDuration: style.animationDuration,
+                    opacity: style.opacity,
+                    background: style.backgroundImage,
+                    stylesheets: [...document.styleSheets].map(s => ({
+                      href: s.href, rules: s.cssRules?.length,
+                      hasVapor: [...s.cssRules].some(r => r.cssText.includes('vapor-wander'))
+                    }))
+                  };
+                }""")
+                raise AssertionError("Smoke animation did not engage: " + str(details)) from error
+            first_transform = smoke.evaluate("el => getComputedStyle(el).transform")
+            # Headless GPU scheduling can delay a rendered frame; verify real
+            # progression rather than assuming one appears within 300ms.
+            try:
+                page.wait_for_function("""previous => {
+                    const el = document.querySelector('.smoke-amber');
+                    return getComputedStyle(el).transform !== previous;
+                }""", arg=first_transform, timeout=3000)
+            except Exception as error:
+                state = smoke.evaluate("""el => ({
+                    transform: getComputedStyle(el).transform,
+                    animation: getComputedStyle(el).animationName,
+                    state: el.getAnimations().map(a => ({playState:a.playState, currentTime:a.currentTime}))
+                })""")
+                raise AssertionError("Smoke failed to advance its animated transform: " + str(state)) from error
+            motion.click()
+            assert shell.get_attribute("data-motion") == "off"
+            assert smoke.evaluate("el => getComputedStyle(el).animationName") == "none"
+            motion.click()
+            assert shell.get_attribute("data-motion") == "on"
+            if origin:
+                page.reload(wait_until="load")
+                assert page.locator("#interface-shell").get_attribute("data-motion") == "on", "motion opt-in did not persist"
+
 
             def check_overflow(view):
                 observed = page.evaluate("""() => {

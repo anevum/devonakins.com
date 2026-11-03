@@ -24,7 +24,7 @@ button, a { touch-action: manipulation; }
 .skip:focus { top: 1rem; }
 .interface-shell { position: relative; width: 100%; height: 100vh; height: 100dvh; min-height: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: grid; grid-template-rows: 76px minmax(0, 1fr) 42px; overflow: hidden; isolation: isolate; background: radial-gradient(ellipse at 75% 50%, rgba(32, 38, 54, .47), transparent 45%), #07090f; }
 .interface-shell::before { content: ""; position: absolute; z-index: 2; pointer-events: none; inset: 0; border: 1px solid rgba(211, 207, 215, .09); }
-.atmosphere { position: absolute; pointer-events: none; inset: 0; z-index: -1; overflow: hidden; }
+.atmosphere { position: absolute; pointer-events: none; inset: 0; z-index: 0; overflow: hidden; }
 .smoke { position: absolute; width: 72vw; height: 90vh; min-width: 460px; min-height: 440px; border-radius: 50%; opacity: .52; filter: blur(64px); will-change: transform; animation: vapor-drift 24s ease-in-out infinite alternate; }
 .smoke-amber { left: 12%; top: -52%; background: radial-gradient(ellipse at 53% 52%, rgba(167, 91, 64, .28) 0%, rgba(105, 64, 75, .17) 29%, transparent 69%); }
 .smoke-cyan { right: -26%; bottom: -40%; background: radial-gradient(ellipse at 47% 48%, rgba(55, 107, 125, .32) 0%, rgba(42, 76, 107, .18) 32%, transparent 68%); animation-delay: -9s; animation-duration: 30s; }
@@ -322,9 +322,7 @@ h1, h2, p { margin-top: 0; }
   .hero-overline { margin-top: 16px; }
 }
 @media(hover: none) { .work-card:hover, .action:hover { transform: none; } }
-@media(prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-}
+/* Reduced motion defaults to off until a visitor explicitly enables it in the site controls. */
 .interface-shell[data-motion="off"] .smoke, .interface-shell[data-motion="off"] .portrait-figure { animation: none; }
 
 @media (max-width: 460px) {
@@ -404,4 +402,109 @@ h1, h2, p { margin-top: 0; }
 @media(max-height: 380px) {
   .rail { flex-basis: 47px; padding-block: 1px; }
   .mobile-light { width: 44px; height: 44px; }
+}
+
+
+/* V1.1.1: atmospheric motion and responsive tactile feedback.
+ * Transform-driven wisps; no video, WebGL, trackers or external resources. */
+.smoke {
+  width: min(91vw, 1220px);
+  height: min(92vh, 890px);
+  min-width: 450px;
+  min-height: 480px;
+  opacity: .66;
+  filter: blur(31px);
+  transform-origin: 50% 50%;
+  animation: vapor-wander 21s cubic-bezier(.42,0,.58,1) infinite alternate;
+}
+.smoke::before, .smoke::after {
+  content: "";
+  position: absolute;
+  inset: 16% 2%;
+  border-radius: 42% 58% 59% 41% / 51% 38% 62% 49%;
+  background:
+    radial-gradient(ellipse 64% 22% at 50% 52%, rgba(230,173,144,.34), transparent 91%),
+    radial-gradient(ellipse 33% 64% at 40% 56%, rgba(157,187,201,.19), transparent 85%);
+  opacity: .62;
+  transform: rotate(-23deg) scaleX(1.1);
+  animation: smoke-fold 13s ease-in-out infinite alternate;
+}
+.smoke::after {
+  inset: 25% 4% 6% 9%;
+  transform: rotate(25deg) scaleX(.9);
+  opacity: .44;
+  animation-delay: -7s;
+  animation-duration: 17s;
+}
+.smoke-amber { left: -19%; top: -35%; background: radial-gradient(ellipse at 52% 56%, rgba(206,112,78,.5) 0%, rgba(125,71,89,.27) 33%, transparent 73%); }
+.smoke-cyan { right: -35%; top: 1%; bottom: auto; background: radial-gradient(ellipse at 53% 49%, rgba(56,149,169,.36) 0%, rgba(36,91,126,.23) 38%, transparent 74%); animation-delay: -7s; animation-duration: 27s; }
+.smoke-violet { left: 10%; bottom: -46%; background: radial-gradient(ellipse at 47% 38%, rgba(112,91,168,.32) 0%, rgba(57,76,134,.25) 34%, transparent 74%); animation-delay: -13s; animation-duration: 33s; }
+@keyframes vapor-wander {
+  0% { transform: translate3d(-12%, -5%, 0) rotate(-13deg) scale(.92); opacity: .48; }
+  50% { transform: translate3d(3%, 4%, 0) rotate(-1deg) scale(1.07); opacity: .75; }
+  100% { transform: translate3d(16%, 10%, 0) rotate(13deg) scale(1.17); opacity: .62; }
+}
+@keyframes smoke-fold {
+  from { transform: translate3d(-6%,3%,0) rotate(-23deg) scaleX(1.09) scaleY(.92); opacity: .45; }
+  to { transform: translate3d(8%,-5%,0) rotate(-10deg) scaleX(.89) scaleY(1.11); opacity: .74; }
+}
+.grid-surface { animation: grid-pulse 22s ease-in-out infinite alternate; }
+@keyframes grid-pulse { 0% { opacity: .30; } 100% { opacity: .56; } }
+.portrait-scene {
+  transform: translate3d(var(--scene-shift-x,0px),var(--scene-shift-y,0px),0);
+  transition: transform .85s ease-out, opacity .6s ease, filter .6s ease;
+}
+.portrait-halo { animation: halo-glow 10s ease-in-out infinite alternate; }
+@keyframes halo-glow { 0% { opacity: .46; } 100% { opacity: .98; } }
+.portrait-orbit { transform-origin: 50% 50%; animation: orbit-drift 66s linear infinite; }
+@keyframes orbit-drift {
+  from { transform: translate(-50%,-50%) rotate(-28deg) rotateX(65deg); }
+  to { transform: translate(-50%,-50%) rotate(332deg) rotateX(65deg); }
+}
+.system-dot { animation: live-indicator 4.5s ease-in-out infinite; }
+@keyframes live-indicator {
+  0%,100% { opacity: .6; box-shadow: 0 0 7px rgba(142,198,173,.29); }
+  50% { opacity: 1; box-shadow: 0 0 15px rgba(142,198,173,.7); }
+}
+.telemetry-ring::before { animation: telemetry-revolve 48s linear infinite; }
+@keyframes telemetry-revolve { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.status-trace { transform-origin: left; animation: signal-drift 6s ease-in-out infinite; }
+@keyframes signal-drift {
+  0%,100% { transform: scaleX(.65); opacity: .46; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+.panel:not([hidden]) .panel-inner > * { animation: panel-arrive .65s cubic-bezier(.2,.7,.22,1) both; }
+.panel:not([hidden]) .panel-inner > :nth-child(2) { animation-delay: .075s; }
+.panel:not([hidden]) .panel-inner > :nth-child(3) { animation-delay: .14s; }
+.panel:not([hidden]) .panel-inner > :nth-child(4) { animation-delay: .19s; }
+.panel:not([hidden]) .panel-inner > :nth-child(n+5) { animation-delay: .22s; }
+@keyframes panel-arrive {
+  from { opacity: 0; transform: translate3d(0,11px,0); }
+  to { opacity: 1; transform: translate3d(0,0,0); }
+}
+.rail-tab { transition: color .35s ease, transform .35s cubic-bezier(.2,.7,.2,1), background-color .35s ease; }
+.rail-tab[aria-selected="true"] { background-color: rgba(229,177,136,.032); }
+.rail-tab[aria-selected="true"] .rail-label { text-shadow: 0 0 20px rgba(226,172,133,.3); }
+.action { transition: transform .35s cubic-bezier(.22,.76,.3,1), border-color .35s ease, background-color .35s ease, box-shadow .35s ease; }
+.action-primary:hover { box-shadow: 0 12px 34px rgba(200,137,107,.15); }
+.action:active, .work-card:active { transform: translateY(1px) scale(.99); }
+.work-card { transition: transform .42s cubic-bezier(.22,.76,.3,1), border-color .35s ease, background .35s ease, box-shadow .35s ease; }
+.work-card:hover { box-shadow: 0 16px 35px rgba(3,6,15,.28), inset 0 0 44px rgba(216,163,125,.025); }
+.copy-button, .section-link, .engine-button { transition: color .3s ease, border-color .3s ease, background-color .3s ease, transform .3s ease; }
+@media(hover:hover) { .copy-button:hover, .section-link:hover { transform: translateY(-2px); } }
+/* The default data-motion="off" prevents animation before JS checks the device
+ * preference. Site-level opt-in can enable motion intentionally. */
+.interface-shell[data-motion="off"] *,
+.interface-shell[data-motion="off"] *::before,
+.interface-shell[data-motion="off"] *::after {
+  animation: none !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+.interface-shell[data-motion="off"] .portrait-scene { transform: none; }
+@media (max-width: 960px) {
+  .smoke { filter: blur(25px); min-width: 410px; min-height: 440px; }
+  .smoke-amber { left: -39%; top: -19%; }
+  .smoke-cyan { right: -45%; top: 15%; }
+  .smoke-violet { left: -12%; bottom: -48%; }
 }
