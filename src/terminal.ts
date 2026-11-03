@@ -5,7 +5,8 @@
  */
 type UsageSnapshot = {
   version: 1;
-  metric: "tokens";
+  metric: "work-codex-tokens";
+  approximate: true;
   count: number;
   asOf: string;
   source: string;
@@ -224,7 +225,8 @@ function parseSnapshot(input: unknown): UsageSnapshot {
   const record = input as Record<string, unknown>;
   if (
     record.version !== 1 ||
-    record.metric !== "tokens" ||
+    record.metric !== "work-codex-tokens" ||
+    record.approximate !== true ||
     record.attestation !== "owner-published" ||
     typeof record.count !== "number" ||
     !Number.isSafeInteger(record.count) ||
@@ -243,18 +245,25 @@ function parseSnapshot(input: unknown): UsageSnapshot {
 }
 
 function showUsage(snapshot: UsageSnapshot) {
+  const compact = new Intl.NumberFormat("en-US", {
+    notation: "compact", maximumFractionDigits: 2,
+  }).format(snapshot.count);
+  const accessible = "Approximately " + snapshot.count.toLocaleString("en-US") +
+    " owner-reported ChatGPT Work and Codex tokens";
   const count = document.querySelector<HTMLElement>("#usage-value");
+  const homeCount = document.querySelector<HTMLElement>("#home-usage-value");
+  for (const element of [count, homeCount]) {
+    if (!element) continue;
+    element.textContent = "≈" + compact;
+    element.setAttribute("aria-label", accessible);
+  }
   const status = document.querySelector<HTMLElement>("#usage-status");
   const date = document.querySelector<HTMLElement>("#usage-date");
-  if (count) {
-    count.textContent = new Intl.NumberFormat("en-US", {
-      notation: "compact",
-      maximumFractionDigits: 2,
-    }).format(snapshot.count);
-    count.setAttribute("aria-label", snapshot.count.toLocaleString("en-US") + " owner-reported tokens");
-  }
-  if (status) status.textContent = "Owner-published estimate, not live tracking.";
-  if (date) date.textContent = "As of " + snapshot.asOf + " · Source: " + snapshot.source.trim();
+  const homeDate = document.querySelector<HTMLElement>("#home-usage-date");
+  if (status) status.textContent = "Owner-reported estimate · Not live tracking.";
+  if (date) date.textContent = "As of " + snapshot.asOf + " · " + snapshot.source.trim();
+  if (homeDate) homeDate.textContent = "AS OF " + snapshot.asOf +
+    " · OWNER-REPORTED · NOT LIVE";
 }
 async function checkUsage() {
   if (polling) return;
@@ -289,7 +298,8 @@ async function checkUsage() {
   }
 }
 document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
-// Do not check automatically: no monitoring requests without a deliberate click.
+// Load a public, static first-party snapshot once at startup; no private API or polling.
+void checkUsage();
 
 // Lighting changes are a purely local visual preference. No network or GPU calls.
 const portraitLights = ["amber", "teal", "violet"] as const;
