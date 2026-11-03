@@ -310,6 +310,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "314.2M" in page.locator("#gpt-profile").inner_text()
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Showcase Sites" in page.locator("#gpt-profile").inner_text()
+                        assert "Activity graph" in page.locator("#gpt-profile").inner_text()
+                        assert "Profile insights" in page.locator("#gpt-profile").inner_text()
                         assert not page.locator("#home-usage-value").count()
                     if axe_source and route in ["/work/", "/work/ideaflow/", "/contact/", "/gpt/"]:
                         page.add_script_tag(content=axe_source)

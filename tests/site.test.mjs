@@ -259,6 +259,7 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.equal(snapshot.profile.stats.peakDailyTokens, 314200000);
   assert.equal(snapshot.profile.stats.longestTaskHours, 23);
   assert.equal(snapshot.profile.stats.recordedStreakDays, 24);
+  assert.equal(snapshot.profile.stats.currentStreakDays, 24);
   assert.equal(snapshot.profile.stats.chatMessages, null, "unknown message count must not be invented");
   assert.ok(snapshot.profile.skills.length >= 5);
   assert.deepEqual(snapshot.profile.showcaseSites, [], "no unverified Sites");
@@ -273,6 +274,9 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.match(profileHtml, /314\.2M/);
   assert.match(profileHtml, /23h/);
   assert.match(profileHtml, /24 days/);
+  assert.match(profileHtml, /CURRENT STREAK AT SNAPSHOT/);
+  assert.match(profileHtml, /Activity graph/);
+  assert.match(profileHtml, /Profile insights/);
   assert.match(profileHtml, /Skills &amp; workflows|Skills & workflows/);
   assert.match(profileHtml, /Showcase Sites/);
   assert.match(profileHtml, /Top plugins/);

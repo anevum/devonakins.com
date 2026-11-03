@@ -77,7 +77,7 @@ function contentFor(path, projects, gptSnapshot) {
     return {
       view: "home", title: "GPT profile — Devon Alan Akins",
       description: "Dated, owner-reported Work/Codex activity, personal workflow skills, and approved showcase links.",
-      index: "00 / GPT PROFILE", heading: "Built with intention",
+      index: "00 / GPT PROFILE", heading: "GPT profile",
       intro: "A public, independently maintained snapshot of how I work with AI. Activity, workflow skills, showcase Sites and tools, with clear data provenance.",
       breadcrumb: '<a href="/#home">Interface</a><span aria-hidden="true"> / </span><span aria-current="page">GPT profile</span>',
       body: renderPublicGptProfile(gptSnapshot),

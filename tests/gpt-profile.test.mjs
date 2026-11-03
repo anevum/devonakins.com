@@ -11,7 +11,7 @@ test("dated owner-supplied snapshot validates without access to private ChatGPT 
   assert.equal(s.count, 2600000000);
   assert.equal(s.profile.publicProfileUrl, "https://chatgpt.com/u/devonakins");
   assert.equal(s.profile.stats.chatMessages, null);
-  assert.equal(s.profile.stats.currentStreakDays, null);
+  assert.equal(s.profile.stats.currentStreakDays, 24, "historical current streak as of snapshot date");
   assert.deepEqual(s.profile.showcaseSites, []);
 });
 
@@ -38,6 +38,9 @@ test("public renderer escapes all curated text, and never invents showcase or pl
   assert.match(html, /314\.2M/);
   assert.match(html, /23h/);
   assert.match(html, /24 days/);
+  assert.match(html, /CURRENT STREAK AT SNAPSHOT/);
+  assert.match(html, /Activity graph/);
+  assert.match(html, /Profile insights/);
   assert.match(html, /Showcase links are awaiting/);
   assert.match(html, /Top-plugin rankings have not been verified/);
   assert.doesNotMatch(html, /<script|private account credentials|current 24-day streak/i);

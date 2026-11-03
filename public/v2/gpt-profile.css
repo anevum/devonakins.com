@@ -1,7 +1,7 @@
 /* GPT profile / curated personal mirror. Shares the existing cinematic shell. */
 .gpt-profile { display: flex; flex-direction: column; gap: 38px; max-width: 1060px; min-width: 0; padding-bottom: 18px; }
 .gpt-profile-identity { display: flex; align-items: center; gap: 17px; padding: 20px 22px; border: 1px solid rgba(211,199,206,.2); background: linear-gradient(116deg,rgba(22,27,38,.91),rgba(10,14,23,.82)); }
-.gpt-profile-monogram { width: 62px; height: 62px; flex: 0 0 62px; display: grid; place-items: center; font-size: 20px; font-weight: 630; letter-spacing: -.1em; color: #efd0b9; border: 1px solid rgba(228,184,148,.48); background: radial-gradient(circle at 20% 15%,rgba(197,145,112,.26),rgba(15,18,29,.9)); }
+.gpt-profile-avatar { width: 62px; height: 62px; flex: 0 0 62px; object-fit: cover; object-position: center 24%; border-radius: 50%; border: 1px solid rgba(228,184,148,.48); background: #141824; box-shadow: 0 0 24px rgba(209,153,116,.13); }
 .gpt-profile-person { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .gpt-profile-eyebrow,.gpt-primary-label,.gpt-section-index,.gpt-stat-label,.gpt-skill-num,.gpt-showcase-card>span { color: #d6ad90; font-size: 10px; letter-spacing: .14em; font-weight: 650; }
 .gpt-profile-person strong { font-size: clamp(17px,2.1vw,25px); font-weight: 510; letter-spacing: -.025em; }
@@ -43,7 +43,7 @@
 @media(max-width:540px) {
   .gpt-profile-identity { flex-wrap:wrap;gap:12px;padding:16px; }
   .gpt-profile-original { margin-left:0;flex:1 0 100%; }
-  .gpt-profile-monogram { width:51px;height:51px;flex-basis:51px; }
+  .gpt-profile-avatar { width:51px;height:51px;flex-basis:51px; }
   .gpt-profile-eyebrow,.gpt-primary-label,.gpt-section-index,.gpt-stat-label,.gpt-skill-num { font-size:9px;letter-spacing:.095em; }
   .gpt-primary-stat { padding:22px 18px; }
   .gpt-primary-stat strong { font-size:clamp(49px,17vw,77px); }

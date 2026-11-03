@@ -104,7 +104,7 @@ export function renderPublicGptProfile(input) {
         '</p></article>').join("") + '</div>'
     : '<p class="gpt-empty">Top-plugin rankings have not been verified for this snapshot.</p>';
   return '<div class="gpt-profile" id="gpt-profile">' +
-    '<div class="gpt-profile-identity"><span class="gpt-profile-monogram" aria-hidden="true">DA</span>' +
+    '<div class="gpt-profile-identity"><img class="gpt-profile-avatar" src="/v2/crossed-arms.webp" alt="" width="62" height="62" loading="lazy">' +
     '<div class="gpt-profile-person"><span class="gpt-profile-eyebrow">PUBLIC WORKFLOW PROFILE</span>' +
     '<strong>' + esc(p.displayName) + '</strong><span>@' + esc(p.username) + '</span></div>' +
     '<a class="gpt-profile-original" href="' + esc(p.publicProfileUrl) +
@@ -121,24 +121,32 @@ export function renderPublicGptProfile(input) {
     metric("PEAK DAILY TOKENS", displayCount(p.stats.peakDailyTokens), "Recorded peak; not current-day usage") +
     metric("LONGEST TASK", p.stats.longestTaskHours === null ? "—" :
       String(p.stats.longestTaskHours) + "h", "Owner-reported duration") +
-    metric("RECORDED STREAK", p.stats.recordedStreakDays === null ? "—" :
-      String(p.stats.recordedStreakDays) + " days", "Historical snapshot; not a current streak") +
+    metric("LONGEST STREAK", p.stats.recordedStreakDays === null ? "—" :
+      String(p.stats.recordedStreakDays) + " days", "Longest streak recorded in dated snapshot") +
     metric("CHAT MESSAGES", displayCount(p.stats.chatMessages),
       p.stats.chatMessages === null ? "Not in approved snapshot" : "Messages, not tokens") +
     metric("WEEKLY TOKENS", displayCount(p.stats.weeklyTokens), "Not in approved snapshot if blank") +
-    metric("CURRENT STREAK", p.stats.currentStreakDays === null ? "—" :
-      String(p.stats.currentStreakDays) + " days", "Not independently verified if blank") +
+    metric("CURRENT STREAK AT SNAPSHOT", p.stats.currentStreakDays === null ? "—" :
+      String(p.stats.currentStreakDays) + " days", "As reported on snapshot date, not live") +
     '</div></section>' +
+    '<section class="gpt-section" aria-labelledby="gpt-graph-heading">' +
+    heading("gpt-graph-heading", "02 / ACTIVITY", "Activity graph",
+      "Daily, weekly and historical graph data require multiple dated, owner-approved samples.") +
+    '<p class="gpt-empty">No approved daily activity series is available yet. A single November 2 snapshot cannot establish a trend.</p></section>' +
     '<section class="gpt-section" aria-labelledby="gpt-skills-heading">' +
-    heading("gpt-skills-heading", "02 / METHODS", "Skills & workflows",
+    heading("gpt-skills-heading", "03 / METHODS", "Skills & workflows",
       "Selected personal workflow skills. These are curated descriptions, not publicly shared ChatGPT skill packages.") +
     skills + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-sites-heading">' +
-    heading("gpt-sites-heading", "03 / SHOWCASE", "Showcase Sites",
+    heading("gpt-sites-heading", "04 / SHOWCASE", "Showcase Sites",
       "Only owner-approved, publicly reachable Sites are listed.") + sites + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-plugins-heading">' +
-    heading("gpt-plugins-heading", "04 / TOOLS", "Top plugins",
+    heading("gpt-plugins-heading", "05 / TOOLS", "Top plugins",
       "Profile rankings are published only when captured in an approved snapshot.") + plugins + '</section>' +
+    '<section class="gpt-section" aria-labelledby="gpt-insights-heading">' +
+    heading("gpt-insights-heading", "06 / INSIGHTS", "Profile insights",
+      "Only observations explicitly captured or approved by the profile owner are shown.") +
+    '<p class="gpt-empty">No public insights have been included in the approved manual snapshot.</p></section>' +
     '<footer class="gpt-profile-foot"><strong>MANUAL SNAPSHOT / NO ACCOUNT ACCESS</strong>' +
     '<p>Snapshot as of <time datetime="' + esc(s.asOf) + '">' + esc(dateLabel) +
     '</time>. Updates are reviewed and published through this site repository, not inferred from browser sessions or private ChatGPT APIs.</p>' +

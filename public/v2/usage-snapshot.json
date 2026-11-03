@@ -15,7 +15,7 @@
       "peakDailyTokens": 314200000,
       "longestTaskHours": 23,
       "recordedStreakDays": 24,
-      "currentStreakDays": null,
+      "currentStreakDays": 24,
       "chatMessages": null,
       "weeklyTokens": null
     },
