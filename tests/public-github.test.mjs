@@ -14,7 +14,7 @@ import {
 
 const observed = Date.parse("2026-11-02T18:15:00.000Z");
 const identity = {
-  login: "anevum", type: "User", public_repos: 12,
+  login: "devonalanakins", type: "User", public_repos: 12,
   email: "should-never-leak@example.test", private_gists: 44,
   followers: 900000, plan: {name: "private"}, access_token: "untrusted",
 };
@@ -29,7 +29,7 @@ const request = (method="GET", suffix="") => new Request(url+suffix,{method});
 test("GitHub public normalization whitelists only observed repository statistics",()=>{
   const signal=normalizeGitHubProfile(identity,new Date(observed).toISOString());
   assert.deepEqual(signal,{
-    version:2, account:"anevum", metric:"public-repositories",
+    version:2, account:"devonalanakins", metric:"public-repositories",
     count:12, asOf:"2026-11-02T18:15:00.000Z",
     source:"GitHub REST API",attestation:"public-provider-response",recent:null,
   });
@@ -38,12 +38,14 @@ test("GitHub public normalization whitelists only observed repository statistics
   assert(!JSON.stringify(signal).includes("access_token"));
   assert(validGitHubSignal(signal,observed));
   assert(!validGitHubSignal({...signal,source:"owner-entered"},observed));
+  assert(!validGitHubSignal({...signal,account:"anevum"},observed));
   assert(!validGitHubSignal({...signal,token:"private"},observed));
   assert(!validGitHubSignal({...signal,count:"12"},observed));
   assert(!validGitHubSignal({...signal,asOf:"2026-12-01T18:15:00.000Z"},observed));
   assert(!validGitHubSignal(signal,observed+GITHUB_SIGNAL_MAX_AGE_MS));
   for(const data of [
     {...identity,login:"attacker"},
+    {...identity,login:"anevum"},
     {...identity,type:"Organization"},
     {...identity,public_repos:-1},
     {...identity,public_repos:1.3},
@@ -164,7 +166,7 @@ test("upstream failures, malformed responses and retry cooldown never manufactur
 
 const repo = (name="devonakins.com",pushed="2026-11-02T18:11:00Z")=>({
  name, pushed_at:pushed, private:false, fork:false, archived:false, disabled:false,
- owner:{login:"anevum"}, html_url:"https://github.com/anevum/"+name,
+ owner:{login:"devonalanakins"}, html_url:"https://github.com/devonalanakins/"+name,
  stargazers_count:99999,email:"private-data",permissions:{admin:true}
 });
 test("recent public code only selects canonical original repos with a dated push",()=>{
@@ -174,10 +176,11 @@ test("recent public code only selects canonical original repos with a dated push
   {...repo("old"),archived:true},
   repo(),
  ],"2026-11-02T18:15:00.000Z");
- assert.deepEqual(recent,{name:"devonakins.com",url:"https://github.com/anevum/devonakins.com",pushedAt:"2026-11-02T18:11:00.000Z"});
+ assert.deepEqual(recent,{name:"devonakins.com",url:"https://github.com/devonalanakins/devonakins.com",pushedAt:"2026-11-02T18:11:00.000Z"});
  assert(!JSON.stringify(recent).includes("stargazers"));
  assert(!JSON.stringify(recent).includes("permissions"));
  assert.equal(normalizeRecentGitHubProject([{...repo(),owner:{login:"someone-else"}}],"2026-11-02T18:15:00.000Z"),null);
+  assert.equal(normalizeRecentGitHubProject([{...repo(),owner:{login:"anevum"}}],"2026-11-02T18:15:00.000Z"),null);
  for(const name of ["../evil",'evil" onclick="alert(1)',".",".."])assert.equal(normalizeRecentGitHubProject([repo(name)],"2026-11-02T18:15:00.000Z"),null);
  assert.equal(normalizeRecentGitHubProject([repo("future","2040-01-01T00:00:00Z")],"2026-11-02T18:15:00.000Z"),null);
  assert.throws(()=>normalizeRecentGitHubProject(Array.from({length:11},()=>repo()),"2026-11-02T18:15:00.000Z"));
