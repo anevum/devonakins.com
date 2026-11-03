@@ -161,7 +161,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.match(html, new RegExp('id="tab-' + view + '"'));
     assert.match(html, new RegExp('id="panel-' + view + '"'));
   }
-  assert.match(html, /Loading public snapshot/);
+  assert.match(html, /Reading profile snapshot/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
@@ -174,6 +174,12 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.ok(portraitBytes.byteLength < 150000, "portrait must stay lightweight");
   const cssResponse = await get("/v2/terminal.css");
   assert.equal(cssResponse.status, 200);
+  assert.match(cssResponse.headers.get("Cache-Control") || "", /must-revalidate/,
+    "Unversioned mutable CSS must revalidate to prevent iOS stale stylesheet rendering");
+  const freshCss = await get("/v2/terminal.css?v=1.2.2");
+  assert.equal(freshCss.status, 200);
+  assert.equal(freshCss.headers.get("ETag"), cssResponse.headers.get("ETag"));
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
   const v2css = await cssResponse.text();
   assert.match(v2css, /\.interface-shell/);
@@ -209,7 +215,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
   const routeHtml = await (await get("/about/")).text();
-  assert.match(routeHtml, /href="\/v2\/terminal\.css"/);
+  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(routeHtml, /href="\/v2\/routes\.css"/);
   assert.match(routeHtml, /data-route-page="true"/);
   assert.doesNotMatch(routeHtml, /href="\/assets\/[^"]+\.css"/,
@@ -229,7 +235,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /\/v2\/crossed-arms\.webp/);
-  assert.match(html, /href="\/v2\/terminal\.css"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(html, /\/ ORIGINAL WORKS/);
   assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
   assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
@@ -244,6 +250,10 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
 test("homepage has one compact GPT stream and one detailed profile route", async () => {
   const html = await (await get("/")).text();
   assert.match(html, /id="usage-value"/);
+  assert.match(html, /data-feed-state="loading"/);
+  assert.match(html, /class="feed-beam"/);
+  assert.match(html, /Reading profile snapshot/);
+  assert.doesNotMatch(html, /Owner-reported · Not live tracking\./);
   assert.match(html, /class="hero-feature" role="group"/);
   assert.match(html, /class="telemetry-profile-link"[^>]*href="\/gpt\/"|href="\/gpt\/" class="telemetry-profile-link"/);
   assert.doesNotMatch(html, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage panel");
@@ -330,7 +340,7 @@ test("every canonical internal page uses the immersive portrait shell, never the
     assert.match(html, /data-route-page="true"/, path);
     assert.match(html, /class="portrait-figure"/, path);
     assert.match(html, /class="route-content"/, path);
-    assert.match(html, /href="\/v2\/terminal\.css"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/, path);
     assert.match(html, /href="\/v2\/routes\.css"/, path);
     assert.match(html, /class="rail" role="tablist"/, path);
     assert.match(html, /href="\/#home"/, path);
@@ -408,5 +418,8 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(source, /ISL — language research/);
   const css = await (await get("/v2/terminal.css")).text();
   assert.match(css, /\.hero-feature-link:focus-visible/);
+  assert.match(css, /V1\.2\.2/);
+  assert.match(css, /\.telemetry-readout\[data-feed-state="ready"\]/);
+  assert.match(css, /@media \(max-width: 460px\)/);
   assert.match(css, /@media \(max-width: 360px\)/);
 });

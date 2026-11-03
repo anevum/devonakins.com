@@ -174,8 +174,8 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnaps
     '<meta property="og:description" content="' + esc(data.description) + '">', "og description");
   replaceExactly('<meta property="og:url" content="https://devonakins.com/">',
     '<meta property="og:url" content="https://devonakins.com' + path + '">', "og url");
-  replaceExactly('<link rel="stylesheet" href="/v2/terminal.css">',
-    '<link rel="stylesheet" href="/v2/terminal.css">\n  <link rel="stylesheet" href="/v2/routes.css">' +
+  replaceExactly('<link rel="stylesheet" href="/v2/terminal.css?v=1.2.2">',
+    '<link rel="stylesheet" href="/v2/terminal.css?v=1.2.2">\n  <link rel="stylesheet" href="/v2/routes.css">' +
     (path === "/gpt/" ? '\n  <link rel="stylesheet" href="/v2/gpt-profile.css">' : ""), "style");
   replaceExactly('class="brand" href="#home"', 'class="brand" href="/#home"', "brand link");
   replaceExactly('<span class="topbar-version">/ ORIGINAL WORKS</span>',
