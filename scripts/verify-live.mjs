@@ -14,7 +14,7 @@ if (!/^[a-f0-9]{40}$/.test(expectedCommit || "")) {
 // Bind verification to the release produced by this exact build, never an old
 // hard-coded version number. A mismatched build must fail before HTTP probes.
 const release = JSON.parse(await readFile(new URL("../.release/release.json", import.meta.url), "utf8"));
-assert.match(release.version, /^\\d+\\.\\d+\\.\\d+$/, "valid built version");
+assert.match(release.version, /^\d+\.\d+\.\d+$/, "valid built version");
 assert.equal(release.commit, expectedCommit, "release artifact must match intended commit");
 const expectedVersion = release.version;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,7 +58,7 @@ assert.equal(expectedSnapshot.approximate, true);
 assert.equal(expectedSnapshot.attestation, "owner-published");
 const snapshotResponse = await request("/v2/usage-snapshot.json", { cache: "no-store" });
 assert.equal(snapshotResponse.status, 200, "public GPT activity snapshot");
-assert.match(snapshotResponse.headers.get("content-type") || "", /application\\/json/, "snapshot MIME");
+assert.match(snapshotResponse.headers.get("content-type") || "", /application\/json/, "snapshot MIME");
 assert.deepEqual(await snapshotResponse.json(), expectedSnapshot, "published snapshot must match tested build");
 
 for (const path of ["/v2/", "/work/", "/about/", "/source/", "/contact/"]) {
