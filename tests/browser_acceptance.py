@@ -207,14 +207,14 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     timespec="milliseconds"
                 ).replace("+00:00", "Z")
                 github_payload = {
-                    "version": 2, "account": "anevum",
+                    "version": 2, "account": "devonalanakins",
                     "metric": "public-repositories", "count": 12,
                     "asOf": updated_at, "source": "GitHub REST API",
                     "attestation": "public-provider-response",
                     "recent": {
                         "name": "devonakins.com",
                         "pushedAt": updated_at,
-                        "url": "https://github.com/anevum/devonakins.com",
+                        "url": "https://github.com/devonalanakins/devonakins.com",
                     },
                 }
                 github_pattern = "**/v2/github-profile.json"
@@ -233,7 +233,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 assert "public repositories" in (
                     page.locator("#usage-value").get_attribute("aria-label") or ""
                 )
-                assert page.locator("#signal-link").get_attribute("href") == "https://github.com/anevum"
+                assert page.locator("#signal-link").get_attribute("href") == "https://github.com/devonalanakins"
                 if width == 390:
                     page.unroute(github_pattern, github_route)
                     failure_route = lambda route: route.fulfill(
@@ -308,7 +308,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.wait_for_function(
                     'document.querySelector("#recent-code-name").textContent === "devonakins.com"'
                 )
-                assert page.locator("#recent-code-link").get_attribute("href") == "https://github.com/anevum/devonakins.com"
+                assert page.locator("#recent-code-link").get_attribute("href") == "https://github.com/devonalanakins/devonakins.com"
                 assert "Last pushed" in page.locator("#recent-code-status").inner_text()
                 assert "not a release" in page.locator("#recent-code-status").inner_text()
                 assert page.locator("#recent-code-link").is_visible()
