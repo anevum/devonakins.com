@@ -12,7 +12,7 @@
     "publicProfileUrl": "https://chatgpt.com/u/devonakins",
     "scope": "Work/Codex activity reported for the selected ChatGPT profile workspace, not all ChatGPT messages or API billing.",
     "stats": {
-      "peakDailyTokens": 314200000,
+      "peakTokens": 314200000,
       "longestTaskHours": 23,
       "recordedStreakDays": 24,
       "currentStreakDays": 24,

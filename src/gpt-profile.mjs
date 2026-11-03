@@ -46,9 +46,9 @@ export function validatePublicGptSnapshot(data) {
       !p.stats || typeof p.stats !== "object" || Array.isArray(p.stats)) {
     throw new Error("Invalid public GPT profile metadata");
   }
-  const { peakDailyTokens, longestTaskHours, recordedStreakDays,
+  const { peakTokens, longestTaskHours, recordedStreakDays,
     currentStreakDays, chatMessages, weeklyTokens } = p.stats;
-  if (![peakDailyTokens, longestTaskHours, recordedStreakDays,
+  if (![peakTokens, longestTaskHours, recordedStreakDays,
     currentStreakDays, chatMessages, weeklyTokens].every(validOptionalInteger)) {
     throw new Error("Invalid public GPT statistic");
   }
@@ -118,7 +118,7 @@ export function renderPublicGptProfile(input) {
     heading("gpt-activity-heading", "01 / ACTIVITY", "By the numbers",
       "Dated figures from the supplied ChatGPT profile snapshot, with missing metrics left unreported.") +
     '<div class="gpt-stats-grid">' +
-    metric("PEAK DAILY TOKENS", displayCount(p.stats.peakDailyTokens), "Recorded peak; not current-day usage") +
+    metric("PEAK TOKENS", displayCount(p.stats.peakTokens), "Profile-reported peak; reporting interval not inferred") +
     metric("LONGEST TASK", p.stats.longestTaskHours === null ? "—" :
       String(p.stats.longestTaskHours) + "h", "Owner-reported duration") +
     metric("LONGEST STREAK", p.stats.recordedStreakDays === null ? "—" :

@@ -21,7 +21,7 @@ test("manual snapshot rejects invalid dates, forged metrics, credentials and uns
     s => { s.count = -1; },
     s => { s.attestation = "api-verified"; },
     s => { s.profile.stats.recordedStreakDays = "24"; },
-    s => { s.profile.stats.peakDailyTokens = -100; },
+    s => { s.profile.stats.peakTokens = -100; },
     s => { s.profile.showcaseSites.push({name:"Bad", description:"Unsafe",url:"javascript:alert(1)"}); },
     s => { s.profile.showcaseSites.push({name:"Bad", description:"Unsafe",url:"https://name:password@example.com"}); },
     s => { s.profile.showcaseSites = Array.from({length:13},(_,i)=>({name:"Site "+i,description:"Test",url:"https://example.com/"+i})); },

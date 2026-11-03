@@ -256,7 +256,7 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.equal(snapshot.approximate, true);
   assert.equal(snapshot.asOf, "2026-11-02");
   assert.equal(snapshot.attestation, "owner-published");
-  assert.equal(snapshot.profile.stats.peakDailyTokens, 314200000);
+  assert.equal(snapshot.profile.stats.peakTokens, 314200000);
   assert.equal(snapshot.profile.stats.longestTaskHours, 23);
   assert.equal(snapshot.profile.stats.recordedStreakDays, 24);
   assert.equal(snapshot.profile.stats.currentStreakDays, 24);
