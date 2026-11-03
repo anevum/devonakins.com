@@ -63,3 +63,26 @@ No changes to ANEVUM, DevonStation, private Lab, Cristy's applications,
 authentication policies, databases, recordings, billing plans or secrets.
 No new domain or recurring service was purchased. Station remains reserved
 in documentation only; no public DNS/application binding was created for it.
+
+## Release 1.1.0 — portrait homepage cutover (deployment pending)
+
+The previously tested crossed-arms portrait interface is generated as the
+indexable canonical `/` homepage. The V2 source remains independently visible
+at `/v2/` with `noindex,nofollow` for review. Existing `/work/`, `/about/`,
+`/source/` and `/contact/` pages and project URLs remain unchanged. The
+previous homepage source is retained in `src/views.mjs` for an emergency
+source-level rollback, and Cloudflare retains the previously active Worker
+version for rapid provider rollback.
+
+The promotion is fail-closed: `src/portrait-home.mjs` transforms only expected
+preview metadata and text; changes to that source must be deliberately reviewed
+before a build can succeed. The build version is 1.1.0. The Node suite checks
+canonical metadata, portrait media, preserved legacy pages and noindex preview;
+PR-level Chromium and WebKit suites check root plus preview.
+
+**Deployment is not automatic on merge.** Before describing this release as
+LIVE, successfully upload the exact merged Worker build, verify Cloudflare's
+active version and rollback candidate, and inspect public routes, canonical
+redirects, security headers and portrait assets over HTTPS. The release must
+not be marked live based on GitHub CI alone. No other domains or Workers are
+touched by this release.

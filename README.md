@@ -24,10 +24,12 @@ npm run build
 npm test
 ```
 
-`npm run build` generates complete HTML for 15 pages, checks TypeScript,
-bundles the client, and creates a self-contained Cloudflare Worker in `.release/`.
-HTML content and navigation work with JavaScript disabled. Three.js is loaded
-only on Home after useful content paints and a WebGL 2 context is available.
+`npm run build` generates the canonical crossed-arms portrait homepage and the
+existing project pages, checks TypeScript, and creates a self-contained
+Cloudflare Worker in `.release/`. The former dimensional DA homepage remains
+in source but is not loaded at `/`. The portrait navigation needs JavaScript;
+without it, the Home page provides links to the server-rendered work and about
+pages, which remain usable without JavaScript.
 
 ## Structure
 
@@ -41,7 +43,9 @@ only on Home after useful content paints and a WebGL 2 context is available.
 - `src/main.ts`: search, filtering, theme, motion, copy controls and scene lifecycle.
 - `src/style.css`: responsive layout and motion system.
 - `src/worker.mjs`: canonical routing, asset delivery and security headers.
-- `scripts/pages.mjs`: static page generation.
+- `scripts/pages.mjs`: static page generation and canonical portrait promotion.
+- `src/portrait-home.mjs`: guarded public homepage metadata transformation.
+- `v2/index.html`: unchanged noindex preview source; root generated from it.
 - `scripts/assets.mjs`: reproducible vector, icon and sharing asset generation.
 - `scripts/build-worker.mjs`: self-contained release packaging.
 - `tests/site.test.mjs`: routing, delivery, model, icon and privacy checks.
@@ -65,7 +69,9 @@ sharing artwork. Run `node scripts/assets.mjs` after changing identity paths.
 
 ## Motion and rendering
 
-Appearance controls select Tide, Iris, or Ember and store preferences locally.
+The portrait home supports amber, teal and violet lighting and quiet motion,
+with system reduced motion taking priority. Older pages retain Tide, Iris and
+Ember appearance controls with local preferences.
 System reduced motion takes priority over the on-site switch. Hidden or
 out-of-view WebGL scenes stop rendering. Phone/low-detail rendering lowers
 pixel density, frame rate and effects. WebGL failure displays an original
@@ -98,7 +104,8 @@ Hashed assets cache for one year; HTML revalidates. Directories normalize to
 trailing-slash URLs. `www` redirects to the canonical HTTPS apex. Unknown paths
 return an actual 404. `/_health` exposes only the release identifier.
 
-See `docs/RELEASE.md` for verification evidence and known limits. For rollback,
+See `docs/RELEASE.md` for verification evidence, the 1.1.0 homepage cutover and
+known limits. GitHub merge does not deploy this Worker automatically. For rollback,
 redeploy a prior Cloudflare version or rebuild the prior tagged source commit.
 Keep the deployed version ID with the source commit in private release records.
 

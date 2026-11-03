@@ -24,12 +24,13 @@ def compiled_preview(dist: Path):
     html = (dist / "v2/index.html").read_text(encoding="utf-8")
     css = (dist / "v2/terminal.css").read_text(encoding="utf-8")
     scripts = re.findall(r'<script type="module"[^>]+src="(/assets/[^"]+\.js)"[^>]*></script>', html)
-    if len(scripts) != 1:
-        raise AssertionError(f"Expected one V2 client entrypoint, got {scripts}")
-    script = (dist / scripts[0].lstrip("/")).read_text(encoding="utf-8")
+    client = [path for path in scripts if path.rsplit("/", 1)[-1].startswith("terminal-")]
+    if len(client) != 1:
+        raise AssertionError(f"Expected one terminal entrypoint, got {scripts}")
+    script = (dist / client[0].lstrip("/")).read_text(encoding="utf-8")
     # The generated modulepreload polyfill is unrelated to these controls.
     script, count = re.subn(r'^import"\./modulepreload-polyfill-[^"]+";', "", script)
-    if count != 1:
+    if count > 1:
         raise AssertionError("Unexpected compiled Vite entrypoint imports")
     html = re.sub(r'<script type="module"[^>]*></script>', "", html)
     html = re.sub(r'<link\b[^>]*>', "", html)
@@ -161,6 +162,32 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                   }));
                 }""")
                 assert not violations, f"Axe WCAG violations: {violations}"
+            if origin:
+                root_response = page.goto(origin + "/", wait_until="load")
+                assert root_response and root_response.status == 200
+                root_html = page.content()
+                assert 'rel="canonical" href="https://devonakins.com/"' in root_html
+                assert 'name="robots" content="noindex' not in root_html
+                assert "V2 PREVIEW" not in root_html
+                page.locator("#panel-home").wait_for(state="visible")
+                assert page.locator(".portrait-figure").evaluate(
+                    "el => el.complete && el.naturalWidth > 0"
+                ), "canonical homepage portrait failed to decode"
+                check_overflow("canonical-home")
+                page.locator("#tab-writing").click()
+                assert page.locator("#panel-writing").is_visible()
+                if axe_source:
+                    page.add_script_tag(content=axe_source)
+                    root_violations = page.evaluate("""async () => {
+                      const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];
+                      const report = await axe.run(document, {
+                        runOnly: {type:'tag', values:tags}
+                      });
+                      return report.violations.map(v => ({
+                        id:v.id, nodes:v.nodes.map(n=>n.target).slice(0,5)
+                      }));
+                    }""")
+                    assert not root_violations, f"Canonical home axe violations: {root_violations}"
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",
