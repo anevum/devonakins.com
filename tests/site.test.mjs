@@ -200,15 +200,15 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.doesNotMatch(client, /motionButton\.setAttribute\("aria-label"/);
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
-  const mainHtml = await (await get("/about/")).text();
-  assert.doesNotMatch(mainHtml, /\/v2\/terminal\.css/);
-  const legacyCss = [...mainHtml.matchAll(/href="(\/assets\/[^"]+\.css)"/g)];
-  assert.ok(legacyCss.length > 0, "legacy stylesheet should still be present");
-  for (const match of legacyCss) {
-    const response = await get(match[1]);
-    assert.equal(response.status, 200);
-    assert.doesNotMatch(await response.text(), /\.interface-shell/, "preview CSS must not inflate legacy CSS");
-  }
+  const routeHtml = await (await get("/about/")).text();
+  assert.match(routeHtml, /href="\/v2\/terminal\.css"/);
+  assert.match(routeHtml, /href="\/v2\/routes\.css"/);
+  assert.match(routeHtml, /data-route-page="true"/);
+  assert.doesNotMatch(routeHtml, /href="\/assets\/[^"]+\.css"/,
+    "no deep link may load the previous site stylesheet");
+  const routesCss = await get("/v2/routes.css");
+  assert.equal(routesCss.status, 200);
+  assert.match(await routesCss.text(), /\.route-panel-inner/);
   assert.equal((await get("/v2")).status, 308);
 });
 
@@ -231,4 +231,58 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(preview, /name="robots" content="noindex,nofollow"/);
   assert.match(preview, /V2 PREVIEW/);
   assert.doesNotMatch(preview, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
+});
+
+test("every canonical internal page uses the immersive portrait shell, never the old design", async () => {
+  const deep = [
+    "/work/", "/source/", "/about/", "/contact/",
+    "/work/operations/", "/work/writing/", "/work/anevum/",
+    "/work/ideaflow/", "/work/devonstation/", "/404/",
+  ];
+  const home = await (await get("/")).text();
+  assert.match(home, /id="interface-shell"/);
+  assert.doesNotMatch(home, /class="site-header wrap"/);
+  for (const path of deep) {
+    const response = await get(path);
+    assert.equal(response.status, 200, path);
+    const html = await response.text();
+    assert.match(html, /id="interface-shell"/, path);
+    assert.match(html, /data-route-page="true"/, path);
+    assert.match(html, /class="portrait-figure"/, path);
+    assert.match(html, /class="route-content"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css"/, path);
+    assert.match(html, /href="\/v2\/routes\.css"/, path);
+    assert.match(html, /class="rail" role="tablist"/, path);
+    assert.match(html, /href="\/#home"/, path);
+    assert.doesNotMatch(html, /class="site-header wrap"|class="desktop-nav"|data-open-search|data-open-settings|class="ambient-stars"|src\/style\.css/, path);
+    assert.doesNotMatch(html, /href="\/assets\/[^"]+\.css"/, path);
+    if (path !== "/404/") {
+      assert.ok(html.includes('rel="canonical" href="https://devonakins.com' + path + '"'), path);
+      assert.doesNotMatch(html, /name="robots" content="noindex"/, path);
+    } else {
+      assert.match(html, /name="robots" content="noindex"/);
+    }
+  }
+  for (const [route, phrase] of [
+    ["/work/", "DevonStation"],
+    ["/work/operations/", "family businesses"],
+    ["/work/writing/", "Books &amp; writing"],
+    ["/work/anevum/", "ANEVUM"],
+    ["/work/ideaflow/", "IdeaFlow"],
+    ["/work/devonstation/", "DevonStation"],
+    ["/about/", "father of two"],
+    ["/source/", "PUBLIC REPOSITORIES"],
+    ["/contact/", "devon@anevum.com"],
+  ]) assert.match(await (await get(route)).text(), new RegExp(phrase, "i"), route);
+  const v2 = await (await get("/v2/")).text();
+  assert.match(v2, /name="robots" content="noindex,nofollow"/);
+});
+test("deep links cannot produce a misleading fragment URL for a different panel", async () => {
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /const isRoutePage = interfaceShell\.dataset\.routePage === "true"/);
+  assert.match(client, /location\.assign\("\/#" \+ name\)/);
+  assert.match(client, /if \(isRoutePage\) return;/);
+  const source = await readFile("src/immersive-routes.mjs", "utf8");
+  assert.match(source, /data-initial-view=/);
+  assert.match(source, /renderImmersiveRoute/);
 });

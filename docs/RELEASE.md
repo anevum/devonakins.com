@@ -135,3 +135,27 @@ enables genuinely changing smoke transforms, an off toggle removes animations,
 and site opt-in persists across reloads on the local test origin. Check the
 actual iPhone Safari appearance/performance separately before production
 release. This candidate is not live merely because code is committed.
+
+## V1.1.2 — unified immersive navigation and deep links
+
+Every public same-origin HTML route now uses the same crossed-arms portrait,
+ambient smoke, five-section navigation, responsive design and motion controls
+as the canonical homepage. The Work archive, all five published project
+detail routes, About, Source, Contact and real 404 document retain their
+existing public URLs, canonical metadata and essential content. The root and
+the protected noindex /v2/ preview remain unchanged.
+
+Public deep links are real pages, not redirects to the old site: they use a
+single source generator (src/immersive-routes.mjs) and supplemental
+/v2/routes.css; the old src/views.mjs templates remain in source history
+but are no longer emitted as public pages. On deep pages a main navigation
+tab returns to /#section instead of placing unrelated content behind a
+misleading project URL. Direct links, canonical metadata, breadcrumb
+navigation and detailed public project descriptions are preserved.
+
+Release checks: all generated HTML pages must have the new shell, a single
+nonlegacy stylesheet system, correct canonical route and functional internal
+links. Chromium/WebKit browser acceptance visits all nine old destinations
+on mobile and checks panel state, canonical navigation, reflow and selected
+automated WCAG cases. Capture rollback version before release and verify live
+Worker /_health, all URLs and assets afterward. No DNS or secrets changed.

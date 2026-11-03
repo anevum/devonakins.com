@@ -1,0 +1,230 @@
+/* Deep-linked public pages share the actual portrait interface and motion system.
+   Only this supplemental stylesheet is needed; legacy global CSS is excluded. */
+.interface-shell[data-route-page="true"] .interface-main {
+  min-width: 0;
+}
+.interface-shell[data-route-page="true"] .portrait-scene {
+  opacity: .20;
+}
+.interface-shell[data-route-page="true"][data-view="home"] .portrait-scene {
+  opacity: .27;
+}
+.route-panel-inner {
+  width: 100%;
+  max-width: 1260px;
+  min-height: 100%;
+  margin: 0 auto;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-top: clamp(20px, 4.5vh, 58px);
+  padding-bottom: clamp(28px, 5vh, 64px);
+}
+.route-content {
+  width: 100%;
+  max-width: 1040px;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+.route-content::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+  inset: -18px -20px;
+  background: linear-gradient(96deg, rgba(5,8,16,.79) 0%, rgba(7,10,17,.63) 64%, rgba(7,10,17,.08) 100%);
+  mask-image: linear-gradient(90deg, black 70%, transparent 100%);
+}
+.route-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: #aab3c2;
+  font-size: 11px;
+  letter-spacing: .045em;
+}
+.route-breadcrumb a,
+.route-breadcrumb [aria-current="page"] {
+  color: #e9c0a3;
+  text-decoration: none;
+}
+.route-breadcrumb a:hover { color: #fff; }
+.route-kicker {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-transform: uppercase;
+  color: #ddb49b;
+  font-size: 10px;
+  letter-spacing: .15em;
+  font-weight: 600;
+}
+.route-kicker-line {
+  height: 1px;
+  width: 29px;
+  flex: 0 0 29px;
+  background: #d4a080;
+}
+.route-header { margin: clamp(22px,5vh,55px) 0 clamp(24px,4vh,42px); }
+.route-panel-inner .route-title {
+  font-size: clamp(48px, 6.7vw, 99px);
+  line-height: .97;
+  max-width: 880px;
+  font-weight: 560;
+  letter-spacing: -.072em;
+  margin: 15px 0 18px;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.route-stop { color: #d6a081; }
+.route-lead {
+  max-width: 720px;
+  font-size: clamp(13px,1.18vw,16px);
+  line-height: 1.75;
+  color: #c2cad4;
+  margin-bottom: 0;
+  text-wrap: pretty;
+}
+.route-projects {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.route-project {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 176px;
+  gap: 11px;
+  padding: 20px 22px;
+  background: linear-gradient(128deg, rgba(31,38,52,.85), rgba(12,16,26,.72));
+  border: 1px solid rgba(220,225,237,.17);
+  text-decoration: none;
+  color: #f5f0f1;
+  backdrop-filter: blur(13px);
+  transition: transform .35s ease, border-color .3s ease, background-color .3s ease;
+}
+.route-project:hover { transform: translateY(-3px); border-color: rgba(229,173,132,.67); }
+.route-project-index, .route-block-label {
+  text-transform: uppercase;
+  color: #d6ac8f;
+  font-size: 9px;
+  letter-spacing: .14em;
+  font-weight: 630;
+}
+.route-project strong { font-weight: 540; font-size: 19px; line-height: 1.23; letter-spacing: -.018em; }
+.route-project-description { flex: 1; color: #bdc5d0; font-size: 12px; line-height: 1.58; }
+.route-project-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #d5b59e;
+  font-size: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(221,221,234,.12);
+}
+.route-blocks {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 18px;
+  max-width: 990px;
+}
+.route-block {
+  padding: 21px 24px;
+  border-left: 1px solid rgba(223,169,130,.55);
+  background: linear-gradient(92deg,rgba(25,31,44,.75),rgba(15,20,32,.39));
+  min-width: 0;
+}
+.route-block-label { margin-bottom: 17px; }
+.route-block p:not(.route-block-label) {
+  color: #c2cbd6;
+  font-size: 13px;
+  line-height: 1.8;
+  max-width: 650px;
+}
+.route-block p:last-child { margin-bottom: 0; }
+.route-meta, .route-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  color: #dfb79a;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: 0 0 24px;
+}
+.route-meta span, .route-values span {
+  padding: 7px 10px;
+  border: 1px solid rgba(228,180,139,.23);
+  background: rgba(12,16,25,.35);
+}
+.route-values { margin-top: 25px; }
+.route-privacy {
+  margin-top: 22px;
+  max-width: 990px;
+  padding: 15px 20px;
+  border: 1px solid rgba(191,200,217,.19);
+  color: #bbc6d2;
+  background: rgba(10,15,25,.52);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.route-privacy strong { color: #e2b69a; letter-spacing: .12em; font-size: 9px; }
+.route-privacy p { margin: 8px 0 0; }
+.route-repos { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  margin: 24px 0 0;
+  padding-bottom: 5px;
+}
+.route-link, .route-contact-address a {
+  color: #e7bfa3;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(229,172,132,.5);
+  padding-bottom: 5px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.route-link:hover, .route-contact-address a:hover { color: #fff; border-color: #fff; }
+.route-fine-print { max-width: 760px; color: #b4bfcc; font-size: 11px; line-height: 1.75; margin: 24px 0 0; }
+.route-contact-address {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 0 28px;
+}
+.route-contact-address > span { font-size: 10px; color: #d5ae93; letter-spacing: .17em; }
+.route-contact-address a { font-size: clamp(19px,3vw,36px); overflow-wrap: anywhere; letter-spacing: -.025em; }
+.route-project:focus-visible, .route-link:focus-visible,
+.route-breadcrumb a:focus-visible, .route-contact-address a:focus-visible {
+  outline: 2px solid #e9bb95;
+  outline-offset: 4px;
+}
+@media (max-width: 960px) {
+  .route-panel-inner { padding-inline: clamp(23px,4vw,50px); }
+  .route-projects { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  .route-panel-inner { padding: 20px 22px 32px; }
+  .route-content::before { inset: -5px -11px; background: rgba(5,8,16,.48); mask-image: none; }
+  .route-panel-inner .route-title { font-size: clamp(41px,11vw,62px); margin: 12px 0 14px; }
+  .route-header { margin: 25px 0 25px; }
+  .route-projects, .route-blocks { grid-template-columns: minmax(0,1fr); }
+  .route-project { min-height: 145px; padding: 15px 17px; }
+  .route-project strong { font-size: 17px; }
+  .route-block { padding: 14px 16px; }
+  .route-meta { gap: 6px; }
+  .route-lead { font-size: 12px; }
+  .route-actions { gap: 14px; }
+}
+@media (max-height: 380px) {
+  .route-panel-inner { padding-top: 13px; }
+  .route-header { margin: 16px 0; }
+  .route-panel-inner .route-title { font-size: clamp(35px,6vw,52px); }
+}
