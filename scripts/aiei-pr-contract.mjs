@@ -3,6 +3,8 @@
  * readable review contract, not source quality or the truth of supplied evidence.
  * Run in a read-only pull_request workflow; never give it production secrets.
  */
+import {execFileSync} from 'node:child_process';
+
 const REQUIRED = [
   'Purpose',
   'Scope and boundaries',
@@ -13,6 +15,40 @@ const REQUIRED = [
   'Release intent',
 ];
 const DECISIONS = new Set(['REVIEW_ONLY','RELEASE_NO_GO','READY_FOR_REVIEW']);
+
+// This is a conservative risk floor based on changed file paths. It does not
+// prove a change is safe; reviewers must still classify behavior independently.
+export function minimumPathRisk(paths) {
+  if (!Array.isArray(paths)) throw new TypeError('Changed paths must be an array.');
+  let floor = 0;
+  for (const path of paths) {
+    if (typeof path !== 'string' || !path.length) throw new TypeError('Changed paths must be non-empty strings.');
+    if (/^(?:\.github\/(?:workflows\/|CODEOWNERS$|PULL_REQUEST_TEMPLATE\.md$)|AGENTS\.md$|wrangler\.jsonc$|scripts\/(?:aiei-|security\/)|tests\/aiei-|LICENSE(?:\..*)?$)/i.test(path) ||
+        /(?:^|\/)(?:auth|security|permissions)\//i.test(path) || /(?:^|\/)\.env(?:\.|$)/i.test(path)) {
+      floor = Math.max(floor, 3);
+    } else if (/^(?:worker\/|package(?:-lock)?\.json$)/i.test(path) || /\.sql$/i.test(path)) {
+      floor = Math.max(floor, 2);
+    } else if (!/(?:^|\/)(?:[^/]+\.)?(?:md|txt)$|^\.gitignore$/i.test(path)) {
+      floor = Math.max(floor, 1);
+    }
+  }
+  return floor;
+}
+
+// The GitHub workflow provides exact commits and a full checkout. Inspect both
+// old and new names of renames (--no-renames) to detect removed guard files.
+function changedPathsFromGit() {
+  const base = process.env.AIEI_BASE_SHA;
+  const head = process.env.AIEI_HEAD_SHA;
+  if (!/^[0-9a-f]{40}$/.test(base || '') || !/^[0-9a-f]{40}$/.test(head || '')) {
+    throw new Error('AIEI_BASE_SHA and AIEI_HEAD_SHA must be exact 40-character commit hashes.');
+  }
+  const data = execFileSync('git', ['diff', '--no-renames', '--name-only', '-z', `${base}...${head}`],
+    {encoding:'utf8',maxBuffer:1024*1024});
+  const paths = data.split('\0').filter(Boolean);
+  if (!paths.length) throw new Error('No changed files found; refusing to approve an unverified PR diff.');
+  return paths;
+}
 
 // A literal code example is not a PR section. Strip code fences before HTML
 // comments so example text cannot accidentally create real headings or eat
@@ -53,7 +89,7 @@ function visibleMarkdown(input) {
   return visible.join('\n');
 }
 
-export function validateContract(input) {
+export function validateContract(input, changedPaths) {
   const errors=[];
   if (typeof input !== 'string' || !input.trim()) return {ok:false,errors:['Pull-request description is missing.']};
   if (Buffer.byteLength(input, 'utf8') > 65536) return {ok:false,errors:['Pull-request description exceeds 64 KiB.']};
@@ -81,6 +117,10 @@ export function validateContract(input) {
   if (tier !== undefined && !/^(R0|R1|R2|R3)$/.test(tier)) {
     errors.push('Risk tier must be exactly R0, R1, R2, or R3.');
   }
+  if (changedPaths !== undefined && /^(R0|R1|R2|R3)$/.test(tier || '')) {
+    const floor = minimumPathRisk(changedPaths);
+    if (Number(tier[1]) < floor) errors.push(`Risk tier ${tier} understates changed-file minimum R${floor}.`);
+  }
   const decision=sections.get('release intent');
   if (decision!==undefined) {
     const meaningful=decision.split('\n').map(x=>x.trim()).filter(Boolean);
@@ -92,10 +132,16 @@ export function validateContract(input) {
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  const report=validateContract(process.env.AIEI_PR_BODY);
-  if (report.ok) {
+  let report;
+  try {
+    report = validateContract(process.env.AIEI_PR_BODY, changedPathsFromGit());
+  } catch (error) {
+    console.error(`AIEI contract: ${error.message}`);
+    process.exitCode=1;
+  }
+  if (report?.ok) {
     console.log('AIEI PR description has required review fields. This does not verify their truth.');
-  } else {
+  } else if (report) {
     for (const e of report.errors) console.error(`AIEI contract: ${e}`);
     process.exitCode=1;
   }

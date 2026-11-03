@@ -15,10 +15,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Check required review evidence fields
         env:
           AIEI_PR_BODY: ${{ github.event.pull_request.body }}
+          AIEI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AIEI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/aiei-pr-contract.mjs
