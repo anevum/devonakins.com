@@ -305,6 +305,26 @@ test("rendered public source and contact routes contain only current GitHub iden
 });
 
 
+test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on home", async () => {
+  const html = await (await get("/")).text();
+  assert.match(html, /class="hero-usage"/);
+  assert.match(html, /id="home-usage-value"[^>]*>≈2\.6B</);
+  assert.match(html, /AS OF 2026-11-02 · OWNER-REPORTED · NOT LIVE/);
+  const response = await get("/v2/usage-snapshot.json");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type"), /application\/json/);
+  assert.deepEqual(await response.json(), {
+    version: 1, metric: "work-codex-tokens", count: 2600000000,
+    approximate: true, asOf: "2026-11-02",
+    source: "Owner-reported ChatGPT profile", attestation: "owner-published",
+  });
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /void checkUsage\(\)/);
+  assert.match(client, /record\.metric !== "work-codex-tokens"/);
+  assert.match(client, /record\.approximate !== true/);
+  assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
+});
+
 test("current engineering showcase is prominently linked and status-qualified", async () => {
   const home = await (await get("/")).text();
   assert.match(home, /class="hero-feature"/);
