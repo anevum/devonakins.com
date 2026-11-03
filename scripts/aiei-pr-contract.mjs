@@ -1,7 +1,7 @@
 /**
- * AIEI PR-description format checker. This is not a code-quality, security, or
- * evidence-authenticity certification. GitHub Actions runs this script from
- * the trusted BASE branch only, never from an untrusted PR head.
+ * AIEI pull-request description format checker. Validates the presence of a
+ * readable review contract, not source quality or the truth of supplied evidence.
+ * Run in a read-only pull_request workflow; never give it production secrets.
  */
 const REQUIRED = [
   'Purpose',
@@ -13,12 +13,32 @@ const REQUIRED = [
 ];
 const DECISIONS = new Set(['REVIEW_ONLY','RELEASE_NO_GO','READY_FOR_REVIEW']);
 
+// A literal code example is not a PR section. Strip code fences before HTML
+// comments so example text cannot accidentally create real headings or eat
+// legitimate content with an unmatched comment marker.
+function visibleMarkdown(input) {
+  let fence = null;
+  const lines = input.split(/\r?\n/).map(line => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0] === fence.char &&
+          marker[1].length >= fence.length && marker[2].trim() === '') fence = null;
+      return '';
+    }
+    if (marker) {
+      fence = {char: marker[1][0], length: marker[1].length};
+      return '';
+    }
+    return line;
+  });
+  return lines.join('\n').replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+}
+
 export function validateContract(input) {
   const errors=[];
   if (typeof input !== 'string' || !input.trim()) return {ok:false,errors:['Pull-request description is missing.']};
   if (Buffer.byteLength(input, 'utf8') > 65536) return {ok:false,errors:['Pull-request description exceeds 64 KiB.']};
-  // Ignore HTML comments; the template's instructions are not actual evidence.
-  const text=input.replace(/<!--[\s\S]*?-->/g,'');
+  const text = visibleMarkdown(input);
   const matches=[...text.matchAll(/^##\s+(.+?)\s*$/gm)];
   const sections=new Map();
   for (let i=0;i<matches.length;i++) {
