@@ -11,6 +11,7 @@ type UsageSnapshot = {
   asOf: string;
   source: string;
   attestation: "owner-published";
+  profile?: { stats?: { peakTokens?: number | null; currentStreakDays?: number | null } };
 };
 
 const shell = document.querySelector<HTMLElement>("#interface-shell");
@@ -241,6 +242,20 @@ function parseSnapshot(input: unknown): UsageSnapshot {
   const date = Date.parse(record.asOf + "T00:00:00Z");
   if (new Date(date).toISOString().slice(0, 10) !== record.asOf || date > Date.now() + 86_400_000)
     throw new Error("Invalid snapshot date");
+  // Optional secondary metrics must not be displayed without type validation.
+  if (record.profile !== undefined) {
+    if (!record.profile || typeof record.profile !== "object" || Array.isArray(record.profile))
+      throw new Error("Invalid profile");
+    const stats = (record.profile as Record<string, unknown>).stats;
+    if (!stats || typeof stats !== "object" || Array.isArray(stats))
+      throw new Error("Invalid profile metrics");
+    const fields = stats as Record<string, unknown>;
+    for (const key of ["peakTokens", "currentStreakDays"]) {
+      const value = fields[key];
+      if (value !== null && (!Number.isSafeInteger(value) || Number(value) < 0))
+        throw new Error("Invalid secondary profile metric");
+    }
+  }
   return record as UsageSnapshot;
 }
 
@@ -253,12 +268,25 @@ function showUsage(snapshot: UsageSnapshot) {
     count.textContent = "≈" + compact;
     count.setAttribute("aria-label", "Approximately " +
       snapshot.count.toLocaleString("en-US") +
-      " owner-reported Work and Codex tokens");
+      " Work and Codex tokens in the dated profile snapshot");
   }
+  const dateLabel = new Date(snapshot.asOf + "T12:00:00Z").toLocaleDateString("en-US", {
+    timeZone: "UTC", month: "short", day: "2-digit", year: "numeric",
+  }).toUpperCase();
+  const stats = snapshot.profile?.stats;
   const status = document.querySelector<HTMLElement>("#usage-status");
   const date = document.querySelector<HTMLElement>("#usage-date");
-  if (status) status.textContent = "Owner-reported · Not live tracking.";
-  if (date) date.textContent = "As of " + snapshot.asOf + " · " + snapshot.source.trim();
+  const streak = stats?.currentStreakDays;
+  const peak = stats?.peakTokens;
+  if (status) {
+    status.textContent = typeof streak === "number" && typeof peak === "number"
+      ? streak + "D STREAK  ·  " + new Intl.NumberFormat("en-US", {
+          notation: "compact", maximumFractionDigits: 1,
+        }).format(peak) + " PEAK"
+      : "PROFILE SNAPSHOT LOADED";
+  }
+  if (date) date.textContent = dateLabel + " · SNAPSHOT";
+  document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "ready");
 }
 async function checkUsage() {
   if (polling) return;
@@ -267,6 +295,7 @@ async function checkUsage() {
   const date = document.querySelector<HTMLElement>("#usage-date");
   polling = true;
   if (button) button.disabled = true;
+  document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "loading");
   try {
     // Optional owner-maintained public file, never a private account API.
     const response = await fetch("/v2/usage-snapshot.json", {
@@ -286,8 +315,9 @@ async function checkUsage() {
       count.textContent = "—";
       count.removeAttribute("aria-label");
     }
-    if (status) status.textContent = "No verified public snapshot available.";
-    if (date) date.textContent = "No tokens or account data were retrieved.";
+    if (status) status.textContent = "SNAPSHOT UNAVAILABLE";
+    if (date) date.textContent = "CHECK SOURCE";
+    document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "unavailable");
   } finally {
     polling = false;
     if (button) button.disabled = false;
