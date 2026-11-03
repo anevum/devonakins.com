@@ -730,3 +730,15 @@ h1, h2, p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   .telemetry-readout .feed-beam span { animation: none; transform: translateX(95%); }
 }
+
+
+/* Short portrait iPhones: keep both project cards fully above the fixed nav. */
+@media (max-width: 460px) and (min-height: 641px) and (max-height: 760px) {
+  .panel-home .hero-panel { padding-top: 14px; padding-bottom: 18px; }
+  .hero-overline { margin-top: 13px; }
+  .hero-panel h1 { margin-bottom: 12px; font-size: clamp(62px, 15vw, 82px); }
+  .hero-description { line-height: 1.55; }
+  .hero-actions { margin-top: 8px; }
+  .hero-feature { margin-top: 9px; }
+  .hero-feature-link { min-height: 93px; padding-block: 9px; }
+}
