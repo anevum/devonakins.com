@@ -153,7 +153,8 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.match(html, new RegExp('id="tab-' + view + '"'));
     assert.match(html, new RegExp('id="panel-' + view + '"'));
   }
-  assert.match(html, /No verified snapshot connected/);
+  assert.match(html, /Loading published snapshot/);
+  assert.match(html, /CHATGPT \/ WORK \+ CODEX/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
@@ -210,6 +211,29 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.equal(routesCss.status, 200);
   assert.match(await routesCss.text(), /\.route-panel-inner/);
   assert.equal((await get("/v2")).status, 308);
+});
+
+test("V2 public ChatGPT stats are explicitly approximate, source-labeled and separately served", async () => {
+  const response = await get("/v2/usage-snapshot.json");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type") ?? "", /application\/json/);
+  const value = await response.json();
+  assert.deepEqual(Object.keys(value).sort(), [
+    "approximate","asOf","attestation","count","metric","source","version"
+  ]);
+  assert.equal(value.version, 1);
+  assert.equal(value.metric, "work-codex-tokens");
+  assert.equal(value.approximate, true);
+  assert.equal(value.count, 2600000000);
+  assert.equal(value.asOf, "2026-11-02");
+  assert.equal(value.attestation, "owner-published");
+  assert.match(value.source, /owner-reported/i);
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /^void checkUsage\(\);$/m, "initial activity refresh must actually run, not be commented out");
+  assert.match(client, /snapshot\.approximate|record\.approximate/);
+  assert.match(client, /Not live/);
+  assert.match(client, /credentials: "omit"/);
+  assert.doesNotMatch(client, /api\.openai\.com|chatgpt\.com\/api\/|Authorization:|Bearer /);
 });
 
 test("canonical homepage publishes the portrait, not the noindex preview", async () => {
