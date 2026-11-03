@@ -86,3 +86,27 @@ active version and rollback candidate, and inspect public routes, canonical
 redirects, security headers and portrait assets over HTTPS. The release must
 not be marked live based on GitHub CI alone. No other domains or Workers are
 touched by this release.
+
+## Manual production deployment for 1.1.0
+
+Only the verified main branch may be deployed. The dedicated workflow is
+Actions > Deploy DevonAkins.com (manual). It requires an exact 40-character
+commit input, builds from source, runs Node tests and publishes only the
+existing devonakins-personal Worker. There is no automatic release on merge.
+
+Before the first run, configure the production GitHub Actions environment and
+two repository/environment secrets: CLOUDFLARE_API_TOKEN and
+CLOUDFLARE_ACCOUNT_ID. Create a dedicated Cloudflare API token for this
+personal site with the minimum Workers deployment and existing route
+permissions required by Wrangler. Never reuse another project's build token,
+and never commit the token or account ID to source.
+
+Record the active production Worker version and source before each deployment.
+If the release fails the post-deployment check, use the immediately preceding
+Cloudflare version as rollback, then verify the public routes again. The
+workflow's scripts/verify-live.mjs checks the exact deployed commit in
+/_health, the canonical indexable portrait home, CSP, old project pages,
+the noindex V2 preview, portrait asset, true 404, and www redirect.
+
+Workflows are source preparation until a manually dispatched run reports
+success and the intended live site is independently observed.
