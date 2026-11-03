@@ -64,6 +64,49 @@ Future real social-platform public milestones need a separately sourced,
 consented, privacy-reviewed publication pipeline. No social metrics are
 fabricated in this increment.
 
+## Public GitHub signal (proposed release addition)
+
+The V2 Observatory now offers two explicitly identified and separate sources:
+
+- **ChatGPT** — an approximate lifetime Work/Codex usage snapshot recorded
+  November 2, 2026, published in a dated JSON file; not live.
+- **GitHub** — an opt-in, periodically refreshed **public repository count**
+  from the publicly documented GitHub REST `GET /users/anevum` endpoint;
+  not followers, commits, contributions, stars, private repositories,
+  published products, or verified ownership of every repository.
+
+Selecting GitHub causes the *website's own Worker* to request the exact fixed
+`https://api.github.com/users/anevum` public endpoint. No account token,
+OAuth grant, visitor IP address or visitor request metadata is intentionally
+sent from the browser to GitHub. Visitors only access the first-party
+`GET /v2/github-profile.json` endpoint.
+
+The Worker validates the returned username, account type and nonnegative
+integer `public_repos`; only a narrow, explicitly whitelisted JSON envelope
+is returned. The upstream profile's email, follower/following totals and
+other fields are never forwarded. The connection has a 4.5-second timeout,
+64-KiB response limit, single-flight request deduplication and a one-minute
+failure cooldown. A successful result is cached in the warm Worker isolate
+for up to an hour and opportunistically in Cloudflare's Cache API when
+available. Different edge locations can refresh at different times. Browser
+responses can be cached for five minutes. On errors, the Worker returns a
+non-cacheable **503** with no fabricated zero or stale metric.
+
+The Observatory identifies this as **cached GitHub public data**, exposes its
+UTC observation time and links to the public GitHub profile. Source buttons
+remain local to the existing portrait/smoke V2 interface and are keyboard-
+and touch-operable. Unsupported values, future/stale timestamps and failure
+responses are hidden behind an explicit unavailable state. The ChatGPT
+snapshot still loads on site visit, and only selecting GitHub initiates a
+GitHub data request. The site makes no outbound provider request from the
+visitor's browser.
+
+This is a source-only increment. No production Cloudflare Worker deployment,
+paid service, new credential, analytics tracker, GitHub permission grant, or
+change to other DevonStation/Cristy/Anevum projects is included. Actual
+Cloudflare API reachability, its cache behavior under production traffic,
+and physical iPhone acceptance require separate verification before release.
+
 ## Build and tests
 
 \`\`\`sh
