@@ -12,14 +12,16 @@ type UsageSnapshot = {
   source: string;
   attestation: "owner-published";
 };
+type PublicCode = {name:string; pushedAt:string; url:string};
 type GitHubPublicSignal = {
-  version: 1;
+  version: 2;
   account: "anevum";
   metric: "public-repositories";
   count: number;
   asOf: string;
   source: "GitHub REST API";
   attestation: "public-provider-response";
+  recent: PublicCode | null;
 };
 type SignalSource = "chatgpt" | "github";
 
@@ -48,6 +50,7 @@ let announcementTimer = 0;
 let motionWanted = true;
 let activeSignal: SignalSource = "chatgpt";
 let signalSequence = 0;
+let recentCodeLoaded = false;
 
 try {
   motionWanted = localStorage.getItem("devon-v2-motion") !== "off";
@@ -86,6 +89,7 @@ function activate(name: string, focus: "tab" | "panel" | "none" = "none", update
     tab.tabIndex = selected ? 0 : -1;
   }
   for (const [key, panel] of panelByName) panel.hidden = key !== name;
+  if (name === "work") void loadRecentCode();
   if (updateHash && location.hash !== "#" + name) {
     // Preserve Back/Forward history when navigating between interface sections.
     history.pushState(null, "", "#" + name);
@@ -229,18 +233,74 @@ function showUsage(snapshot: UsageSnapshot) {
   if (status) status.textContent = shortDate + " · Not live";
   if (date) date.textContent = "As of " + observed + " · " + snapshot.source.trim() + " · Approximate";
 }
+function validPublicCode(project: unknown, observedAt: unknown): project is PublicCode | null {
+  if (project === null) return true;
+  if (!project || typeof project !== "object" || Array.isArray(project) ||
+      Object.keys(project).sort().join(",") !== "name,pushedAt,url")
+    return false;
+  const p = project as Record<string,unknown>;
+  if (typeof p.name !== "string" || p.name.length < 1 || p.name.length > 100 ||
+      !/^[A-Za-z0-9_.-]+$/.test(p.name) || p.name === "." || p.name === ".." ||
+      p.url !== "https://github.com/anevum/" + encodeURIComponent(p.name) ||
+      typeof p.pushedAt !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(p.pushedAt))
+    return false;
+  const pushed = Date.parse(p.pushedAt);
+  return Number.isFinite(pushed) && new Date(pushed).toISOString() === p.pushedAt &&
+    pushed <= Date.now() + 300_000 &&
+    typeof observedAt === "string" && Number.isFinite(Date.parse(observedAt)) &&
+    pushed <= Date.parse(observedAt) + 300_000;
+}
+function showRecentCode(recent: PublicCode | null, unavailable = false) {
+  const name = document.querySelector<HTMLElement>("#recent-code-name");
+  const status = document.querySelector<HTMLElement>("#recent-code-status");
+  const link = document.querySelector<HTMLAnchorElement>("#recent-code-link");
+  if (!name || !status || !link) return;
+  if (unavailable || !recent) {
+    name.textContent = unavailable ? "Update unavailable" : "No eligible recent public project";
+    status.textContent = unavailable ? "Could not confirm current public GitHub activity." :
+      "No recent original public repository was returned.";
+    link.href = "https://github.com/anevum";
+    link.textContent = "Browse public repositories ↗";
+    return;
+  }
+  name.textContent = recent.name;
+  status.textContent = "Last pushed " + new Date(recent.pushedAt).toLocaleDateString(
+    "en-US", {month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}
+  ) + " · Public code, not a release announcement.";
+  link.href = recent.url;
+  link.textContent = "Open repository ↗";
+}
+async function loadRecentCode() {
+  if (recentCodeLoaded) return;
+  recentCodeLoaded = true;
+  try {
+    // First-party public GitHub proxy only; no visitor account context sent.
+    const response = await fetch("/v2/github-profile.json", {
+      cache:"no-store", credentials:"omit", headers:{Accept:"application/json"},
+    });
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json"))
+      throw new Error("Public source unavailable");
+    const signal = parseGitHubSignal(await response.json());
+    showRecentCode(signal.recent);
+  } catch {
+    showRecentCode(null,true);
+  }
+}
+
 function parseGitHubSignal(input: unknown): GitHubPublicSignal {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("Invalid GitHub public response");
   const value = input as Record<string, unknown>;
   if (
-    Object.keys(value).sort().join(",") !== "account,asOf,attestation,count,metric,source,version" ||
-    value.version !== 1 || value.account !== "anevum" ||
+    Object.keys(value).sort().join(",") !== "account,asOf,attestation,count,metric,recent,source,version" ||
+    value.version !== 2 || value.account !== "anevum" ||
     value.metric !== "public-repositories" ||
     value.source !== "GitHub REST API" ||
     value.attestation !== "public-provider-response" ||
     typeof value.count !== "number" || !Number.isSafeInteger(value.count) ||
     value.count < 0 || value.count > 1_000_000 ||
+    !validPublicCode(value.recent, value.asOf) ||
     typeof value.asOf !== "string" ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.asOf)
   ) throw new Error("Invalid GitHub public response");
@@ -267,6 +327,8 @@ function showGitHubSignal(snapshot: GitHubPublicSignal) {
     month: "short", day: "numeric", year: "numeric", hour: "2-digit",
     minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
   }) + " · " + snapshot.source;
+  recentCodeLoaded = true;
+  showRecentCode(snapshot.recent);
 }
 async function refreshSignal() {
   const sequence = ++signalSequence;
