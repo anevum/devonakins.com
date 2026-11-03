@@ -89,6 +89,21 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.add_style_tag(content=css)
                 page.add_script_tag(content=script)
             page.locator("#panel-home").wait_for(state="visible")
+            page.wait_for_function("""() => {
+                const value = document.querySelector('#home-usage-value');
+                const status = document.querySelector('#usage-status');
+                return value?.textContent?.trim() === '≈2.6B' &&
+                    status?.textContent?.includes('Not live tracking.');
+            }""")
+            assert page.locator("#home-usage-date").inner_text().startswith(
+                "AS OF 2026-11-02"
+            ), "dated activity snapshot missing"
+            if (width, height) in [(390, 844), (1440, 900)]:
+                assert page.locator("#home-usage-value").evaluate("""el => {
+                  const box = el.getBoundingClientRect();
+                  return box.width > 0 && box.height > 0 &&
+                    box.top >= 0 && box.bottom <= innerHeight;
+                }"""), "home activity metric not in the initial viewport"
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
