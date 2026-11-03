@@ -231,6 +231,17 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 assert page.locator("#home-usage-value").inner_text().strip() == "—"
                 assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
             check_overflow("home")
+            # On normal portrait-phone and desktop viewports the featured project
+            # cards must be in the initial panel viewport, not clipped below it.
+            if (width, height) in [(390, 844), (1440, 900)]:
+                feature_box = featured.bounding_box()
+                panel_box = page.locator("#panel-home").bounding_box()
+                assert feature_box and panel_box
+                assert feature_box["y"] >= panel_box["y"], (label, feature_box, panel_box)
+                assert (feature_box["y"] + feature_box["height"]
+                        <= panel_box["y"] + panel_box["height"] - 8), (
+                    label, "Featured AIEI/ISL cards are below the fold", feature_box, panel_box
+                )
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
             assert light.is_visible(), "portrait lighting control missing"
