@@ -89,45 +89,45 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.add_style_tag(content=css)
                 page.add_script_tag(content=script)
             page.locator("#panel-home").wait_for(state="visible")
+            assert page.locator("#home-usage-value").count() == 0, "redundant homepage statistic remains"
+            assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
             if origin:
                 page.wait_for_function("""() => {
-                    const value = document.querySelector('#home-usage-value');
+                    const value = document.querySelector('#usage-value');
                     const status = document.querySelector('#usage-status');
                     return value?.textContent?.trim() === '≈2.6B' &&
                         status?.textContent?.includes('Not live tracking.');
                 }""")
-                assert page.locator("#home-usage-date").inner_text().startswith(
-                    "AS OF 2026-11-02"
-                ), "dated activity snapshot missing"
+                assert page.locator("#usage-date").inner_text().startswith(
+                    "As of 2026-11-02"
+                ), "dated snapshot missing from bottom stream"
                 if (width, height) == (390, 844):
-                    # Falsification: a malformed owner snapshot must clear BOTH
-                    # the sidebar and the prominent hero, then recover on refresh.
+                    # Falsification: malformed snapshots clear the ONLY stream value;
+                    # returning to a valid snapshot restores it.
                     snapshot_url = "**/v2/usage-snapshot.json"
                     page.route(snapshot_url, lambda route: route.fulfill(
                         status=200, content_type="application/json",
                         body='{"version":1,"count":-1}'
                     ))
-                    page.locator("#refresh-usage").click()
-                    page.wait_for_function("""() => {
-                        return document.querySelector('#home-usage-value')?.textContent?.trim() === '—' &&
-                          document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
-                          document.querySelector('#home-usage-date')?.textContent?.includes('NO VERIFIED PUBLIC SNAPSHOT');
-                    }""")
-                    page.unroute(snapshot_url)
-                    page.locator("#refresh-usage").click()
+                    page.evaluate("document.getElementById('refresh-usage').click()")
                     page.wait_for_function("""() =>
-                      document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B' &&
+                      document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
+                      document.querySelector('#usage-status')?.textContent?.includes('No verified public snapshot')
+                    """)
+                    page.unroute(snapshot_url)
+                    page.evaluate("document.getElementById('refresh-usage').click()")
+                    page.wait_for_function("""() =>
                       document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'
                     """)
             else:
-                assert page.locator("#home-usage-value").inner_text().strip() == "—"
-                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
+                assert page.locator("#usage-value").inner_text().strip() == "—"
             if (width, height) in [(390, 844), (1440, 900)]:
-                assert page.locator("#home-usage-value").evaluate("""el => {
-                  const box = el.getBoundingClientRect();
-                  return box.width > 0 && box.height > 0 &&
-                    box.top >= 0 && box.bottom <= innerHeight;
-                }"""), "home activity metric not in the initial viewport"
+                for selector in ["#usage-value", ".telemetry-profile-link"]:
+                    assert page.locator(selector).evaluate("""el => {
+                      const box = el.getBoundingClientRect();
+                      return box.width > 0 && box.height > 0 &&
+                        box.top >= 0 && box.bottom <= innerHeight;
+                    }"""), "GPT stream element not in initial viewport: " + selector
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
@@ -209,27 +209,14 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "horizontal" if width <= 960 else "vertical"
                 ), observed
 
-            # The first screen must preserve both owner-requested public signals.
+            # Retain AIEI/ISL highlights and use the Observatory as the only
+            # ChatGPT activity stream.
             featured = page.locator(".hero-feature")
-            usage = page.locator(".hero-usage")
             assert featured.is_visible(), "AIEI/ISL highlights not visible"
-            assert usage.is_visible(), "dated ChatGPT activity not visible"
             assert page.locator(".hero-feature-link").count() == 2
             assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
             assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
-            if origin:
-                # The module loads a first-party JSON snapshot asynchronously.
-                # Wait for validated data, not merely page load, on both engines.
-                page.wait_for_function(
-                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
-                    timeout=7000,
-                )
-                assert "≈2.6B" in page.locator("#home-usage-value").inner_text()
-                assert "OWNER-REPORTED" in page.locator("#home-usage-date").inner_text()
-                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
-            else:
-                assert page.locator("#home-usage-value").inner_text().strip() == "—"
-                assert "SNAPSHOT" in page.locator("#home-usage-date").inner_text()
+            assert page.locator(".hero-usage").count() == 0
             check_overflow("home")
             # On normal portrait-phone and desktop viewports the featured project
             # cards must be in the initial panel viewport, not clipped below it.
@@ -306,17 +293,13 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
                 assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
-                assert page.locator(".hero-usage").is_visible(), "canonical GPT activity missing"
+                assert page.locator(".hero-usage").count() == 0, "duplicate hero metric"
+                assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
                 page.wait_for_function(
-                    """() => document.querySelector('#home-usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    """() => document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'""",
                     timeout=7000,
                 )
-                assert page.locator("#home-usage-value").inner_text() == "≈2.6B"
-                page.wait_for_function("""() => {
-                    const text = document.querySelector('#usage-status')?.textContent ?? '';
-                    return text.includes('Owner-reported estimate');
-                }""", timeout=7000)
-                assert "NOT LIVE" in page.locator("#home-usage-date").inner_text()
+                assert "Not live tracking." in page.locator("#usage-status").inner_text()
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")
@@ -340,7 +323,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 # All legacy deep links must render the cinematic shell,
                 # retain their own content, and return via the canonical tabs.
                 for route in [
-                    "/work/", "/source/", "/about/", "/contact/",
+                    "/work/", "/source/", "/about/", "/contact/", "/gpt/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
                     "/work/aiei/", "/work/isl/", "/work/phatcake/",
@@ -355,7 +338,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     ), "portrait decode: " + route
                     assert not page.locator(".site-header").count(), route
                     check_overflow("deep link " + route)
-                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/aiei/", "/work/isl/", "/contact/"]:
+                    if route == "/gpt/":
+                        assert page.locator("#gpt-profile").is_visible()
+                        assert "314.2M" in page.locator("#gpt-profile").inner_text()
+                        assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
+                        assert "Showcase Sites" in page.locator("#gpt-profile").inner_text()
+                        assert "Activity graph" in page.locator("#gpt-profile").inner_text()
+                        assert "Profile insights" in page.locator("#gpt-profile").inner_text()
+                        assert not page.locator("#home-usage-value").count()
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/aiei/", "/work/isl/", "/contact/", "/gpt/"]:
                         page.add_script_tag(content=axe_source)
                         link_violations = page.evaluate("""async () => {
                           const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];

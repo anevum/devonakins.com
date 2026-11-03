@@ -2,10 +2,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { pages, projects } from "../src/content.mjs";
 import { promotePortraitHome } from "../src/portrait-home.mjs";
 import { renderImmersiveRoute } from "../src/immersive-routes.mjs";
+import { validatePublicGptSnapshot } from "../src/gpt-profile.mjs";
 
 // All public routes use one independently audited cinematic shell. No legacy
 // homepage, navbar or old global CSS is generated for deep-linked pages.
 const home = promotePortraitHome(await readFile("v2/index.html", "utf8"));
+const gptSnapshot = validatePublicGptSnapshot(JSON.parse(await readFile("public/v2/usage-snapshot.json", "utf8")));
 await writeFile("index.html", home);
 const all = [
   ...pages.map(({ path }) => path),
@@ -16,7 +18,7 @@ for (const path of all) {
   if (path === "/") continue;
   const dir = "." + path;
   await mkdir(dir, { recursive: true });
-  await writeFile(dir + "index.html", renderImmersiveRoute(home, path, projects));
+  await writeFile(dir + "index.html", renderImmersiveRoute(home, path, projects, gptSnapshot));
 }
 await writeFile(
   "public/sitemap.xml",

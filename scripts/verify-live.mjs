@@ -48,7 +48,9 @@ assert.match(markup, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
 assert.match(markup, /class="portrait-figure"/);
 assert.match(markup, /id="interface-shell"/);
 assert.doesNotMatch(markup, /V2 PREVIEW|name="robots" content="noindex/);
-assert.match(markup, /id="home-usage-value"/, "GPT activity is present in homepage HTML");
+assert.match(markup, /id="usage-value"/, "compact GPT activity stream is present");
+assert.match(markup, /href="\/gpt\/"/, "home stream links to detailed GPT profile");
+assert.doesNotMatch(markup, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage metric");
 assert.match(markup, /class="hero-feature" role="group"/, "AIEI and ISL homepage highlights");
 for (const path of ["/work/aiei/", "/work/isl/"]) {
   assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
@@ -65,11 +67,19 @@ assert.equal(snapshotResponse.status, 200, "public GPT activity snapshot");
 assert.match(snapshotResponse.headers.get("content-type") || "", /application\/json/, "snapshot MIME");
 assert.deepEqual(await snapshotResponse.json(), expectedSnapshot, "published snapshot must match tested build");
 
-for (const path of ["/v2/", "/work/", "/about/", "/source/", "/contact/"]) {
+for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/"]) {
   const response = await request(path);
   assert.equal(response.status, 200, path + " status");
   if (path === "/v2/") {
     assert.match(await response.text(), /name="robots" content="noindex,nofollow"/);
+  }
+  if (path === "/gpt/") {
+    const profile = await response.text();
+    assert.match(profile, /id="gpt-profile"/);
+    assert.match(profile, /314\.2M|314,200,000/, "peak tokens reflected in published profile");
+    assert.match(profile, /Skills &amp; workflows|Skills & workflows/);
+    assert.match(profile, /Showcase Sites/);
+    assert.match(profile, /Top plugins/);
   }
 }
 // Portfolio release-specific acceptance: public project pages must be live,
@@ -113,4 +123,4 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
-console.log("Passed: canonical portrait, AIEI/ISL featured links, five project routes and disclosures, dated GPT JSON, security headers, preview, image, 404 and www redirect");
+console.log("Passed: one GPT homepage stream, full GPT profile, AIEI/ISL featured links and five portfolio routes, dated snapshot JSON, security headers, preview, image, 404 and www redirect");

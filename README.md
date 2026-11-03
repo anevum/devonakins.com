@@ -60,6 +60,30 @@ The sample notes are new website copy, not exports of private correspondence.
 Project illustrations are original symbolic diagrams, not screenshots of the
 private applications. The reference concept images are not distributed.
 
+## Manual GPT profile snapshot
+
+The canonical, public owner-approved GPT profile snapshot is
+`public/v2/usage-snapshot.json`. It supplies both the single compact
+Work/Codex token signal in the homepage Observatory and the detailed
+`/gpt/` page. **There is no authenticated ChatGPT integration.**
+
+To update the mirror, review the visible ChatGPT profile in the correct
+workspace (especially if a personal and a Business workspace differ), then
+edit only values actually shown there. Set `asOf` to the date of that
+capture. Do not interpolate token activity, infer a current streak from
+historical data, or combine Work/Codex tokens with ChatGPT messages or
+API billing. Unknown counts stay `null`. Curate `profile.skills` as
+public-safe descriptions of independently authored workflows, and include
+only public, owner-approved links in `profile.showcaseSites`; similarly
+`profile.topPlugins` needs a verified manual snapshot.
+
+Run `npm run build && npm test` and review the updated
+`/gpt/` page and mobile homepage stream before merging. The existing
+GitHub/Cloudflare pipeline releases merged changes. Do not put
+screenshots containing private content, cookies, API credentials, or
+nonpublic Sites into this repository. Automated daily syncing or
+authenticated scraping is **not** enabled.
+
 ## Identity assets
 
 Original paths are shared between the SVG identity and the extruded Three.js

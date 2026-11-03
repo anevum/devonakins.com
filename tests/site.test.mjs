@@ -13,6 +13,7 @@ test("all public pages have genuine server-rendered content and canonical metada
     "/source/",
     "/about/",
     "/contact/",
+    "/gpt/",
     "/work/writing/",
     "/work/ideaflow/",
     "/work/devonstation/",
@@ -160,7 +161,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.match(html, new RegExp('id="tab-' + view + '"'));
     assert.match(html, new RegExp('id="panel-' + view + '"'));
   }
-  assert.match(html, /No verified snapshot connected/);
+  assert.match(html, /Loading public snapshot/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
@@ -240,30 +241,57 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.doesNotMatch(preview, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
 });
 
-test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on home", async () => {
+test("homepage has one compact GPT stream and one detailed profile route", async () => {
   const html = await (await get("/")).text();
-  assert.match(html, /class="hero-usage" role="group"/);
+  assert.match(html, /id="usage-value"/);
   assert.match(html, /class="hero-feature" role="group"/);
-  assert.match(html, /<output class="hero-usage-value"/);
-  assert.match(html, /id="home-usage-value"[^>]*>—</);
-  assert.match(html, /id="home-usage-date">PUBLIC SNAPSHOT NOT YET VERIFIED</);
-  assert.doesNotMatch(html, /≈2\.6B/, "unvalidated HTML must not display a statistic");
+  assert.match(html, /class="telemetry-profile-link"[^>]*href="\/gpt\/"|href="\/gpt\/" class="telemetry-profile-link"/);
+  assert.doesNotMatch(html, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage panel");
+  assert.equal((html.match(/id="usage-value"/g) || []).length, 1);
   const response = await get("/v2/usage-snapshot.json");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("Content-Type"), /application\/json/);
-  assert.deepEqual(await response.json(), {
-    version: 1, metric: "work-codex-tokens", count: 2600000000,
-    approximate: true, asOf: "2026-11-02",
-    source: "Owner-reported ChatGPT profile", attestation: "owner-published",
-  });
+  const snapshot = await response.json();
+  assert.equal(snapshot.metric, "work-codex-tokens");
+  assert.equal(snapshot.count, 2600000000);
+  assert.equal(snapshot.approximate, true);
+  assert.equal(snapshot.asOf, "2026-11-02");
+  assert.equal(snapshot.attestation, "owner-published");
+  assert.equal(snapshot.profile.stats.peakTokens, 314200000);
+  assert.equal(snapshot.profile.stats.longestTaskHours, 23);
+  assert.equal(snapshot.profile.stats.recordedStreakDays, 24);
+  assert.equal(snapshot.profile.stats.currentStreakDays, 24);
+  assert.equal(snapshot.profile.stats.chatMessages, null, "unknown message count must not be invented");
+  assert.ok(snapshot.profile.skills.length >= 5);
+  assert.deepEqual(snapshot.profile.showcaseSites, [], "no unverified Sites");
+  assert.deepEqual(snapshot.profile.topPlugins, [], "no unverified rankings");
+
+  const profile = await get("/gpt/");
+  assert.equal(profile.status, 200);
+  const profileHtml = await profile.text();
+  assert.match(profileHtml, /<link rel="canonical" href="https:\/\/devonakins\.com\/gpt\/">/);
+  assert.match(profileHtml, /id="gpt-profile"/);
+  assert.match(profileHtml, /≈2\.6B/);
+  assert.match(profileHtml, /314\.2M/);
+  assert.match(profileHtml, /23h/);
+  assert.match(profileHtml, /24 days/);
+  assert.match(profileHtml, /CURRENT STREAK AT SNAPSHOT/);
+  assert.match(profileHtml, /Activity graph/);
+  assert.match(profileHtml, /Profile insights/);
+  assert.match(profileHtml, /Skills &amp; workflows|Skills & workflows/);
+  assert.match(profileHtml, /Showcase Sites/);
+  assert.match(profileHtml, /Top plugins/);
+  assert.match(profileHtml, /No private or unverified Sites/);
+  assert.match(profileHtml, /href="https:\/\/chatgpt\.com\/u\/devonakins"/);
+  assert.match(profileHtml, /href="\/v2\/gpt-profile\.css"/);
+  assert.doesNotMatch(profileHtml, /data-private|backend-api\/wham/);
   const client = await readFile("src/terminal.ts", "utf8");
   assert.match(client, /void checkUsage\(\)/);
   assert.match(client, /record\.metric !== "work-codex-tokens"/);
   assert.match(client, /record\.approximate !== true/);
-  assert.match(client, /NO VERIFIED PUBLIC SNAPSHOT AVAILABLE/);
-  assert.equal((client.match(/for \(const element of \[count, homeCount\]\)/g) || []).length, 2,
-    "both readouts must be populated and cleared together");
+  assert.doesNotMatch(client, /home-usage-value|home-usage-date/);
   assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
+  assert.match((await (await get("/v2/gpt-profile.css")).text()), /\.gpt-profile-identity/);
 });
 
 test("production verifier requires the exact built version and public snapshot", async () => {
@@ -275,18 +303,19 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('assert.equal(release.commit, expectedCommit'));
   assert.ok(verifier.includes('data.version === expectedVersion'));
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
-  assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
-  assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
+  assert.ok(verifier.includes('"/gpt/"'));
   assert.ok(verifier.includes('class="hero-feature" role="group"'));
   for (const path of ["/work/aiei/", "/work/isl/", "/work/phatcake/", "/work/brandicade/", "/work/rhen/"]) {
     assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
   }
   assert.ok(verifier.includes('not been implemented or demonstrated'), "ISL concept disclosure checked live");
+  assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
+  assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
 });
 
 test("every canonical internal page uses the immersive portrait shell, never the old design", async () => {
   const deep = [
-    "/work/", "/source/", "/about/", "/contact/",
+    "/work/", "/source/", "/about/", "/contact/", "/gpt/",
     "/work/operations/", "/work/writing/", "/work/anevum/",
     "/work/ideaflow/", "/work/devonstation/", "/404/",
   ];
