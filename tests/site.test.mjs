@@ -307,7 +307,9 @@ test("rendered public source and contact routes contain only current GitHub iden
 
 test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on home", async () => {
   const html = await (await get("/")).text();
-  assert.match(html, /class="hero-usage"/);
+  assert.match(html, /class="hero-usage" role="group"/);
+  assert.match(html, /class="hero-feature" role="group"/);
+  assert.match(html, /<output class="hero-usage-value"/);
   assert.match(html, /id="home-usage-value"[^>]*>≈2\.6B</);
   assert.match(html, /AS OF 2026-11-02 · OWNER-REPORTED · NOT LIVE/);
   const response = await get("/v2/usage-snapshot.json");
