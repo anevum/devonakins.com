@@ -12,11 +12,11 @@ const body=(tier='R1')=>`## Purpose\nShip a small bounded technical change with 
 const expectRisk=(path,level)=>assert.equal(minimumPathRisk([path]),level,path);
 test('documentation-only change has R0 floor',()=>expectRisk('README.md',0));
 test('UI and ordinary scripts have R1 floor',()=>{expectRisk('src/main.ts',1);expectRisk('tests/ui.test.mjs',1);});
-test('worker code, SQL migration and manifest have R2 floor',()=>{
- for(const p of ['worker/mail.mjs','migrations/0002.sql','package.json','package-lock.json'])expectRisk(p,2);
+test('worker code, SQL migration and dependency lock have R2 floor',()=>{
+ for(const p of ['worker/mail.mjs','migrations/0002.sql','package-lock.json'])expectRisk(p,2);
 });
 test('policy, actions, deployment, security, and AIEI guards have R3 floor',()=>{
- for(const p of ['.github/workflows/verify.yml','.github/CODEOWNERS','.github/PULL_REQUEST_TEMPLATE.md','AGENTS.md','wrangler.jsonc','scripts/aiei-pr-contract.mjs','tests/aiei-path-risk.test.mjs','scripts/security/scanner.py','src/auth/session.ts','.env.production','LICENSE']) expectRisk(p,3);
+ for(const p of ['.github/workflows/verify.yml','.github/CODEOWNERS','.github/PULL_REQUEST_TEMPLATE.md','AGENTS.md','wrangler.jsonc','scripts/aiei-pr-contract.mjs','tests/aiei-path-risk.test.mjs','scripts/security/scanner.py','src/auth/session.ts','.env.production','LICENSE','package.json']) expectRisk(p,3);
 });
 test('rejects understated risk for guard and CI changes',()=>{
  for(const tier of ['R0','R1','R2']) {

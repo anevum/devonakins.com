@@ -16,17 +16,20 @@ const REQUIRED = [
 ];
 const DECISIONS = new Set(['REVIEW_ONLY','RELEASE_NO_GO','READY_FOR_REVIEW']);
 
-// This is a conservative risk floor based on changed file paths. It does not
-// prove a change is safe; reviewers must still classify behavior independently.
+// Conservative path-only minimums. This cannot determine whether the actual
+// change is safe; reviewers must assess behavior, dependencies and deployment.
+// Include every known entry point that can weaken CI, governance or a release.
+const R3_PATH = /^(?:\.github\/|AGENTS\.md$|wrangler\.(?:jsonc?|toml|ya?ml)$|vite\.config\.[cm]?[jt]s$|package\.json$|scripts\/(?:aiei-|security\/|(?:build-worker|verify-live)\.[cm]?[jt]s$)|tests\/aiei-|LICENSE(?:\..*)?$)/i;
+const R2_PATH = /^(?:(?:worker|workers|functions|api)\/|src\/worker(?:\/|\.[cm]?[jt]s$)|package-lock\.json$)/i;
 export function minimumPathRisk(paths) {
   if (!Array.isArray(paths)) throw new TypeError('Changed paths must be an array.');
   let floor = 0;
   for (const path of paths) {
     if (typeof path !== 'string' || !path.length) throw new TypeError('Changed paths must be non-empty strings.');
-    if (/^(?:\.github\/(?:workflows\/|CODEOWNERS$|PULL_REQUEST_TEMPLATE\.md$)|AGENTS\.md$|wrangler\.jsonc$|scripts\/(?:aiei-|security\/)|tests\/aiei-|LICENSE(?:\..*)?$)/i.test(path) ||
-        /(?:^|\/)(?:auth|security|permissions)\//i.test(path) || /(?:^|\/)\.env(?:\.|$)/i.test(path)) {
+    if (R3_PATH.test(path) || /(?:^|\/)(?:auth|security|permissions)\//i.test(path) ||
+        /(?:^|\/)\.env(?:\.|$)/i.test(path)) {
       floor = Math.max(floor, 3);
-    } else if (/^(?:worker\/|package(?:-lock)?\.json$)/i.test(path) || /\.sql$/i.test(path)) {
+    } else if (R2_PATH.test(path) || /\.sql$/i.test(path)) {
       floor = Math.max(floor, 2);
     } else if (!/(?:^|\/)(?:[^/]+\.)?(?:md|txt)$|^\.gitignore$/i.test(path)) {
       floor = Math.max(floor, 1);
