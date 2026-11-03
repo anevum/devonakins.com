@@ -89,12 +89,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.add_style_tag(content=css)
                 page.add_script_tag(content=script)
             page.locator("#panel-home").wait_for(state="visible")
-            page.wait_for_function("""() => {
-                const value = document.querySelector('#home-usage-value');
-                const status = document.querySelector('#usage-status');
-                return value?.textContent?.trim() === '≈2.6B' &&
-                    status?.textContent?.includes('Not live tracking.');
-            }""")
+            if origin:
+                page.wait_for_function("""() => {
+                    const value = document.querySelector('#home-usage-value');
+                    const status = document.querySelector('#usage-status');
+                    return value?.textContent?.trim() === '≈2.6B' &&
+                        status?.textContent?.includes('Not live tracking.');
+                }""")
+            else:
+                assert page.locator("#home-usage-value").inner_text().strip() == "≈2.6B"
             assert page.locator("#home-usage-date").inner_text().startswith(
                 "AS OF 2026-11-02"
             ), "dated activity snapshot missing"
