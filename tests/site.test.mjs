@@ -176,10 +176,10 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.equal(cssResponse.status, 200);
   assert.match(cssResponse.headers.get("Cache-Control") || "", /must-revalidate/,
     "Unversioned mutable CSS must revalidate to prevent iOS stale stylesheet rendering");
-  const freshCss = await get("/v2/terminal.css?v=1.2.2");
+  const freshCss = await get("/v2/terminal.css?v=1.2.3");
   assert.equal(freshCss.status, 200);
   assert.equal(freshCss.headers.get("ETag"), cssResponse.headers.get("ETag"));
-  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
   const v2css = await cssResponse.text();
   assert.match(v2css, /\.interface-shell/);
@@ -215,7 +215,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
   const routeHtml = await (await get("/about/")).text();
-  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(routeHtml, /href="\/v2\/routes\.css"/);
   assert.match(routeHtml, /data-route-page="true"/);
   assert.doesNotMatch(routeHtml, /href="\/assets\/[^"]+\.css"/,
@@ -235,7 +235,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /\/v2\/crossed-arms\.webp/);
-  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/);
   assert.match(html, /\/ ORIGINAL WORKS/);
   assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
   assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
@@ -342,7 +342,7 @@ test("every canonical internal page uses the immersive portrait shell, never the
     assert.match(html, /data-route-page="true"/, path);
     assert.match(html, /class="portrait-figure"/, path);
     assert.match(html, /class="route-content"/, path);
-    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.3"/, path);
     assert.match(html, /href="\/v2\/routes\.css"/, path);
     assert.match(html, /class="rail" role="tablist"/, path);
     assert.match(html, /href="\/#home"/, path);
