@@ -5,5 +5,43 @@
   "approximate": true,
   "asOf": "2026-11-02",
   "source": "Owner-reported ChatGPT profile",
-  "attestation": "owner-published"
+  "attestation": "owner-published",
+  "profile": {
+    "displayName": "Devon Alan Akins",
+    "username": "devonakins",
+    "publicProfileUrl": "https://chatgpt.com/u/devonakins",
+    "scope": "Work/Codex activity reported for the selected ChatGPT profile workspace, not all ChatGPT messages or API billing.",
+    "stats": {
+      "peakDailyTokens": 314200000,
+      "longestTaskHours": 23,
+      "recordedStreakDays": 24,
+      "currentStreakDays": null,
+      "chatMessages": null,
+      "weeklyTokens": null
+    },
+    "skills": [
+      {
+        "name": "Verified Software Delivery",
+        "description": "Implement, test, review and release software with evidence-backed deployment gates."
+      },
+      {
+        "name": "AI Code Integrity Audit",
+        "description": "Challenge generated code, backend claims, tests and release readiness independently."
+      },
+      {
+        "name": "Fresh Chat Continuity",
+        "description": "Resume ongoing projects from GitHub, Notion and verified checkpoints across conversations."
+      },
+      {
+        "name": "Visual Briefing & Design Review",
+        "description": "Translate complex plans and product decisions into precise visual reviews."
+      },
+      {
+        "name": "Rigorous Inquiry",
+        "description": "Investigate mathematics, science, engineering and professional decisions at technical depth."
+      }
+    ],
+    "showcaseSites": [],
+    "topPlugins": []
+  }
 }

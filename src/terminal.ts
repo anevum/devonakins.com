@@ -248,22 +248,17 @@ function showUsage(snapshot: UsageSnapshot) {
   const compact = new Intl.NumberFormat("en-US", {
     notation: "compact", maximumFractionDigits: 2,
   }).format(snapshot.count);
-  const accessible = "Approximately " + snapshot.count.toLocaleString("en-US") +
-    " owner-reported ChatGPT Work and Codex tokens";
   const count = document.querySelector<HTMLElement>("#usage-value");
-  const homeCount = document.querySelector<HTMLElement>("#home-usage-value");
-  for (const element of [count, homeCount]) {
-    if (!element) continue;
-    element.textContent = "≈" + compact;
-    element.setAttribute("aria-label", accessible);
+  if (count) {
+    count.textContent = "≈" + compact;
+    count.setAttribute("aria-label", "Approximately " +
+      snapshot.count.toLocaleString("en-US") +
+      " owner-reported Work and Codex tokens");
   }
   const status = document.querySelector<HTMLElement>("#usage-status");
   const date = document.querySelector<HTMLElement>("#usage-date");
-  const homeDate = document.querySelector<HTMLElement>("#home-usage-date");
-  if (status) status.textContent = "Owner-reported estimate · Not live tracking.";
+  if (status) status.textContent = "Owner-reported · Not live tracking.";
   if (date) date.textContent = "As of " + snapshot.asOf + " · " + snapshot.source.trim();
-  if (homeDate) homeDate.textContent = "AS OF " + snapshot.asOf +
-    " · OWNER-REPORTED · NOT LIVE";
 }
 async function checkUsage() {
   if (polling) return;
@@ -285,19 +280,14 @@ async function checkUsage() {
     const snapshot = parseSnapshot(await response.json());
     showUsage(snapshot);
   } catch {
-    // Hide any previously displayed number when source data becomes unavailable.
-    // Never leave a stale claim in the visible homepage while the sidebar is empty.
+    // One public readout. Clear stale values when the snapshot is invalid.
     const count = document.querySelector<HTMLElement>("#usage-value");
-    const homeCount = document.querySelector<HTMLElement>("#home-usage-value");
-    for (const element of [count, homeCount]) {
-      if (!element) continue;
-      element.textContent = "—";
-      element.removeAttribute("aria-label");
+    if (count) {
+      count.textContent = "—";
+      count.removeAttribute("aria-label");
     }
     if (status) status.textContent = "No verified public snapshot available.";
     if (date) date.textContent = "No tokens or account data were retrieved.";
-    const homeDate = document.querySelector<HTMLElement>("#home-usage-date");
-    if (homeDate) homeDate.textContent = "NO VERIFIED PUBLIC SNAPSHOT AVAILABLE";
   } finally {
     polling = false;
     if (button) button.disabled = false;

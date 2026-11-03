@@ -1,0 +1,57 @@
+/* GPT profile / curated personal mirror. Shares the existing cinematic shell. */
+.gpt-profile { display: flex; flex-direction: column; gap: 38px; max-width: 1060px; min-width: 0; padding-bottom: 18px; }
+.gpt-profile-identity { display: flex; align-items: center; gap: 17px; padding: 20px 22px; border: 1px solid rgba(211,199,206,.2); background: linear-gradient(116deg,rgba(22,27,38,.91),rgba(10,14,23,.82)); }
+.gpt-profile-monogram { width: 62px; height: 62px; flex: 0 0 62px; display: grid; place-items: center; font-size: 20px; font-weight: 630; letter-spacing: -.1em; color: #efd0b9; border: 1px solid rgba(228,184,148,.48); background: radial-gradient(circle at 20% 15%,rgba(197,145,112,.26),rgba(15,18,29,.9)); }
+.gpt-profile-person { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.gpt-profile-eyebrow,.gpt-primary-label,.gpt-section-index,.gpt-stat-label,.gpt-skill-num,.gpt-showcase-card>span { color: #d6ad90; font-size: 10px; letter-spacing: .14em; font-weight: 650; }
+.gpt-profile-person strong { font-size: clamp(17px,2.1vw,25px); font-weight: 510; letter-spacing: -.025em; }
+.gpt-profile-person>span:last-child { font-size: 12px; color: #a9b8c8; }
+.gpt-profile-original { margin-left: auto; color: #f0c9af; font-size: 11px; white-space: nowrap; text-decoration: none; border-bottom: 1px solid rgba(224,165,125,.5); padding: 12px 0; }
+.gpt-profile-original:hover,.gpt-profile-foot a:hover { color: white; }
+.gpt-primary-stat { position: relative; overflow: hidden; border: 1px solid rgba(219,174,146,.31); background: radial-gradient(circle at 90% 0,rgba(142,91,110,.22),transparent 48%),linear-gradient(115deg,rgba(28,31,45,.95),rgba(9,14,24,.94)); padding: clamp(23px,4vw,44px); }
+.gpt-primary-stat:after { content:"";position:absolute;right:-5%;top:-125%;width:47%;aspect-ratio:1;border:1px solid rgba(177,182,212,.19);border-radius:50%;pointer-events:none;box-shadow:0 0 65px rgba(184,130,159,.07); }
+.gpt-primary-stat strong { display: block; color: #f7dfcb; font-size: clamp(62px, 11vw, 120px); font-weight: 480; line-height: 1.04; letter-spacing: -.082em; font-variant-numeric: tabular-nums; margin: 13px 0 9px; }
+.gpt-primary-date { color: #e0c0a9; letter-spacing: .035em; font-size: 11px; }
+.gpt-primary-stat p { color: #b9c5d2; max-width: 660px; line-height: 1.7; font-size: 12px; margin: 20px 0 0; }
+.gpt-section { min-width:0; }
+.gpt-section-head { display:flex; align-items:flex-start; gap:20px; padding-bottom:19px; border-bottom:1px solid rgba(211,213,228,.17); margin-bottom:19px; }
+.gpt-section-index { flex:0 0 auto; padding-top:7px; }
+.gpt-section-head h2 { font-size: clamp(24px,3.6vw,41px); line-height:1.13; letter-spacing:-.055em; font-weight:530; margin:0 0 8px; }
+.gpt-section-head p { color:#aebac9; line-height:1.6; font-size:12px; margin:0; max-width:690px; }
+.gpt-stats-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
+.gpt-stat { display:flex; flex-direction:column; gap:13px; min-width:0; min-height:140px; padding:18px 19px; border:1px solid rgba(211,220,235,.15); background:linear-gradient(135deg,rgba(25,31,43,.83),rgba(11,15,25,.82)); }
+.gpt-stat-value { font-size:clamp(29px,3.7vw,45px); letter-spacing:-.058em; font-variant-numeric:tabular-nums; font-weight:510; overflow-wrap:anywhere; }
+.gpt-stat-caption { margin-top:auto; color:#a7b7c7; line-height:1.5; font-size:11px; }
+.gpt-skill-grid,.gpt-showcase-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.gpt-skill { min-width:0; padding:20px 22px; border:1px solid rgba(187,205,223,.17); background:rgba(18,24,34,.75); }
+.gpt-skill h3 { color:#f4efec;font-size:17px;font-weight:540;letter-spacing:-.03em;line-height:1.3;margin:15px 0 9px; }
+.gpt-skill p { color:#adbdc9;font-size:12px;line-height:1.7;margin:0; }
+.gpt-showcase-card { display:flex;flex-direction:column;gap:14px;min-height:165px;padding:22px;text-decoration:none;border:1px solid rgba(201,204,219,.19);background:linear-gradient(138deg,rgba(34,28,43,.87),rgba(10,18,28,.78)); }
+.gpt-showcase-card:hover { border-color:rgba(226,175,139,.57); }
+.gpt-showcase-card strong { font-size:20px;font-weight:530; }
+.gpt-showcase-card small { color:#b6c3d2;font-size:12px;line-height:1.6; }
+.gpt-showcase-card em { margin-top:auto;color:#e2bea0;font-style:normal;font-size:10px;letter-spacing:.08em; }
+.gpt-empty { padding:23px 25px; border:1px dashed rgba(181,194,215,.32); background:rgba(12,17,26,.76); color:#b7c2d0;line-height:1.75;font-size:12px; }
+.gpt-profile-foot { padding:23px 25px; border-top:1px solid rgba(212,169,140,.4);background:rgba(9,14,22,.77); }
+.gpt-profile-foot strong { display:block;color:#ddb298;font-size:10px;letter-spacing:.13em; }
+.gpt-profile-foot p { max-width:780px;color:#b7c4d1;font-size:12px;line-height:1.7;margin:12px 0; }
+.gpt-profile-foot a { color:#edc3a8;font-size:12px;text-decoration:none; }
+@media(max-width:800px) {
+  .gpt-stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .gpt-profile { gap:28px; }
+}
+@media(max-width:540px) {
+  .gpt-profile-identity { flex-wrap:wrap;gap:12px;padding:16px; }
+  .gpt-profile-original { margin-left:0;flex:1 0 100%; }
+  .gpt-profile-monogram { width:51px;height:51px;flex-basis:51px; }
+  .gpt-profile-eyebrow,.gpt-primary-label,.gpt-section-index,.gpt-stat-label,.gpt-skill-num { font-size:9px;letter-spacing:.095em; }
+  .gpt-primary-stat { padding:22px 18px; }
+  .gpt-primary-stat strong { font-size:clamp(49px,17vw,77px); }
+  .gpt-section-head { flex-direction:column;gap:5px; }
+  .gpt-stats-grid { gap:8px; }
+  .gpt-stat { padding:14px;min-height:134px; }
+  .gpt-stat-value { font-size:clamp(26px,8vw,38px); }
+  .gpt-skill-grid,.gpt-showcase-grid { grid-template-columns:minmax(0,1fr); }
+  .gpt-skill { padding:17px; }
+}
+@media(prefers-reduced-motion: reduce) { .gpt-showcase-card { transition:none; } }

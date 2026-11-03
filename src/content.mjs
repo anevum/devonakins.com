@@ -121,6 +121,12 @@ export const pages = [
       "Devon Akins is a stay-at-home father, writer, and software builder helping improve real workflows and developing ANEVUM.",
   },
   {
+    path: "/gpt/",
+    key: "gpt",
+    title: "GPT profile — Devon Alan Akins",
+    description: "Dated Work and Codex activity, personal workflow skills and a curated ChatGPT Sites showcase.",
+  },
+  {
     path: "/contact/",
     key: "contact",
     title: "Contact — Devon Akins",

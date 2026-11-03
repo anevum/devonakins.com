@@ -1,3 +1,4 @@
+import { renderPublicGptProfile } from "./gpt-profile.mjs";
 /**
  * Render every public deep link inside the same cinematic shell as the home
  * interface. Legacy page source stays in Git history for reversible recovery,
@@ -36,7 +37,7 @@ function projectCard(project, index) {
     '</a>';
 }
 
-function contentFor(path, projects) {
+function contentFor(path, projects, gptSnapshot) {
   const parent = '<a href="/#work">Interface</a><span aria-hidden="true"> / </span>';
   if (path === "/work/") {
     return {
@@ -72,6 +73,18 @@ function contentFor(path, projects) {
     };
   }
 
+  if (path === "/gpt/") {
+    return {
+      view: "home", title: "GPT profile — Devon Alan Akins",
+      description: "Dated, owner-reported Work/Codex activity, personal workflow skills, and approved showcase links.",
+      index: "00 / GPT PROFILE", heading: "Built with intention",
+      intro: "A public, independently maintained snapshot of how I work with AI. Activity, workflow skills, showcase Sites and tools, with clear data provenance.",
+      breadcrumb: '<a href="/#home">Interface</a><span aria-hidden="true"> / </span><span aria-current="page">GPT profile</span>',
+      body: renderPublicGptProfile(gptSnapshot),
+      actions: link("/#home", "Return to the interface") +
+        external(gptSnapshot.profile.publicProfileUrl, "Original ChatGPT profile"),
+    };
+  }
   if (path === "/about/") {
     return {
       view: "home", title: "About — Devon Alan Akins",
@@ -138,9 +151,9 @@ function contentFor(path, projects) {
   throw new Error("Unrecognized public route: " + path);
 }
 
-export function renderImmersiveRoute(canonicalHomepage, path, projects) {
+export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnapshot) {
   if (path === "/") throw new Error("The canonical homepage must not be replaced");
-  const data = contentFor(path, projects);
+  const data = contentFor(path, projects, gptSnapshot);
   let html = canonicalHomepage;
   const replaceExactly = (from, to, description) => {
     const count = html.split(from).length - 1;
@@ -160,7 +173,8 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects) {
   replaceExactly('<meta property="og:url" content="https://devonakins.com/">',
     '<meta property="og:url" content="https://devonakins.com' + path + '">', "og url");
   replaceExactly('<link rel="stylesheet" href="/v2/terminal.css">',
-    '<link rel="stylesheet" href="/v2/terminal.css">\n  <link rel="stylesheet" href="/v2/routes.css">', "style");
+    '<link rel="stylesheet" href="/v2/terminal.css">\n  <link rel="stylesheet" href="/v2/routes.css">' +
+    (path === "/gpt/" ? '\n  <link rel="stylesheet" href="/v2/gpt-profile.css">' : ""), "style");
   replaceExactly('class="brand" href="#home"', 'class="brand" href="/#home"', "brand link");
   replaceExactly('<span class="topbar-version">/ ORIGINAL WORKS</span>',
     '<span class="topbar-version">/ ' + (data.view === "work" ? "WORK FILES" : data.view === "contact" ? "OPEN CHANNEL" : "PERSONAL RECORD") + '</span>', "header context");
