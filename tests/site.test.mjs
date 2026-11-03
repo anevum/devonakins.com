@@ -244,6 +244,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
 test("homepage has one compact GPT stream and one detailed profile route", async () => {
   const html = await (await get("/")).text();
   assert.match(html, /id="usage-value"/);
+  assert.match(html, /class="hero-feature" role="group"/);
   assert.match(html, /class="telemetry-profile-link"[^>]*href="\/gpt\/"|href="\/gpt\/" class="telemetry-profile-link"/);
   assert.doesNotMatch(html, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage panel");
   assert.equal((html.match(/id="usage-value"/g) || []).length, 1);
@@ -369,4 +370,38 @@ test("rendered public source and contact routes contain only current GitHub iden
     assert.doesNotMatch(html, /https:\/\/github\.com\/anevum(?:\/|["?#])/i, route);
     assert.match(html, /https:\/\/github\.com\/devonalanakins/i, route);
   }
+});
+
+test("current engineering showcase is prominently linked and status-qualified", async () => {
+  const home = await (await get("/")).text();
+  assert.match(home, /class="hero-feature" role="group" aria-label="Featured current projects"/);
+  assert.match(home, /href="\/work\/aiei\/"/);
+  assert.match(home, /href="\/work\/isl\/"/);
+  assert.match(home, /ACTIVE ENGINEERING \/ OPEN SOURCE/);
+  assert.match(home, /LANGUAGE RESEARCH \/ PROPOSED/);
+  assert.doesNotMatch(home, /Development currently paused/);
+  const archive = await (await get("/work/")).text();
+  for (const slug of ["aiei", "isl", "phatcake", "brandicade", "rhen"]) {
+    assert.match(archive, new RegExp('href="/work/' + slug + '/"'), slug);
+    const response = await get("/work/" + slug + "/");
+    assert.equal(response.status, 200, slug);
+    const html = await response.text();
+    assert.match(html, /class="route-content"/);
+    assert.match(html, new RegExp("https://devonakins.com/work/" + slug + "/"));
+  }
+  const aiei = await (await get("/work/aiei/")).text();
+  assert.match(aiei, /AIEI/);
+  assert.match(aiei, /independent|human review|human release/i);
+  assert.match(aiei, /https:\/\/github\.com\/devonalanakins\/aiei/);
+  const isl = await (await get("/work/isl/")).text();
+  assert.match(isl, /Intent Specification Language/);
+  assert.match(isl, /Research concept/);
+  assert.match(isl, /not been implemented or demonstrated/);
+  assert.doesNotMatch(isl, /https:\/\/github\.com\/devonalanakins\/isl/);
+  const source = await (await get("/source/")).text();
+  assert.match(source, /AIEI — engineering integrity toolkit/);
+  assert.match(source, /ISL — language research/);
+  const css = await (await get("/v2/terminal.css")).text();
+  assert.match(css, /\.hero-feature-link:focus-visible/);
+  assert.match(css, /@media \(max-width: 360px\)/);
 });
