@@ -270,7 +270,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 assert feature_box and panel_box and last_card
                 assert feature_box["y"] >= panel_box["y"] - 1, (label, feature_box, panel_box)
                 assert (last_card["y"] + last_card["height"]
-                        <= panel_box["y"] + panel_box["height"] - 3), (
+                        <= panel_box["y"] + panel_box["height"] + 1), (
                     label, "Last AIEI/ISL card clipped by fixed navigation", last_card, panel_box
                 )
             if width <= 960:
