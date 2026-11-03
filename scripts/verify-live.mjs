@@ -55,7 +55,7 @@ assert.match(markup, /class="hero-feature" role="group" aria-label="Active devel
 assert.match(markup, /<h2>Active development<\/h2>/, "development heading");
 assert.match(markup, /class="focus-grid"/, "responsive work grid");
 assert.doesNotMatch(markup, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/, "deprecated cramped copy removed");
-assert.match(markup, /aria-label="View full GPT profile"/, "GPT stream has an accessible profile action");
+assert.match(markup, /aria-label="View profile — full GPT activity and skills"/, "GPT stream has an accessible profile action");
 for (const path of ["/work/aiei/", "/work/isl/"]) {
   assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
 }

@@ -230,7 +230,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             # CSS grid blockifies inline-flex into flex; either is correct.
             assert profile_style["display"] in ["flex", "inline-flex"], (label, profile_style)
             assert page.locator(".telemetry-profile-label").inner_text() == "View profile"
-            assert page.locator(".telemetry-profile-link").get_attribute("aria-label") == "View full GPT profile"
+            assert page.locator(".telemetry-profile-link").get_attribute("aria-label") == "View profile — full GPT activity and skills"
             assert profile_style["decoration"] == "none" and profile_style["border"] >= 1, (
                 label, "GPT profile action has stale/missing styles", profile_style
             )

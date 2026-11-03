@@ -251,7 +251,7 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   const html = await (await get("/")).text();
   assert.match(html, /id="usage-value"/);
   assert.match(html, /data-feed-state="loading"/);
-  assert.match(html, /aria-label="View full GPT profile"/);
+  assert.match(html, /aria-label="View profile — full GPT activity and skills"/);
   assert.match(html, /<span class="telemetry-profile-label">View profile<\/span>/);
   assert.match(html, /class="feed-beam"/);
   assert.match(html, /Reading profile snapshot/);
