@@ -17,7 +17,7 @@ from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
-VIEWPORTS = [(320, 568), (390, 844), (768, 900), (844, 320), (1440, 900)]
+VIEWPORTS = [(320, 568), (390, 700), (390, 844), (768, 900), (844, 320), (1440, 900)]
 
 
 def compiled_preview(dist: Path):
@@ -122,7 +122,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     """)
             else:
                 assert page.locator("#usage-value").inner_text().strip() == "—"
-            if (width, height) in [(390, 844), (1440, 900)]:
+            if (width, height) in [(390, 700), (390, 844), (1440, 900)]:
                 for selector in ["#usage-value", ".telemetry-profile-link"]:
                     assert page.locator(selector).evaluate("""el => {
                       const box = el.getBoundingClientRect();
@@ -243,11 +243,18 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             check_overflow("home")
             # On normal portrait-phone and desktop viewports the featured project
             # cards must be in the initial panel viewport, not clipped below it.
-            if (width, height) in [(390, 844), (1440, 900)]:
+            if (width, height) in [(390, 700), (390, 844), (1440, 900)]:
                 # Desktop stays above the fold. Phones may scroll their content
                 # panel, but the cards must be reachable without nav overlap.
-                if width <= 460:
+                if width <= 460 and (width, height) != (390, 700):
                     featured.scroll_into_view_if_needed()
+                if (width, height) == (390, 700):
+                    # The compact short-iPhone layout should show both cards
+                    # above navigation without depending on a user scroll.
+                    scroll_extra = page.locator("#panel-home").evaluate(
+                        "el => el.scrollHeight - el.clientHeight"
+                    )
+                    assert scroll_extra <= 2, (label, "Short iPhone home requires scroll", scroll_extra)
                 feature_box = featured.bounding_box()
                 panel_box = page.locator("#panel-home").bounding_box()
                 assert feature_box and panel_box
