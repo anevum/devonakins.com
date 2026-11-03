@@ -13,6 +13,7 @@ test("all public pages have genuine server-rendered content and canonical metada
     "/source/",
     "/about/",
     "/contact/",
+    "/gpt/",
     "/work/writing/",
     "/work/ideaflow/",
     "/work/devonstation/",
@@ -160,7 +161,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.match(html, new RegExp('id="tab-' + view + '"'));
     assert.match(html, new RegExp('id="panel-' + view + '"'));
   }
-  assert.match(html, /No verified snapshot connected/);
+  assert.match(html, /Reading profile snapshot/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
@@ -173,6 +174,12 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.ok(portraitBytes.byteLength < 150000, "portrait must stay lightweight");
   const cssResponse = await get("/v2/terminal.css");
   assert.equal(cssResponse.status, 200);
+  assert.match(cssResponse.headers.get("Cache-Control") || "", /must-revalidate/,
+    "Unversioned mutable CSS must revalidate to prevent iOS stale stylesheet rendering");
+  const freshCss = await get("/v2/terminal.css?v=1.2.2");
+  assert.equal(freshCss.status, 200);
+  assert.equal(freshCss.headers.get("ETag"), cssResponse.headers.get("ETag"));
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(cssResponse.headers.get("Content-Type"), /text\/css/);
   const v2css = await cssResponse.text();
   assert.match(v2css, /\.interface-shell/);
@@ -208,7 +215,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
   assert.match(client, /button\.id === "shift-light" \? "Shift light\. Current: "/);
   assert.match(client, /"Cycle portrait lighting\. Current: "/);
   const routeHtml = await (await get("/about/")).text();
-  assert.match(routeHtml, /href="\/v2\/terminal\.css"/);
+  assert.match(routeHtml, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(routeHtml, /href="\/v2\/routes\.css"/);
   assert.match(routeHtml, /data-route-page="true"/);
   assert.doesNotMatch(routeHtml, /href="\/assets\/[^"]+\.css"/,
@@ -228,7 +235,7 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.match(html, /id="interface-shell"/);
   assert.match(html, /class="portrait-figure"/);
   assert.match(html, /\/v2\/crossed-arms\.webp/);
-  assert.match(html, /href="\/v2\/terminal\.css"/);
+  assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/);
   assert.match(html, /\/ ORIGINAL WORKS/);
   assert.doesNotMatch(html, /noindex|V2 PREVIEW|private-preview/i);
   assert.match(html, /<meta property="og:url" content="https:\/\/devonakins\.com\/">/);
@@ -240,9 +247,85 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.doesNotMatch(preview, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
 });
 
+test("homepage has one compact GPT stream and one detailed profile route", async () => {
+  const html = await (await get("/")).text();
+  assert.match(html, /id="usage-value"/);
+  assert.match(html, /data-feed-state="loading"/);
+  assert.match(html, /class="feed-beam"/);
+  assert.match(html, /Reading profile snapshot/);
+  assert.doesNotMatch(html, /Owner-reported · Not live tracking\./);
+  assert.match(html, /class="hero-feature" role="group"/);
+  assert.match(html, /class="telemetry-profile-link"[^>]*href="\/gpt\/"|href="\/gpt\/" class="telemetry-profile-link"/);
+  assert.doesNotMatch(html, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage panel");
+  assert.equal((html.match(/id="usage-value"/g) || []).length, 1);
+  const response = await get("/v2/usage-snapshot.json");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type"), /application\/json/);
+  const snapshot = await response.json();
+  assert.equal(snapshot.metric, "work-codex-tokens");
+  assert.equal(snapshot.count, 2600000000);
+  assert.equal(snapshot.approximate, true);
+  assert.equal(snapshot.asOf, "2026-11-02");
+  assert.equal(snapshot.attestation, "owner-published");
+  assert.equal(snapshot.profile.stats.peakTokens, 314200000);
+  assert.equal(snapshot.profile.stats.longestTaskHours, 23);
+  assert.equal(snapshot.profile.stats.recordedStreakDays, 24);
+  assert.equal(snapshot.profile.stats.currentStreakDays, 24);
+  assert.equal(snapshot.profile.stats.chatMessages, null, "unknown message count must not be invented");
+  assert.ok(snapshot.profile.skills.length >= 5);
+  assert.deepEqual(snapshot.profile.showcaseSites, [], "no unverified Sites");
+  assert.deepEqual(snapshot.profile.topPlugins, [], "no unverified rankings");
+
+  const profile = await get("/gpt/");
+  assert.equal(profile.status, 200);
+  const profileHtml = await profile.text();
+  assert.match(profileHtml, /<link rel="canonical" href="https:\/\/devonakins\.com\/gpt\/">/);
+  assert.match(profileHtml, /id="gpt-profile"/);
+  assert.match(profileHtml, /≈2\.6B/);
+  assert.match(profileHtml, /314\.2M/);
+  assert.match(profileHtml, /23h/);
+  assert.match(profileHtml, /24 days/);
+  assert.match(profileHtml, /CURRENT STREAK AT SNAPSHOT/);
+  assert.match(profileHtml, /Activity graph/);
+  assert.match(profileHtml, /Profile insights/);
+  assert.match(profileHtml, /Skills &amp; workflows|Skills & workflows/);
+  assert.match(profileHtml, /Showcase Sites/);
+  assert.match(profileHtml, /Top plugins/);
+  assert.match(profileHtml, /No private or unverified Sites/);
+  assert.match(profileHtml, /href="https:\/\/chatgpt\.com\/u\/devonakins"/);
+  assert.match(profileHtml, /href="\/v2\/gpt-profile\.css"/);
+  assert.doesNotMatch(profileHtml, /data-private|backend-api\/wham/);
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /void checkUsage\(\)/);
+  assert.match(client, /record\.metric !== "work-codex-tokens"/);
+  assert.match(client, /record\.approximate !== true/);
+  assert.doesNotMatch(client, /home-usage-value|home-usage-date/);
+  assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
+  assert.match((await (await get("/v2/gpt-profile.css")).text()), /\.gpt-profile-identity/);
+});
+
+test("production verifier requires the exact built version and public snapshot", async () => {
+  const verifier = await readFile("scripts/verify-live.mjs", "utf8");
+  const release = JSON.parse(await readFile(".release/release.json", "utf8"));
+  assert.match(release.version, /^\d+\.\d+\.\d+$/);
+  assert.match(release.commit, /^[a-f0-9]{40}$/);
+  assert.ok(verifier.includes('../.release/release.json'));
+  assert.ok(verifier.includes('assert.equal(release.commit, expectedCommit'));
+  assert.ok(verifier.includes('data.version === expectedVersion'));
+  assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
+  assert.ok(verifier.includes('"/gpt/"'));
+  assert.ok(verifier.includes('class="hero-feature" role="group"'));
+  for (const path of ["/work/aiei/", "/work/isl/", "/work/phatcake/", "/work/brandicade/", "/work/rhen/"]) {
+    assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
+  }
+  assert.ok(verifier.includes('not been implemented or demonstrated'), "ISL concept disclosure checked live");
+  assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
+  assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
+});
+
 test("every canonical internal page uses the immersive portrait shell, never the old design", async () => {
   const deep = [
-    "/work/", "/source/", "/about/", "/contact/",
+    "/work/", "/source/", "/about/", "/contact/", "/gpt/",
     "/work/operations/", "/work/writing/", "/work/anevum/",
     "/work/ideaflow/", "/work/devonstation/", "/404/",
   ];
@@ -257,7 +340,7 @@ test("every canonical internal page uses the immersive portrait shell, never the
     assert.match(html, /data-route-page="true"/, path);
     assert.match(html, /class="portrait-figure"/, path);
     assert.match(html, /class="route-content"/, path);
-    assert.match(html, /href="\/v2\/terminal\.css"/, path);
+    assert.match(html, /href="\/v2\/terminal\.css\?v=1\.2\.2"/, path);
     assert.match(html, /href="\/v2\/routes\.css"/, path);
     assert.match(html, /class="rail" role="tablist"/, path);
     assert.match(html, /href="\/#home"/, path);
@@ -302,4 +385,41 @@ test("rendered public source and contact routes contain only current GitHub iden
     assert.doesNotMatch(html, /https:\/\/github\.com\/anevum(?:\/|["?#])/i, route);
     assert.match(html, /https:\/\/github\.com\/devonalanakins/i, route);
   }
+});
+
+test("current engineering showcase is prominently linked and status-qualified", async () => {
+  const home = await (await get("/")).text();
+  assert.match(home, /class="hero-feature" role="group" aria-label="Featured current projects"/);
+  assert.match(home, /href="\/work\/aiei\/"/);
+  assert.match(home, /href="\/work\/isl\/"/);
+  assert.match(home, /ACTIVE ENGINEERING \/ OPEN SOURCE/);
+  assert.match(home, /LANGUAGE RESEARCH \/ PROPOSED/);
+  assert.doesNotMatch(home, /Development currently paused/);
+  const archive = await (await get("/work/")).text();
+  for (const slug of ["aiei", "isl", "phatcake", "brandicade", "rhen"]) {
+    assert.match(archive, new RegExp('href="/work/' + slug + '/"'), slug);
+    const response = await get("/work/" + slug + "/");
+    assert.equal(response.status, 200, slug);
+    const html = await response.text();
+    assert.match(html, /class="route-content"/);
+    assert.match(html, new RegExp("https://devonakins.com/work/" + slug + "/"));
+  }
+  const aiei = await (await get("/work/aiei/")).text();
+  assert.match(aiei, /AIEI/);
+  assert.match(aiei, /independent|human review|human release/i);
+  assert.match(aiei, /https:\/\/github\.com\/devonalanakins\/aiei/);
+  const isl = await (await get("/work/isl/")).text();
+  assert.match(isl, /Intent Specification Language/);
+  assert.match(isl, /Research concept/);
+  assert.match(isl, /not been implemented or demonstrated/);
+  assert.doesNotMatch(isl, /https:\/\/github\.com\/devonalanakins\/isl/);
+  const source = await (await get("/source/")).text();
+  assert.match(source, /AIEI — engineering integrity toolkit/);
+  assert.match(source, /ISL — language research/);
+  const css = await (await get("/v2/terminal.css")).text();
+  assert.match(css, /\.hero-feature-link:focus-visible/);
+  assert.match(css, /V1\.2\.2/);
+  assert.match(css, /\.telemetry-readout\[data-feed-state="ready"\]/);
+  assert.match(css, /@media \(max-width: 460px\)/);
+  assert.match(css, /@media \(max-width: 360px\)/);
 });

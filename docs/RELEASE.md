@@ -159,3 +159,60 @@ links. Chromium/WebKit browser acceptance visits all nine old destinations
 on mobile and checks panel state, canonical navigation, reflow and selected
 automated WCAG cases. Capture rollback version before release and verify live
 Worker /_health, all URLs and assets afterward. No DNS or secrets changed.
+
+
+## V1.2.0 — AIEI / ISL personal portfolio (manual release candidate)
+
+The cinematic portrait homepage now features AIEI (open-source engineering
+integrity toolkit) and ISL (proposed Intent Specification Language research),
+alongside the dated, owner-reported ChatGPT activity snapshot already released
+in V1.1.3. ISL is a proposal, not a working compiler or released language.
+The expanded Work directory adds five publicly shareable project detail pages
+(AIEI, ISL, Phatcake, Brandicade, RHEN), with clear implementation maturity
+and confidentiality boundaries. DevonStation's public status reflects active
+development and the writing page distinguishes a published work under
+revision from unpublished manuscripts.
+
+The desktop 1440x900 portrait first-fold fit was corrected to show both
+featured research/engineering cards without obscuring them. The combined
+branch passed the targeted GitHub Actions build/Node tests and five viewports
+in Chromium and WebKit, plus automated axe accessibility checks; physical
+iPhone behavior remains separately unverified.
+
+This release bumps the Worker build version to 1.2.0. The manual production
+workflow must be dispatched from the *exact tested main SHA* only after release
+approval and must verify the live Worker /_health matches the built SHA/version.
+The post-deployment verifier additionally checks AIEI/ISL homepage features,
+five new canonical project pages, and ISL's explicit research-stage disclaimer,
+in addition to the public GPT JSON snapshot, security headers and existing
+canonical routes. Preserve the previously active Worker deployment as rollback.
+Do not treat a source merge as a live website release.
+
+
+## V1.2.2 — iPhone feed and CSS consistency release candidate
+
+Fix the observed iPhone Safari mismatch where the new AIEI/ISL featured links
+rendered as unstyled, underlined text and the persistent GPT statistics strip
+overflowed its navigation row. The canonical homepage and all immersive deep
+links now reference the versioned /v2/terminal.css?v=1.2.2 stylesheet,
+ensuring a distinct browser cache key immediately on release. The Worker
+revalidates mutable /v2/*.css files on subsequent visits rather than
+allowing them to stay fresh for an hour. Hashed compiled assets retain the
+existing immutable caching policy.
+
+A compact cinematic GPT activity stream replaces the large plain mobile
+text: approximately 2.6B tokens, actual snapshot-dated streak/peak metrics,
+a subtle decorative scan effect, and a defined GPT profile action. The data
+still comes from the same validated first-party profile snapshot, not an
+authenticated live API or fabricated real-time events. The short strip
+shows its publication date instead of lengthy technical disclaimers. The
+full /gpt/ page retains explanatory context and source provenance.
+
+The Home panel and cards are scrollable on mobile rather than letting
+oversized content cover the fixed bottom navigation. The browser checks
+assert computed card styling, no text overflow, separation of the navigation
+and feed, data validation and failure recovery at mobile and desktop widths.
+Preserve reduced-motion preferences. All required tests and a specific
+iPhone Safari visual review must pass before an approved release.
+Manual production deployment and exact-commit /_health verification remain
+separate from merging source.

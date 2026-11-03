@@ -4,6 +4,7 @@ import { gzipSync } from "node:zlib";
 import { execFileSync } from "node:child_process";
 const mime = {
   ".html": "text/html; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".svg": "image/svg+xml",
@@ -49,7 +50,7 @@ try {
   }).trim();
 } catch {}
 const release = {
-  version: "1.1.2",
+  version: "1.2.2",
   session: "DEVONAKINS.BUILD.2026-10-29.001",
   commit,
 };
