@@ -240,6 +240,43 @@ test("canonical homepage publishes the portrait, not the noindex preview", async
   assert.doesNotMatch(preview, /rel="canonical" href="https:\/\/devonakins\.com\/"/);
 });
 
+test("ChatGPT Work/Codex usage snapshot is dated, first-party and prominent on home", async () => {
+  const html = await (await get("/")).text();
+  assert.match(html, /class="hero-usage"/);
+  assert.match(html, /id="home-usage-value"[^>]*>—</);
+  assert.match(html, /id="home-usage-date">PUBLIC SNAPSHOT NOT YET VERIFIED</);
+  assert.doesNotMatch(html, /≈2\.6B/, "unvalidated HTML must not display a statistic");
+  const response = await get("/v2/usage-snapshot.json");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type"), /application\/json/);
+  assert.deepEqual(await response.json(), {
+    version: 1, metric: "work-codex-tokens", count: 2600000000,
+    approximate: true, asOf: "2026-11-02",
+    source: "Owner-reported ChatGPT profile", attestation: "owner-published",
+  });
+  const client = await readFile("src/terminal.ts", "utf8");
+  assert.match(client, /void checkUsage\(\)/);
+  assert.match(client, /record\.metric !== "work-codex-tokens"/);
+  assert.match(client, /record\.approximate !== true/);
+  assert.match(client, /NO VERIFIED PUBLIC SNAPSHOT AVAILABLE/);
+  assert.equal((client.match(/for \(const element of \[count, homeCount\]\)/g) || []).length, 2,
+    "both readouts must be populated and cleared together");
+  assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
+});
+
+test("production verifier requires the exact built version and public snapshot", async () => {
+  const verifier = await readFile("scripts/verify-live.mjs", "utf8");
+  const release = JSON.parse(await readFile(".release/release.json", "utf8"));
+  assert.match(release.version, /^\d+\.\d+\.\d+$/);
+  assert.match(release.commit, /^[a-f0-9]{40}$/);
+  assert.ok(verifier.includes('../.release/release.json'));
+  assert.ok(verifier.includes('assert.equal(release.commit, expectedCommit'));
+  assert.ok(verifier.includes('data.version === expectedVersion'));
+  assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
+  assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
+  assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
+});
+
 test("every canonical internal page uses the immersive portrait shell, never the old design", async () => {
   const deep = [
     "/work/", "/source/", "/about/", "/contact/",

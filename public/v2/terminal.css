@@ -508,3 +508,49 @@ h1, h2, p { margin-top: 0; }
   .smoke-cyan { right: -45%; top: 15%; }
   .smoke-violet { left: -12%; bottom: -48%; }
 }
+
+/* Dated first-party usage snapshot on the landing screen. No live counter. */
+.hero-usage {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  max-width: min(100%, 480px);
+  margin-top: clamp(13px, 2.3vh, 24px);
+  padding: 12px 15px;
+  border: 1px solid rgba(219, 174, 146, .3);
+  border-left: 2px solid #d4a782;
+  background: linear-gradient(105deg, rgba(19, 23, 33, .88), rgba(15, 17, 27, .67));
+  backdrop-filter: blur(10px);
+}
+.hero-usage-primary { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hero-usage-label, .hero-usage-detail > span {
+  color: #d5ac91; font-size: 8px; font-weight: 650; letter-spacing: .15em; line-height: 1.4;
+}
+.hero-usage-value {
+  color: #f8e5d5; font-size: clamp(28px, 3.8vw, 43px); font-weight: 560;
+  letter-spacing: -.055em; font-variant-numeric: tabular-nums; line-height: 1.06; white-space: nowrap;
+}
+.hero-usage-detail {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  border-left: 1px solid rgba(190, 198, 210, .25); padding-left: 15px;
+}
+.hero-usage-detail small { color: #aeb8c8; font-size: 9px; line-height: 1.5; letter-spacing: .035em; overflow-wrap: anywhere; }
+.hero-usage + .hero-foot { margin-top: clamp(12px, 2vh, 25px); }
+@media (max-width: 460px) {
+  .hero-usage { gap: 9px; margin-top: 12px; padding: 8px 10px; }
+  .hero-usage-label, .hero-usage-detail > span { font-size: 7px; letter-spacing: .08em; }
+  .hero-usage-value { font-size: 27px; }
+  .hero-usage-detail { padding-left: 9px; gap: 3px; }
+  .hero-usage-detail small { font-size: 8px; }
+  .hero-usage + .hero-foot { display: none; }
+}
+@media (max-width: 460px) and (max-height: 640px) {
+  .hero-usage { margin-top: 7px; padding: 6px 8px; }
+  .hero-usage-value { font-size: 24px; }
+  .hero-usage-detail > span { display: none; }
+}
+@media (max-height: 380px) {
+  .hero-usage { margin-top: 8px; padding: 6px 10px; }
+  .hero-usage + .hero-foot { display: none; }
+}
