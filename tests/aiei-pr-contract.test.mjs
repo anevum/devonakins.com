@@ -83,3 +83,9 @@ test('accepts high-risk R3 reviews without treating it as release approval',()=>
  const r=validateContract(sample.replace('## Risk tier\nR1','## Risk tier\nR3').replace('REVIEW_ONLY','RELEASE_NO_GO'));
  assert.deepEqual(r,{ok:true,errors:[]});
 });
+test('uncompleted PR template blocks acceptance until risk tier is selected',async()=>{
+ const template=await readFile(new URL('../.github/PULL_REQUEST_TEMPLATE.md',import.meta.url),'utf8');
+ assert.match(template,/SELECT_RISK_TIER/);
+ const r=validateContract(template);
+ assert(!r.ok && r.errors.some(x=>x.includes('Risk tier must')));
+});
