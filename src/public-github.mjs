@@ -3,8 +3,8 @@
  * Never forwards GitHub's raw profile (emails, links, identifiers), secrets,
  * browser cookies or visitor request metadata to the upstream service.
  */
-export const GITHUB_SIGNAL_URL = "https://api.github.com/users/anevum";
-export const GITHUB_REPOS_URL = "https://api.github.com/users/anevum/repos?per_page=10&sort=pushed&type=owner";
+export const GITHUB_SIGNAL_URL = "https://api.github.com/users/devonalanakins";
+export const GITHUB_REPOS_URL = "https://api.github.com/users/devonalanakins/repos?per_page=10&sort=pushed&type=owner";
 export const GITHUB_SIGNAL_CACHE_KEY = "https://devonakins.com/v2/github-profile.json";
 export const GITHUB_SIGNAL_MAX_AGE_MS = 60 * 60 * 1000;
 const RETRY_DELAY_MS = 60 * 1000;
@@ -18,7 +18,7 @@ function validRecentProject(value, now = Date.now()) {
       Object.keys(value).sort().join(",") !== "name,pushedAt,url" ||
       typeof value.name !== "string" || value.name.length < 1 || value.name.length > 100 ||
       !/^[A-Za-z0-9_.-]+$/.test(value.name) || value.name === "." || value.name === ".." ||
-      value.url !== "https://github.com/anevum/" + encodeURIComponent(value.name) ||
+      value.url !== "https://github.com/devonalanakins/" + encodeURIComponent(value.name) ||
       typeof value.pushedAt !== "string" ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.pushedAt))
     return false;
@@ -32,7 +32,7 @@ export function normalizeRecentGitHubProject(input, observedAt) {
   const observed = Date.parse(observedAt);
   for (const entry of input) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
-        entry.owner?.login !== "anevum" || entry.private !== false ||
+        entry.owner?.login !== "devonalanakins" || entry.private !== false ||
         entry.fork !== false || entry.archived !== false || entry.disabled === true ||
         typeof entry.name !== "string" ||
         typeof entry.pushed_at !== "string") continue;
@@ -41,7 +41,7 @@ export function normalizeRecentGitHubProject(input, observedAt) {
     const recent = {
       name: entry.name,
       pushedAt: new Date(timestamp).toISOString(),
-      url: "https://github.com/anevum/" + encodeURIComponent(entry.name),
+      url: "https://github.com/devonalanakins/" + encodeURIComponent(entry.name),
     };
     if (validRecentProject(recent, observed)) return recent;
   }
@@ -49,7 +49,7 @@ export function normalizeRecentGitHubProject(input, observedAt) {
 }
 export function normalizeGitHubProfile(raw, observedAt, recent = null) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
-      raw.login !== "anevum" || raw.type !== "User" ||
+      raw.login !== "devonalanakins" || raw.type !== "User" ||
       !Number.isSafeInteger(raw.public_repos) ||
       raw.public_repos < 0 || raw.public_repos > MAX_SAFE_COUNT) {
     throw new Error("Unexpected GitHub public profile");
@@ -59,7 +59,7 @@ export function normalizeGitHubProfile(raw, observedAt, recent = null) {
   }
   return {
     version: 2,
-    account: "anevum",
+    account: "devonalanakins",
     metric: "public-repositories",
     count: raw.public_repos,
     asOf: observedAt,
@@ -72,7 +72,7 @@ export function normalizeGitHubProfile(raw, observedAt, recent = null) {
 export function validGitHubSignal(value, now = Date.now()) {
   if (!value || typeof value !== "object" || Array.isArray(value) ||
       Object.keys(value).sort().join(",") !== "account,asOf,attestation,count,metric,recent,source,version" ||
-      value.version !== 2 || value.account !== "anevum" ||
+      value.version !== 2 || value.account !== "devonalanakins" ||
       value.metric !== "public-repositories" ||
       value.source !== "GitHub REST API" ||
       value.attestation !== "public-provider-response" ||
