@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {validateContract} from '../scripts/aiei-pr-contract.mjs';
 
 const sample=`## Purpose\nMake the user's current page readable on narrow phones.\n\n## Scope and boundaries\nOnly the website stylesheet changes; no accounts, APIs, or deployments.\n\n## Acceptance evidence\nNode test output and screenshots for 320 and 390 pixel viewports; live iPhone not checked.\n\n## Negative cases\nEnsure reduced-motion preference still disables animated transitions and all links remain keyboard-accessible.\n\n## Risks and unknowns\nPhysical device test and source-to-production commit are unverified, so do not deploy.\n\n## Release intent\nREVIEW_ONLY\n`;
@@ -33,4 +34,37 @@ test('accepts release no-go with explicit incomplete evidence',()=>{
 test('rejects one-word no-test claims',()=>{
  const r=validateContract(sample.replace('Node test output and screenshots for 320 and 390 pixel viewports; live iPhone not checked.','N/A'));
  assert(!r.ok && r.errors.some(x=>x.includes('Acceptance evidence')));
+});
+test('rejects a complete spoofed review contract entirely inside a markdown code fence',()=>{
+ const r=validateContract('```markdown\n'+sample+'\n```');
+ assert(!r.ok && r.errors.some(x=>x.includes('Missing section: Purpose')));
+});
+test('ignores duplicate headings inside literal fenced examples',()=>{
+ const r=validateContract('```text\n## Purpose\nNot part of the review.\n```\n'+sample);
+ assert.deepEqual(r,{ok:true,errors:[]});
+});
+test('rejects acceptance evidence that is only an illustrative code block',()=>{
+ const r=validateContract(sample.replace('Node test output and screenshots for 320 and 390 pixel viewports; live iPhone not checked.','~~~text\nFake test results and screenshots from a template example.\n~~~'));
+ assert(!r.ok && r.errors.some(x=>x.includes('Acceptance evidence')));
+});
+test('ignores tilde-fenced headings and preserves real sections',()=>{
+ const r=validateContract(sample.replace('Make the user\'s current page readable on narrow phones.','Make narrow screens readable for users.\n\n~~~markdown\n## Risks and unknowns\nFake second heading not part of the contract.\n~~~'));
+ assert.deepEqual(r,{ok:true,errors:[]});
+});
+test('rejects a contract that only appears inside an unterminated HTML comment',()=>{
+ const r=validateContract('<!--\n'+sample);
+ assert(!r.ok && r.errors.some(x=>x.includes('Missing section: Purpose')));
+});
+test('code fence comment markers do not hide real review content',()=>{
+ const r=validateContract('```text\n<!-- fake comment opener\n```\n'+sample);
+ assert.deepEqual(r,{ok:true,errors:[]});
+});
+test('AIEI workflow remains read-only and reports status for draft PRs',async()=>{
+ const yml=await readFile(new URL('../.github/workflows/aiei-review-contract.yml',import.meta.url),'utf8');
+ assert.match(yml,/^  pull_request:/m);
+ assert.doesNotMatch(yml,/^  pull_request_target:/m);
+ assert.match(yml,/permissions:\s*\n\s+contents: read/);
+ assert.doesNotMatch(yml,/^    if:.*\.draft/m);
+ assert.match(yml,/persist-credentials: false/);
+ assert.doesNotMatch(yml,/\$\{\{\s*secrets\./);
 });
