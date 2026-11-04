@@ -406,7 +406,6 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "Showcase Sites" not in page.locator("#gpt-profile").inner_text()
                         assert page.locator(".gpt-weekly-metric").count() == 4
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
-                        assert "Showcase Sites" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
                         assert not page.locator("#home-usage-value").count()
