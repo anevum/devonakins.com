@@ -112,7 +112,7 @@ function contentFor(path, projects, gptSnapshot) {
       breadcrumb: '<a href="/#research">Interface</a><span aria-hidden="true"> / </span><span aria-current="page">Open source</span>',
       body: '<div class="route-blocks">' +
         block("THE PRINCIPLE", paragraph("I publish source so that implementation can be reviewed, learned from, and improved. Open-source code does not make private data, client records or personal systems public.")) +
-        block("PUBLIC REPOSITORIES", '<div class="route-repos">' +
+        block("PUBLIC REPOSITORIES & RESEARCH", '<div class="route-repos">' +
           external("https://github.com/devonalanakins/devonakins.com", "This website — source") +
           external("https://github.com/devonalanakins/merit", "Merit — engineering integrity toolkit") +
           link("/work/rhen-language/", "Rhen — experimental language") +
