@@ -6,17 +6,18 @@ import { validatePublicGptSnapshot, renderPublicGptProfile } from "../src/gpt-pr
 const input = JSON.parse(await readFile(new URL("../public/v2/usage-snapshot.json", import.meta.url), "utf8"));
 const clone = () => structuredClone(input);
 
-test("one November 3 profile and seven-day analytics share a date but not a reporting scope", () => {
+test("one November 4 profile and seven-day analytics share a date but not a reporting scope", () => {
   const s = validatePublicGptSnapshot(clone());
-  assert.equal(s.count, 2600000000);
+  assert.equal(s.count, 2700000000);
   assert.equal(s.approximate, true);
-  assert.equal(s.asOf, "2026-11-03");
-  assert.equal(s.profile.stats.chatMessages, 367);
-  assert.equal(s.profile.stats.weeklyTokens, 621839191);
+  assert.equal(s.asOf, "2026-11-04");
+  assert.equal(s.profile.stats.chatMessages, 325);
+  assert.equal(s.profile.stats.weeklyTokens, 621712155);
   assert.deepEqual(s.profile.weeklyActivity, {
-    startDate:"2026-10-28", endDate:"2026-11-03", days:7,
-    tokens:621839191, messages:367, pluginCalls:297, skillUses:125,
+    startDate:"2026-10-29", endDate:"2026-11-04", days:7,
+    tokens:621712155, messages:325, pluginCalls:299, skillUses:114,
   });
+  assert.equal(s.profile.profileInsightsAsOf, "2026-11-03");
   assert.deepEqual(s.profile.profileInsights, {
     fastModePercent:2, mostUsedReasoning:"Light", skillsExplored:78, totalSkillUses:2152,
   });
@@ -44,6 +45,8 @@ test("invalid snapshots, mismatched periods and forbidden Site fields cannot pub
     s => { s.profile.stats.chatMessages = null; },
     s => { s.profile.profileInsights.fastModePercent = 102; },
     s => { s.profile.profileInsights.totalSkillUses = -1; },
+    s => { s.profile.profileInsightsAsOf = "2026-11-05"; },
+    s => { s.profile.profileInsightsAsOf = "2026-02-30"; },
     s => { s.profile.skills[0].featured = "yes"; },
     s => { s.profile.showcaseSites = []; },
     s => { s.profile.featuredSite = { name:"unapproved" }; },
@@ -56,12 +59,12 @@ test("invalid snapshots, mismatched periods and forbidden Site fields cannot pub
 
 test("shows true seven-day figures and profile insights, but no Site module or fake chart", () => {
   const html=renderPublicGptProfile(clone());
-  for (const token of ["This week in motion", "621.8M", "367", "297", "125",
-    "Oct 28 - Nov 3, 2026", "314.2M", "23h", "24 days", "78",
+  for (const token of ["This week in motion", "621.7M", "325", "299", "114",
+    "Oct 29 - Nov 4, 2026", "314.2M", "23h", "25 days", "78",
     "2,152", "2%", "Light", "GitHub", "Notion", "Slack",
     "Skills &amp; workflows", "Activity graph", "Profile insights",
-    "November 3; not live"]) assert.ok(html.includes(token), token);
-  assert.match(html, /datetime="2026-11-03"/);
+    "November 4, 2026; not live", "November 3, 2026"]) assert.ok(html.includes(token), token);
+  assert.match(html, /datetime="2026-11-04"/);
   assert.match(html, /role="list" aria-label="Seven day analytics totals"/);
   assert.match(html, /data-featured="true"/);
   assert.doesNotMatch(html, /Showcase Sites|gpt-sites-heading|gpt-showcase-card|Anevum/);

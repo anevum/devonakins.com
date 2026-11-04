@@ -95,12 +95,12 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.wait_for_function("""() => {
                     const value = document.querySelector('#usage-value');
                     const status = document.querySelector('#usage-status');
-                    return value?.textContent?.trim() === '≈2.6B' &&
-                        status?.textContent?.includes('24D STREAK') &&
+                    return value?.textContent?.trim() === '≈2.7B' &&
+                        status?.textContent?.includes('25D STREAK') &&
                         status?.textContent?.includes('314.2M PEAK');
                 }""")
                 assert page.locator("#usage-date").inner_text().startswith(
-                    "NOV 03, 2026"
+                    "NOV 04, 2026"
                 ), "dated snapshot missing from bottom stream"
                 if (width, height) == (390, 844):
                     # Falsification: malformed snapshots clear the ONLY stream value;
@@ -118,7 +118,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     page.unroute(snapshot_url)
                     page.evaluate("document.getElementById('refresh-usage').click()")
                     page.wait_for_function("""() =>
-                      document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'
+                      document.querySelector('#usage-value')?.textContent?.trim() === '≈2.7B'
                     """)
             else:
                 assert page.locator("#usage-value").inner_text().strip() == "—"
@@ -355,12 +355,12 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 assert page.locator(".hero-usage").count() == 0, "duplicate hero metric"
                 assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
                 page.wait_for_function(
-                    """() => document.querySelector('#usage-value')?.textContent?.trim() === '≈2.6B'""",
+                    """() => document.querySelector('#usage-value')?.textContent?.trim() === '≈2.7B'""",
                     timeout=7000,
                 )
-                assert "24D STREAK" in page.locator("#usage-status").inner_text()
+                assert "25D STREAK" in page.locator("#usage-status").inner_text()
                 assert "314.2M PEAK" in page.locator("#usage-status").inner_text()
-                assert page.locator("#usage-date").inner_text().startswith("NOV 03, 2026")
+                assert page.locator("#usage-date").inner_text().startswith("NOV 04, 2026")
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")

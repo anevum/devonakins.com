@@ -2,7 +2,7 @@
 
 # Devon Akins — personal website
 
-> **Public documentation note · November 3, 2026:** The source contains a public personal website and a manually maintained ChatGPT profile mirror. Screenshot-derived statistics are snapshots, not an authenticated live analytics feed. Deployment status must be verified against the actual Cloudflare Worker.
+> **Public documentation note · November 4, 2026:** The source contains a public personal website and a manually maintained ChatGPT profile mirror. Screenshot-derived statistics are snapshots, not an authenticated live analytics feed. Deployment status must be verified against the actual Cloudflare Worker.
 
 [Website](https://devonakins.com) · [Current reviews](https://github.com/devonalanakins/devonakins.com/pulls)
 
@@ -97,9 +97,11 @@ screenshots containing private content, cookies, API credentials, or
 nonpublic Sites into this repository. Automated daily syncing or
 authenticated scraping is **not** enabled.
 
-November 3, 2026: `profile.weeklyActivity` records seven-day token, message,
-plugin-call and skill-use totals for October 28 through November 3.
+November 4, 2026: `profile.weeklyActivity` records seven-day token, message,
+plugin-call and skill-use totals for October 29 through November 4.
 `profile.profileInsights` and cumulative token activity are separate scopes.
+The unchanged profile insight figures retain `profile.profileInsightsAsOf` of
+November 3, 2026; the November 4 recording did not refresh those insights.
 The detailed `/gpt/` page excludes Showcase Sites entirely; the homepage
 retains its single activity stream. Exact daily values are not inferred from
 screen recordings. Each new capture requires a reviewed static file update.
