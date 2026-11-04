@@ -387,7 +387,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "/work/", "/source/", "/about/", "/contact/", "/gpt/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
-                    "/work/aiei/", "/work/isl/", "/work/phatcake/",
+                    "/work/aiei/", "/work/isl/", "/work/squelch/",
                     "/work/brandicade/", "/work/rhen/",
                 ]:
                     response = page.goto(origin + route, wait_until="load")

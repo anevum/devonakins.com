@@ -94,7 +94,7 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
 const portfolio = [
   ["/work/aiei/", "AIEI"],
   ["/work/isl/", "Intent Specification Language"],
-  ["/work/phatcake/", "Phatcake"],
+  ["/work/squelch/", "Squelch"],
   ["/work/brandicade/", "Brandicade"],
   ["/work/rhen/", "RHEN"],
 ];
@@ -114,6 +114,9 @@ for (const [path, title] of portfolio) {
     assert.match(page, /not been implemented or demonstrated/, "ISL non-release disclosure");
   }
 }
+const retiredProject = await request("/work/phatcake/?from=bookmark", { redirect: "manual" });
+assert.equal(retiredProject.status, 308, "retired project URL redirects permanently");
+assert.equal(retiredProject.headers.get("location"), origin + "/work/squelch/?from=bookmark", "legacy project redirect target");
 const image = await request("/v2/crossed-arms.webp");
 assert.equal(image.status, 200, "portrait asset");
 assert.match(image.headers.get("content-type") || "", /image\/webp/);

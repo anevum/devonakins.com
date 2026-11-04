@@ -323,7 +323,7 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
   assert.ok(verifier.includes('"/gpt/"'));
   assert.ok(verifier.includes('class="hero-feature" role="group"'));
-  for (const path of ["/work/aiei/", "/work/isl/", "/work/phatcake/", "/work/brandicade/", "/work/rhen/"]) {
+  for (const path of ["/work/aiei/", "/work/isl/", "/work/squelch/", "/work/brandicade/", "/work/rhen/"]) {
     assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
   }
   assert.ok(verifier.includes('not been implemented or demonstrated'), "ISL concept disclosure checked live");
@@ -410,7 +410,7 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(home, /Intent-first language research/);
   assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
-  for (const slug of ["aiei", "isl", "phatcake", "brandicade", "rhen"]) {
+  for (const slug of ["aiei", "isl", "squelch", "brandicade", "rhen"]) {
     assert.match(archive, new RegExp('href="/work/' + slug + '/"'), slug);
     const response = await get("/work/" + slug + "/");
     assert.equal(response.status, 200, slug);
@@ -438,4 +438,19 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(css, /\.focus-project-copy/);
   assert.match(css, /@media \(max-width: 460px\)/);
   assert.match(css, /@media \(max-width: 360px\)/);
+});
+
+test("Squelch identity and legacy project links preserve bookmarks without retired branding", async () => {
+  for (const path of ["/work/phatcake", "/work/phatcake/", "/work/phatcake/index.html"]) {
+    const redirected = await get(path + "?from=bookmark");
+    assert.equal(redirected.status, 308, path);
+    assert.equal(redirected.headers.get("Location"), "https://devonakins.com/work/squelch/?from=bookmark", path);
+  }
+  const detail = await (await get("/work/squelch/")).text();
+  assert.match(detail, /Squelch/);
+  assert.match(detail, /https:\/\/github\.com\/devonalanakins\/squelch/);
+  assert.doesNotMatch(detail, /Phatcake|mascot|frosting|cake character/i);
+  const home = await (await get("/")).text();
+  assert.match(home, /href="\/work\/squelch\/"/);
+  assert.doesNotMatch(home, /Phatcake|href="\/work\/phatcake\/"/);
 });

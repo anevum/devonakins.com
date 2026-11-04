@@ -234,3 +234,16 @@ observed in v1.2.1. Release only after the exact-head build, Node tests,
 Chromium/WebKit mobile layouts, keyboard, reduced-motion and accessibility
 checks pass. Separately verify the deployed Worker and actual public route,
 keeping the prior Cloudflare version available for rollback.
+
+## Squelch identity migration — pending site release
+
+The professional four-deck DJ workstation is now named **Squelch**, and the
+existing GitHub repository has been renamed to `devonalanakins/squelch`.
+The public Work archive, detailed project page, homepage Work panel, source link,
+production route checks, and sitemap generation now use `/work/squelch/`.
+The retired `/work/phatcake/` project address permanently redirects to the
+canonical Squelch page, preserving old bookmarks without presenting obsolete
+branding. No pet, mascot, or cake-themed identity is part of the product.
+This is a source change only until CI passes and the exact commit is deployed
+and independently verified on the Cloudflare Worker. The audio program remains
+an experimental prototype, not a released DJ application.
