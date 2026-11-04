@@ -60,9 +60,9 @@ pages, which remain usable without JavaScript.
 
 The public portfolio now uses **Merit** (formerly AIEI) for the engineering-integrity toolkit at [devonalanakins/merit](https://github.com/devonalanakins/merit). The unchanged `aiei` CLI and evidence schemas remain compatibility identifiers during a separately reviewed migration.
 
-**Rhen** is also the selected name for an experimental, manually programmable language with local-only interpreter and JavaScript/Python compiler prototypes. The existing [devonalanakins/rhen](https://github.com/devonalanakins/rhen) repository is **not that compiler**: it remains a separate market-research/trading codebase. Portfolio routes are intentionally distinct: `/work/rhen-language/` for the language and `/work/rhen/` for existing market research. Historical `/work/isl/` and `/work/aiei/` URLs permanently redirect to the relevant new project pages.
+**Rhen** now has its own new [programming-language repository](https://github.com/devonalanakins/rhen), with an experimental M0 compiler, JSON IR and JS/Python emitters in [draft PR #1](https://github.com/devonalanakins/rhen/pull/1). This is not a released language. The former trading RHEN source was renamed [Vesper Legacy](https://github.com/devonalanakins/vesper-legacy), while [Vesper](https://github.com/devonalanakins/vesper) is the independent clean rebuild. Portfolio routes are `/work/rhen-language/` for Rhen, `/work/vesper/` for the finance redesign and historical `/work/rhen/` for Vesper Legacy. Historical `/work/isl/` and `/work/aiei/` routes redirect to the current identities.
 
-This site presents versioned development status, not proof that the unpublished language source is deployed or available as a public compiler. No trading, financial, or release controls were changed for the identity update.
+This site presents source development status, not proof that Rhen has been released as a compiler or that any financial project is live. No trading, financial, or release controls were changed for the identity update.
 
 ## Update content
 
