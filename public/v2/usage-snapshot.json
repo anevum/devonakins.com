@@ -3,45 +3,77 @@
   "metric": "work-codex-tokens",
   "count": 2600000000,
   "approximate": true,
-  "asOf": "2026-11-02",
-  "source": "Owner-reported ChatGPT profile",
+  "asOf": "2026-11-03",
+  "source": "Owner-provided ChatGPT profile and Usage Analytics recordings",
   "attestation": "owner-published",
   "profile": {
     "displayName": "Devon Alan Akins",
     "username": "devonakins",
     "publicProfileUrl": "https://chatgpt.com/u/devonakins",
-    "scope": "Work/Codex activity reported for the selected ChatGPT profile workspace, not all ChatGPT messages or API billing.",
+    "scope": "Work/Codex activity reported for the selected ChatGPT profile workspace, not all ChatGPT conversations or API billing.",
     "stats": {
       "peakTokens": 314200000,
       "longestTaskHours": 23,
       "recordedStreakDays": 24,
       "currentStreakDays": 24,
-      "chatMessages": null,
-      "weeklyTokens": null
+      "chatMessages": 367,
+      "weeklyTokens": 621839191
     },
     "skills": [
       {
-        "name": "Verified Software Delivery",
-        "description": "Implement, test, review and release software with evidence-backed deployment gates."
-      },
-      {
-        "name": "AI Code Integrity Audit",
-        "description": "Challenge generated code, backend claims, tests and release readiness independently."
-      },
-      {
         "name": "Fresh Chat Continuity",
-        "description": "Resume ongoing projects from GitHub, Notion and verified checkpoints across conversations."
+        "description": "Resume ongoing projects from GitHub, Notion and verified checkpoints across conversations.",
+        "featured": true
       },
       {
         "name": "Visual Briefing & Design Review",
-        "description": "Translate complex plans and product decisions into precise visual reviews."
+        "description": "Translate complex plans and product decisions into precise visual reviews.",
+        "featured": true
+      },
+      {
+        "name": "Verified Software Delivery",
+        "description": "Implement, test, review and release software with evidence-backed deployment gates.",
+        "featured": true
       },
       {
         "name": "Rigorous Inquiry",
-        "description": "Investigate mathematics, science, engineering and professional decisions at technical depth."
+        "description": "Investigate mathematics, science, engineering and professional decisions at technical depth.",
+        "featured": true
+      },
+      {
+        "name": "AI Code Integrity Audit",
+        "description": "Challenge generated code, backend claims, tests and release readiness independently.",
+        "featured": false
       }
     ],
-    "showcaseSites": [],
-    "topPlugins": []
+    "topPlugins": [
+      {
+        "name": "GitHub",
+        "description": "Code, repositories, commits, pull requests and engineering reviews."
+      },
+      {
+        "name": "Notion",
+        "description": "Workspace documentation, decisions and project knowledge."
+      },
+      {
+        "name": "Slack",
+        "description": "Team conversations and collaboration workflows."
+      }
+    ],
+    "weeklyActivity": {
+      "startDate": "2026-10-28",
+      "endDate": "2026-11-03",
+      "days": 7,
+      "tokens": 621839191,
+      "messages": 367,
+      "pluginCalls": 297,
+      "skillUses": 125
+    },
+    "profileInsights": {
+      "fastModePercent": 2,
+      "mostUsedReasoning": "Light",
+      "skillsExplored": 78,
+      "totalSkillUses": 2152
+    }
   }
 }

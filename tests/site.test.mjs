@@ -267,16 +267,19 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.equal(snapshot.metric, "work-codex-tokens");
   assert.equal(snapshot.count, 2600000000);
   assert.equal(snapshot.approximate, true);
-  assert.equal(snapshot.asOf, "2026-11-02");
+  assert.equal(snapshot.asOf, "2026-11-03");
   assert.equal(snapshot.attestation, "owner-published");
   assert.equal(snapshot.profile.stats.peakTokens, 314200000);
   assert.equal(snapshot.profile.stats.longestTaskHours, 23);
   assert.equal(snapshot.profile.stats.recordedStreakDays, 24);
   assert.equal(snapshot.profile.stats.currentStreakDays, 24);
-  assert.equal(snapshot.profile.stats.chatMessages, null, "unknown message count must not be invented");
+  assert.equal(snapshot.profile.stats.chatMessages, 367, "seven-day messages");
+  assert.equal(snapshot.profile.stats.weeklyTokens, 621839191, "seven-day tokens");
+  assert.deepEqual(snapshot.profile.weeklyActivity, {startDate:"2026-10-28",endDate:"2026-11-03",days:7,tokens:621839191,messages:367,pluginCalls:297,skillUses:125});
+  assert.equal(snapshot.profile.profileInsights.skillsExplored, 78);
   assert.ok(snapshot.profile.skills.length >= 5);
-  assert.deepEqual(snapshot.profile.showcaseSites, [], "no unverified Sites");
-  assert.deepEqual(snapshot.profile.topPlugins, [], "no unverified rankings");
+  assert.equal(Object.hasOwn(snapshot.profile, "showcaseSites"), false, "no Sites field");
+  assert.deepEqual(snapshot.profile.topPlugins.map(x => x.name), ["GitHub", "Notion", "Slack"]);
 
   const profile = await get("/gpt/");
   assert.equal(profile.status, 200);
@@ -291,9 +294,12 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.match(profileHtml, /Activity graph/);
   assert.match(profileHtml, /Profile insights/);
   assert.match(profileHtml, /Skills &amp; workflows|Skills & workflows/);
-  assert.match(profileHtml, /Showcase Sites/);
+  assert.doesNotMatch(profileHtml, /Showcase Sites|gpt-sites-heading|gpt-showcase-card|Anevum/);
+  assert.match(profileHtml, /621\.8M/);
+  assert.match(profileHtml, /2,152/);
+  assert.match(profileHtml, /This week in motion/);
   assert.match(profileHtml, /Top plugins/);
-  assert.match(profileHtml, /No private or unverified Sites/);
+  assert.match(profileHtml, /297/);
   assert.match(profileHtml, /href="https:\/\/chatgpt\.com\/u\/devonakins"/);
   assert.match(profileHtml, /href="\/v2\/gpt-profile\.css"/);
   assert.doesNotMatch(profileHtml, /data-private|backend-api\/wham/);

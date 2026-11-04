@@ -207,7 +207,7 @@ export const pages = [
     path: "/gpt/",
     key: "gpt",
     title: "GPT profile — Devon Alan Akins",
-    description: "Dated Work and Codex activity, personal workflow skills and a curated ChatGPT Sites showcase.",
+    description: "Dated Work/Codex activity, weekly analytics, custom workflow skills and integrated tools.",
   },
   {
     path: "/contact/",
