@@ -1,9 +1,9 @@
 {
   "version": 1,
   "metric": "work-codex-tokens",
-  "count": 2600000000,
+  "count": 2700000000,
   "approximate": true,
-  "asOf": "2026-11-03",
+  "asOf": "2026-11-04",
   "source": "Owner-provided ChatGPT profile and Usage Analytics recordings",
   "attestation": "owner-published",
   "profile": {
@@ -14,10 +14,10 @@
     "stats": {
       "peakTokens": 314200000,
       "longestTaskHours": 23,
-      "recordedStreakDays": 24,
-      "currentStreakDays": 24,
-      "chatMessages": 367,
-      "weeklyTokens": 621839191
+      "recordedStreakDays": 25,
+      "currentStreakDays": 25,
+      "chatMessages": 325,
+      "weeklyTokens": 621712155
     },
     "skills": [
       {
@@ -61,19 +61,20 @@
       }
     ],
     "weeklyActivity": {
-      "startDate": "2026-10-28",
-      "endDate": "2026-11-03",
+      "startDate": "2026-10-29",
+      "endDate": "2026-11-04",
       "days": 7,
-      "tokens": 621839191,
-      "messages": 367,
-      "pluginCalls": 297,
-      "skillUses": 125
+      "tokens": 621712155,
+      "messages": 325,
+      "pluginCalls": 299,
+      "skillUses": 114
     },
     "profileInsights": {
       "fastModePercent": 2,
       "mostUsedReasoning": "Light",
       "skillsExplored": 78,
       "totalSkillUses": 2152
-    }
+    },
+    "profileInsightsAsOf": "2026-11-03"
   }
 }

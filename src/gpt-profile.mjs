@@ -62,6 +62,9 @@ export function validatePublicGptSnapshot(data) {
       weeklyTokens !== w.tokens || chatMessages !== w.messages)
     throw new Error("Invalid seven-day GPT analytics");
   const insights = p.profileInsights;
+  if (p.profileInsightsAsOf !== undefined &&
+      (!validDate(p.profileInsightsAsOf) || p.profileInsightsAsOf > data.asOf))
+    throw new Error("Invalid GPT profile insights capture date");
   if (!insights || typeof insights !== "object" || Array.isArray(insights) ||
       !Number.isInteger(insights.fastModePercent) ||
       insights.fastModePercent < 0 || insights.fastModePercent > 100 ||
@@ -102,6 +105,9 @@ export function renderPublicGptProfile(input) {
   const w = p.weeklyActivity;
   const ins = p.profileInsights;
   const longDate = dateLabel(s.asOf, {month:"long", day:"numeric", year:"numeric"});
+  const insightsLongDate = dateLabel(p.profileInsightsAsOf || s.asOf,
+    {month:"long", day:"numeric", year:"numeric"});
+  const railDay = day => dateLabel(day, {month:"short", day:"2-digit"}).toUpperCase();
   const periodLabel = dateLabel(w.startDate, {month:"short", day:"numeric"}) +
     " - " + dateLabel(w.endDate);
   const weeklyMetric = (label, value, units) =>
@@ -145,7 +151,8 @@ export function renderPublicGptProfile(input) {
     weekly +
     '<section class="gpt-section" aria-labelledby="gpt-activity-heading">' +
     heading("gpt-activity-heading", "01 / PROFILE", "By the numbers",
-      "Profile-level figures from November 3, separate from the seven-day activity above.") +
+      "Profile-level figures captured " + longDate +
+      ", separate from the seven-day activity above.") +
     '<div class="gpt-stats-grid">' +
     metric("PEAK TOKENS", displayCount(p.stats.peakTokens), "Profile peak; interval not independently determined") +
     metric("LONGEST TASK", p.stats.longestTaskHours === null ? "\u2014" :
@@ -153,7 +160,7 @@ export function renderPublicGptProfile(input) {
     metric("LONGEST STREAK", p.stats.recordedStreakDays === null ? "\u2014" :
       p.stats.recordedStreakDays + " days", "Recorded streak") +
     metric("CURRENT STREAK AT SNAPSHOT", p.stats.currentStreakDays === null ? "\u2014" :
-      p.stats.currentStreakDays + " days", "As of November 3; not live") +
+      p.stats.currentStreakDays + " days", "As of " + longDate + "; not live") +
     metric("SKILLS EXPLORED", full(ins.skillsExplored), "Profile insight") +
     metric("TOTAL SKILL USES", full(ins.totalSkillUses), "Profile total; not the seven-day figure") +
     '</div></section>' +
@@ -162,26 +169,29 @@ export function renderPublicGptProfile(input) {
       "Seven-day totals were captured; exact daily values were not available for publication.") +
     '<div class="gpt-signal-context"><span class="gpt-signal-overline">ANALYTICS / 7D</span>' +
     '<p>The source includes model, plugin, skill and message charts. This snapshot publishes the recorded totals rather than inventing daily data.</p>' +
-    '<div class="gpt-period-rail" aria-label="Reporting period October 28 through November 3, 2026">' +
-    '<span>OCT 28</span><span class="gpt-period-track" aria-hidden="true"></span><span>NOV 03</span></div></div></section>' +
+    '<div class="gpt-period-rail" aria-label="Reporting period ' + esc(dateLabel(w.startDate)) +
+    ' through ' + esc(dateLabel(w.endDate)) + '">' +
+    '<span>' + esc(railDay(w.startDate)) + '</span><span class="gpt-period-track" aria-hidden="true"></span><span>' +
+    esc(railDay(w.endDate)) + '</span></div></div></section>' +
     '<section class="gpt-section" aria-labelledby="gpt-skills-heading">' +
     heading("gpt-skills-heading", "03 / METHODS", "Skills & workflows",
-      "Four skills featured on the captured profile, plus an engineering review workflow.") +
+      "Four previously captured featured skills, plus an engineering review workflow.") +
     skills + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-plugins-heading">' +
     heading("gpt-plugins-heading", "04 / TOOLS", "Top plugins",
-      "Integrations shown on the November 3 profile, not seven-day call rankings.") +
+      "Owner-curated integrations retained from an earlier profile capture, not seven-day call rankings.") +
     plugins + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-insights-heading">' +
     heading("gpt-insights-heading", "05 / INSIGHTS", "Profile insights",
-      "Profile observations captured alongside the activity snapshot.") +
+      "Profile observations last captured " + insightsLongDate +
+      "; separately dated from the latest activity snapshot.") +
     '<div class="gpt-insights-grid">' +
     metric("FAST MODE", ins.fastModePercent + "%", "Profile-reported proportion") +
     metric("MOST USED REASONING", ins.mostUsedReasoning, "Profile insight; not a benchmark") +
     '</div></section>' +
     '<footer class="gpt-profile-foot"><strong>DATED PUBLIC SNAPSHOT / NO PRIVATE ACCOUNT ACCESS</strong>' +
     '<p>As of <time datetime="' + esc(s.asOf) + '">' + esc(longDate) + '</time>. ' +
-    'Reconciled from two supplied recordings. Updates are published through this repository; ' +
+    'Reconciled from owner-provided recordings. Updates are published through this repository; ' +
     'no authenticated ChatGPT API, account cookies, or estimated daily values.</p>' +
     '<a href="' + esc(p.publicProfileUrl) + '" target="_blank" rel="noopener noreferrer">View original profile</a>' +
     '</footer></div>';
