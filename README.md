@@ -102,6 +102,8 @@ plugin-call and skill-use totals for October 29 through November 4.
 `profile.profileInsights` and cumulative token activity are separate scopes.
 The unchanged profile insight figures retain `profile.profileInsightsAsOf` of
 November 3, 2026; the November 4 recording did not refresh those insights.
+The public skills and plugin descriptions are retained from an earlier
+owner-approved profile capture and are not presented as November 4 measurements.
 The detailed `/gpt/` page excludes Showcase Sites entirely; the homepage
 retains its single activity stream. Exact daily values are not inferred from
 screen recordings. Each new capture requires a reviewed static file update.

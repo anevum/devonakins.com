@@ -175,11 +175,11 @@ export function renderPublicGptProfile(input) {
     esc(railDay(w.endDate)) + '</span></div></div></section>' +
     '<section class="gpt-section" aria-labelledby="gpt-skills-heading">' +
     heading("gpt-skills-heading", "03 / METHODS", "Skills & workflows",
-      "Four skills featured on the captured profile, plus an engineering review workflow.") +
+      "Four previously captured featured skills, plus an engineering review workflow.") +
     skills + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-plugins-heading">' +
     heading("gpt-plugins-heading", "04 / TOOLS", "Top plugins",
-      "Integrations shown on the " + longDate + " profile, not seven-day call rankings.") +
+      "Owner-curated integrations retained from an earlier profile capture, not seven-day call rankings.") +
     plugins + '</section>' +
     '<section class="gpt-section" aria-labelledby="gpt-insights-heading">' +
     heading("gpt-insights-heading", "05 / INSIGHTS", "Profile insights",

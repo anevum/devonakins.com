@@ -63,6 +63,7 @@ test("shows true seven-day figures and profile insights, but no Site module or f
     "Oct 29 - Nov 4, 2026", "314.2M", "23h", "25 days", "78",
     "2,152", "2%", "Light", "GitHub", "Notion", "Slack",
     "Skills &amp; workflows", "Activity graph", "Profile insights",
+    "previously captured featured skills", "Owner-curated integrations",
     "November 4, 2026; not live", "November 3, 2026"]) assert.ok(html.includes(token), token);
   assert.match(html, /datetime="2026-11-04"/);
   assert.match(html, /role="list" aria-label="Seven day analytics totals"/);
