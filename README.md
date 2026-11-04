@@ -72,10 +72,9 @@ workspace (especially if a personal and a Business workspace differ), then
 edit only values actually shown there. Set `asOf` to the date of that
 capture. Do not interpolate token activity, infer a current streak from
 historical data, or combine Work/Codex tokens with ChatGPT messages or
-API billing. Unknown counts stay `null`. Curate `profile.skills` as
-public-safe descriptions of independently authored workflows, and include
-only public, owner-approved links in `profile.showcaseSites`; similarly
-`profile.topPlugins` needs a verified manual snapshot.
+API billing. Unknown counts stay `null`. Curate `profile.skills` as public-safe descriptions of independently
+authored workflows. The public GPT mirror excludes Showcase Sites and
+lists only profile-captured integrations in `profile.topPlugins`.
 
 Run `npm run build && npm test` and review the updated
 `/gpt/` page and mobile homepage stream before merging. The existing
@@ -83,6 +82,13 @@ GitHub/Cloudflare pipeline releases merged changes. Do not put
 screenshots containing private content, cookies, API credentials, or
 nonpublic Sites into this repository. Automated daily syncing or
 authenticated scraping is **not** enabled.
+
+November 3, 2026: `profile.weeklyActivity` records seven-day token, message,
+plugin-call and skill-use totals for October 28 through November 3.
+`profile.profileInsights` and cumulative token activity are separate scopes.
+The detailed `/gpt/` page excludes Showcase Sites entirely; the homepage
+retains its single activity stream. Exact daily values are not inferred from
+screen recordings. Each new capture requires a reviewed static file update.
 
 ## Identity assets
 

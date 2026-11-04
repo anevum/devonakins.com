@@ -82,7 +82,9 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
     assert.match(profile, /id="gpt-profile"/);
     assert.match(profile, /314\.2M|314,200,000/, "peak tokens reflected in published profile");
     assert.match(profile, /Skills &amp; workflows|Skills & workflows/);
-    assert.match(profile, /Showcase Sites/);
+    assert.doesNotMatch(profile, /Showcase Sites|gpt-sites-heading|gpt-showcase-card/, "public profile must exclude Sites");
+    assert.match(profile, /621\.8M/, "seven-day token total reflected in published profile");
+    assert.match(profile, /This week in motion/, "dated weekly analytics panel is present");
     assert.match(profile, /Top plugins/);
   }
 }

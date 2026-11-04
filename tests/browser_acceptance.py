@@ -100,7 +100,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         status?.textContent?.includes('314.2M PEAK');
                 }""")
                 assert page.locator("#usage-date").inner_text().startswith(
-                    "NOV 02, 2026"
+                    "NOV 03, 2026"
                 ), "dated snapshot missing from bottom stream"
                 if (width, height) == (390, 844):
                     # Falsification: malformed snapshots clear the ONLY stream value;
@@ -360,7 +360,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 )
                 assert "24D STREAK" in page.locator("#usage-status").inner_text()
                 assert "314.2M PEAK" in page.locator("#usage-status").inner_text()
-                assert page.locator("#usage-date").inner_text().startswith("NOV 02, 2026")
+                assert page.locator("#usage-date").inner_text().startswith("NOV 03, 2026")
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")
@@ -402,8 +402,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     if route == "/gpt/":
                         assert page.locator("#gpt-profile").is_visible()
                         assert "314.2M" in page.locator("#gpt-profile").inner_text()
+                        assert "621.8M" in page.locator("#gpt-profile").inner_text()
+                        assert "Showcase Sites" not in page.locator("#gpt-profile").inner_text()
+                        assert page.locator(".gpt-weekly-metric").count() == 4
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
-                        assert "Showcase Sites" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
                         assert not page.locator("#home-usage-value").count()
