@@ -364,7 +364,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")
-                assert report.json()["count"] == 2600000000
+                assert report.json()["count"] == 2700000000
                 page.locator("#tab-writing").click()
                 assert page.locator("#panel-writing").is_visible()
                 if axe_source:
