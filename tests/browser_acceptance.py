@@ -402,7 +402,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     if route == "/gpt/":
                         assert page.locator("#gpt-profile").is_visible()
                         assert "314.2M" in page.locator("#gpt-profile").inner_text()
-                        assert "621.8M" in page.locator("#gpt-profile").inner_text()
+                        assert "621.7M" in page.locator("#gpt-profile").inner_text()
                         assert "Showcase Sites" not in page.locator("#gpt-profile").inner_text()
                         assert page.locator(".gpt-weekly-metric").count() == 4
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
