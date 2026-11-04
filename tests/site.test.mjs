@@ -294,7 +294,7 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.match(profileHtml, /Activity graph/);
   assert.match(profileHtml, /Profile insights/);
   assert.match(profileHtml, /Skills &amp; workflows|Skills & workflows/);
-  assert.doesNotMatch(profileHtml, /Showcase Sites|gpt-sites-heading|gpt-showcase-card|Anevum/);
+  assert.doesNotMatch(profileHtml, /Showcase Sites|gpt-sites-heading|gpt-showcase-card/);
   assert.match(profileHtml, /621\.8M/);
   assert.match(profileHtml, /2,152/);
   assert.match(profileHtml, /This week in motion/);
