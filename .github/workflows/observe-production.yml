@@ -1,0 +1,39 @@
+name: Observe DevonAkins.com production (read-only)
+
+on:
+  pull_request:
+    paths:
+      - scripts/probe-production.mjs
+      - tests/probe-production.test.mjs
+      - .github/workflows/observe-production.yml
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Optional exact 40-character release commit (blank to observe any known ancestor)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  observer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify read-only probe and failure cases
+        run: |
+          node --check scripts/probe-production.mjs
+          node --test tests/probe-production.test.mjs
+      - name: Observe live Worker release and public routes without mutating production
+        env:
+          EXPECTED_RELEASE_COMMIT: ${{ inputs.expected_commit }}
+          CHECK_SOURCE_ANCESTRY: '1'
+        run: node scripts/probe-production.mjs
