@@ -70,6 +70,17 @@ export function createHandler(assets, release) {
           status: 400,
           headers: securityHeaders,
         });
+      // Preserve the previous public project URLs when rebranding.
+      const renamedProjects = new Map([
+        ["aiei", "merit"],
+        ["isl", "rhen-language"],
+      ]);
+      const legacyMatch = /^\/work\/([a-z-]+)(?:\/|\/index\.html)?$/.exec(path);
+      const currentProject = legacyMatch && renamedProjects.get(legacyMatch[1]);
+      if (currentProject) {
+        url.pathname = "/work/" + currentProject + "/";
+        return redirect(url.href);
+      }
       // Preserve old public project bookmarks without serving the retired identity.
       if (["/work/phatcake", "/work/phatcake/", "/work/phatcake/index.html"].includes(path)) {
         url.pathname = "/work/squelch/";
