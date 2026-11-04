@@ -1,4 +1,10 @@
+<p align="center"><img src=".github/assets/readme-hero.svg" alt="Original DevonAkins.com project illustration" width="100%" /></p>
+
 # Devon Akins — personal website
+
+> **Public documentation note · November 3, 2026:** The source contains a public personal website and a manually maintained ChatGPT profile mirror. Screenshot-derived statistics are snapshots, not an authenticated live analytics feed. Deployment status must be verified against the actual Cloudflare Worker.
+
+[Website](https://devonakins.com) · [Current reviews](https://github.com/devonalanakins/devonakins.com/pulls)
 
 A personal workshop for ideas, systems, fictional worlds, and small experiments.
 Production: https://devonakins.com
