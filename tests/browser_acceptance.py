@@ -234,10 +234,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert profile_style["decoration"] == "none" and profile_style["border"] >= 1, (
                 label, "GPT profile action has stale/missing styles", profile_style
             )
-            # Retain AIEI/ISL highlights and use the Observatory as the only
+            # Retain Merit/Rhen language highlights and use the Observatory as the only
             # ChatGPT activity stream.
             featured = page.locator(".hero-feature")
-            assert featured.is_visible(), "AIEI/ISL highlights not visible"
+            assert featured.is_visible(), "Merit/Rhen language highlights not visible"
             assert page.locator(".hero-feature-link").count() == 2
             assert page.locator(".focus-heading h2").inner_text() == "Active development"
             assert page.locator(".focus-project-state").all_inner_texts() == ["Active", "Research"]
@@ -246,8 +246,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             ), "Project status must retain its inline indicator layout"
             assert "ACTIVE ENGINEERING" not in featured.inner_text()
             assert "LANGUAGE RESEARCH / PROPOSED" not in featured.inner_text()
-            assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/aiei/"
-            assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/isl/"
+            assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/merit/"
+            assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/rhen-language/"
             assert page.locator(".hero-usage").count() == 0
             check_overflow("home")
             # On normal portrait-phone and desktop viewports the featured project
@@ -271,7 +271,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 assert feature_box["y"] >= panel_box["y"] - 1, (label, feature_box, panel_box)
                 assert (last_card["y"] + last_card["height"]
                         <= panel_box["y"] + panel_box["height"] + 1), (
-                    label, "Last AIEI/ISL card clipped by fixed navigation", last_card, panel_box
+                    label, "Last Merit/Rhen language card clipped by fixed navigation", last_card, panel_box
                 )
             if width <= 960:
                 # The GPT stream and navigation remain in their dedicated rows.
@@ -350,7 +350,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "el => el.complete && el.naturalWidth > 0"
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
-                assert page.locator(".hero-feature").is_visible(), "canonical AIEI/ISL missing"
+                assert page.locator(".hero-feature").is_visible(), "canonical Merit/Rhen language missing"
                 assert page.locator(".focus-project-copy").count() == 2
                 assert page.locator(".hero-usage").count() == 0, "duplicate hero metric"
                 assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
@@ -387,7 +387,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "/work/", "/source/", "/about/", "/contact/", "/gpt/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
-                    "/work/aiei/", "/work/isl/", "/work/squelch/",
+                    "/work/merit/", "/work/rhen-language/", "/work/squelch/",
                     "/work/brandicade/", "/work/rhen/",
                 ]:
                     response = page.goto(origin + route, wait_until="load")
@@ -409,7 +409,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
                         assert not page.locator("#home-usage-value").count()
-                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/aiei/", "/work/isl/", "/contact/", "/gpt/"]:
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/merit/", "/work/rhen-language/", "/contact/", "/gpt/"]:
                         page.add_script_tag(content=axe_source)
                         link_violations = page.evaluate("""async () => {
                           const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];

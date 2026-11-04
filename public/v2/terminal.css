@@ -891,7 +891,7 @@ h1, h2, p { margin-top: 0; }
   font-size: 12px;
   line-height: 1;
 }
-.hero-feature .focus-project-isl .focus-project-arrow { color: #a4ced2; }
+.hero-feature .focus-project-rhen-language .focus-project-arrow { color: #a4ced2; }
 
 /* A clear action in the dated GPT stream, rather than an all-caps metadata label. */
 .telemetry-profile-link { text-transform: none; letter-spacing: .01em; }

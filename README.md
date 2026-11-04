@@ -56,6 +56,14 @@ pages, which remain usable without JavaScript.
 - `scripts/build-worker.mjs`: self-contained release packaging.
 - `tests/site.test.mjs`: routing, delivery, model, icon and privacy checks.
 
+## Project names and source boundaries
+
+The public portfolio now uses **Merit** (formerly AIEI) for the engineering-integrity toolkit at [devonalanakins/merit](https://github.com/devonalanakins/merit). The unchanged `aiei` CLI and evidence schemas remain compatibility identifiers during a separately reviewed migration.
+
+**Rhen** is also the selected name for an experimental, manually programmable language with local-only interpreter and JavaScript/Python compiler prototypes. The existing [devonalanakins/rhen](https://github.com/devonalanakins/rhen) repository is **not that compiler**: it remains a separate market-research/trading codebase. Portfolio routes are intentionally distinct: `/work/rhen-language/` for the language and `/work/rhen/` for existing market research. Historical `/work/isl/` and `/work/aiei/` URLs permanently redirect to the relevant new project pages.
+
+This site presents versioned development status, not proof that the unpublished language source is deployed or available as a public compiler. No trading, financial, or release controls were changed for the identity update.
+
 ## Update content
 
 Edit `src/content.mjs` and rebuild. Add a project only when its status,

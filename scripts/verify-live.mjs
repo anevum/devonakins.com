@@ -56,7 +56,7 @@ assert.match(markup, /<h2>Active development<\/h2>/, "development heading");
 assert.match(markup, /class="focus-grid"/, "responsive work grid");
 assert.doesNotMatch(markup, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/, "deprecated cramped copy removed");
 assert.match(markup, /aria-label="View profile — full GPT activity and skills"/, "GPT stream has an accessible profile action");
-for (const path of ["/work/aiei/", "/work/isl/"]) {
+for (const path of ["/work/merit/", "/work/rhen-language/"]) {
   assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
 }
 
@@ -92,11 +92,11 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
 // indexable, canonically linked, and powered by the same immersive shell.
 // These routes and research boundaries must survive an actual Worker deploy.
 const portfolio = [
-  ["/work/aiei/", "AIEI"],
-  ["/work/isl/", "Intent Specification Language"],
+  ["/work/merit/", "Merit"],
+  ["/work/rhen-language/", "Rhen"],
   ["/work/squelch/", "Squelch"],
   ["/work/brandicade/", "Brandicade"],
-  ["/work/rhen/", "RHEN"],
+  ["/work/rhen/", "RHEN — Market Research"],
 ];
 for (const [path, title] of portfolio) {
   const response = await request(path, { cache: "no-store" });
@@ -109,10 +109,15 @@ for (const [path, title] of portfolio) {
   assert.match(page, /data-route-page="true"/, path + " immersive route shell");
   assert.ok(page.includes(title), path + " title");
   assert.doesNotMatch(page, /name="robots" content="noindex"/, path + " must be indexable");
-  if (path === "/work/isl/") {
-    assert.match(page, /Research concept/, "ISL research status");
-    assert.match(page, /not been implemented or demonstrated/, "ISL non-release disclosure");
+  if (path === "/work/rhen-language/") {
+    assert.match(page, /Local prototype/, "Rhen language prototype status");
+    assert.match(page, /not a released compiler/, "Rhen non-release disclosure");
   }
+}
+for (const [legacy, current] of [["aiei", "merit"], ["isl", "rhen-language"]]) {
+  const response = await request("/work/" + legacy + "/?from=bookmark", { redirect: "manual" });
+  assert.equal(response.status, 308, legacy + " historical bookmark");
+  assert.equal(response.headers.get("location"), origin + "/work/" + current + "/?from=bookmark", legacy + " redirect");
 }
 const retiredProject = await request("/work/phatcake/?from=bookmark", { redirect: "manual" });
 assert.equal(retiredProject.status, 308, "retired project URL redirects permanently");
@@ -132,4 +137,4 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
-console.log("Passed: one GPT homepage stream, full GPT profile, AIEI/ISL featured links and five portfolio routes, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
+console.log("Passed: one GPT homepage stream, full GPT profile, Merit/Rhen featured links, canonical language/markets separation and portfolio routes, dated snapshot JSON, security headers, preview, image, 404 and www redirect");

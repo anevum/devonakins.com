@@ -323,10 +323,10 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
   assert.ok(verifier.includes('"/gpt/"'));
   assert.ok(verifier.includes('class="hero-feature" role="group"'));
-  for (const path of ["/work/aiei/", "/work/isl/", "/work/squelch/", "/work/brandicade/", "/work/rhen/"]) {
+  for (const path of ["/work/merit/", "/work/rhen-language/", "/work/squelch/", "/work/brandicade/", "/work/rhen/"]) {
     assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
   }
-  assert.ok(verifier.includes('not been implemented or demonstrated'), "ISL concept disclosure checked live");
+  assert.ok(verifier.includes('not a released compiler'), "Rhen compiler prototype non-release disclosure checked live");
   assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));
   assert.doesNotMatch(verifier, /data\\.version === "1\\.1\\.0"/);
 });
@@ -395,41 +395,43 @@ test("rendered public source and contact routes contain only current GitHub iden
   }
 });
 
-test("current engineering showcase is prominently linked and status-qualified", async () => {
+test("current engineering showcase distinguishes Merit, Rhen language and RHEN markets", async () => {
   const home = await (await get("/")).text();
   assert.match(home, /class="hero-feature" role="group" aria-label="Active development"/);
   assert.match(home, /<h2>Active development<\/h2>/);
   assert.match(home, /class="focus-grid"/);
   assert.match(home, /class="focus-project-state focus-project-active">Active<\/span>/);
   assert.match(home, /class="focus-project-state focus-project-research">Research<\/span>/);
-  assert.doesNotMatch(home, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/,
-    "old cramped metadata must not appear on the homepage");
-  assert.match(home, /href="\/work\/aiei\/"/);
-  assert.match(home, /href="\/work\/isl\/"/);
-  assert.match(home, /Trustworthy AI engineering/);
-  assert.match(home, /Intent-first language research/);
+  assert.ok(home.includes('href="/work/merit/"'));
+  assert.ok(home.includes('href="/work/rhen-language/"'));
+  assert.match(home, /Evidence-led software verification/);
+  assert.match(home, /Human-first programming language/);
   assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
-  for (const slug of ["aiei", "isl", "squelch", "brandicade", "rhen"]) {
-    assert.match(archive, new RegExp('href="/work/' + slug + '/"'), slug);
+  for (const slug of ["merit", "rhen-language", "squelch", "brandicade", "rhen"]) {
+    assert.ok(archive.includes('href="/work/' + slug + '/"'), slug);
     const response = await get("/work/" + slug + "/");
     assert.equal(response.status, 200, slug);
     const html = await response.text();
     assert.match(html, /class="route-content"/);
-    assert.match(html, new RegExp("https://devonakins.com/work/" + slug + "/"));
+    assert.ok(html.includes("https://devonakins.com/work/" + slug + "/"));
   }
-  const aiei = await (await get("/work/aiei/")).text();
-  assert.match(aiei, /AIEI/);
-  assert.match(aiei, /independent|human review|human release/i);
-  assert.match(aiei, /https:\/\/github\.com\/devonalanakins\/aiei/);
-  const isl = await (await get("/work/isl/")).text();
-  assert.match(isl, /Intent Specification Language/);
-  assert.match(isl, /Research concept/);
-  assert.match(isl, /not been implemented or demonstrated/);
-  assert.doesNotMatch(isl, /https:\/\/github\.com\/devonalanakins\/isl/);
+  const merit = await (await get("/work/merit/")).text();
+  assert.match(merit, /Merit/);
+  assert.match(merit, /independent|human review|human release/i);
+  assert.match(merit, /https:\/\/github\.com\/devonalanakins\/merit/);
+  const language = await (await get("/work/rhen-language/")).text();
+  assert.match(language, /Rhen/);
+  assert.match(language, /Local prototype/);
+  assert.match(language, /not a released compiler/);
+  assert.doesNotMatch(language, /https:\/\/github\.com\/devonalanakins\/isl/);
+  const markets = await (await get("/work/rhen/")).text();
+  assert.match(markets, /Market Research/);
+  assert.match(markets, /https:\/\/github\.com\/devonalanakins\/rhen/);
+  assert.match(markets, /not the experimental Rhen programming language/);
   const source = await (await get("/source/")).text();
-  assert.match(source, /AIEI — engineering integrity toolkit/);
-  assert.match(source, /ISL — language research/);
+  assert.match(source, /Merit — engineering integrity toolkit/);
+  assert.match(source, /Rhen — experimental language/);
   const css = await (await get("/v2/terminal.css")).text();
   assert.match(css, /\.hero-feature-link:focus-visible/);
   assert.match(css, /V1\.2\.3/);
@@ -438,6 +440,20 @@ test("current engineering showcase is prominently linked and status-qualified", 
   assert.match(css, /\.focus-project-copy/);
   assert.match(css, /@media \(max-width: 460px\)/);
   assert.match(css, /@media \(max-width: 360px\)/);
+});
+
+test("legacy AIEI and ISL portfolio routes retain permanent query-preserving redirects", async () => {
+  const routes = [
+    ["aiei", "merit"],
+    ["isl", "rhen-language"],
+  ];
+  for (const [before, after] of routes) {
+    for (const path of ["/work/" + before, "/work/" + before + "/", "/work/" + before + "/index.html"]) {
+      const response = await get(path + "?from=bookmark");
+      assert.equal(response.status, 308, path);
+      assert.equal(response.headers.get("Location"), "https://devonakins.com/work/" + after + "/?from=bookmark");
+    }
+  }
 });
 
 test("Squelch identity and legacy project links preserve bookmarks without retired branding", async () => {
