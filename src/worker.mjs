@@ -70,6 +70,11 @@ export function createHandler(assets, release) {
           status: 400,
           headers: securityHeaders,
         });
+      // Preserve old public project bookmarks without serving the retired identity.
+      if (["/work/phatcake", "/work/phatcake/", "/work/phatcake/index.html"].includes(path)) {
+        url.pathname = "/work/squelch/";
+        return redirect(url.href);
+      }
       const index = path.endsWith("/")
         ? path + "index.html"
         : path + "/index.html";

@@ -16,7 +16,7 @@ test("selected Work tab has accessible, status-qualified editorial cards and a c
     const hrefs = [...section.matchAll(/class="work-card [^"]+" href="([^"]+)"/g)].map(m => m[1]);
     assert.deepEqual(hrefs, [
       "/work/aiei/", "/work/isl/", "/work/devonstation/",
-      "/work/operations/", "/work/ideaflow/", "/work/rhen/"
+      "/work/operations/", "/work/ideaflow/", "/work/squelch/"
     ]);
     assert.equal((section.match(/work-card-spotlight/g) || []).length, 2);
     assert.equal((section.match(/work-card-support/g) || []).length, 4);
@@ -30,7 +30,7 @@ test("selected Work tab has accessible, status-qualified editorial cards and a c
   assert.match(css, /#panel-work \.work-card-spotlight/);
   assert.match(css, /@media\(max-width:600px\)/);
   assert.match(css, /prefers-reduced-motion:reduce/);
-  for (const slug of ["aiei", "isl", "devonstation", "operations", "ideaflow", "rhen"]) {
+  for (const slug of ["aiei", "isl", "devonstation", "operations", "ideaflow", "squelch"]) {
     assert.match(await readFile("dist/work/" + slug + "/index.html", "utf8"),
       new RegExp('rel="canonical" href="https://devonakins.com/work/' + slug + '/"'));
   }
