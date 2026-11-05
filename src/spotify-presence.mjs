@@ -58,6 +58,21 @@ export function projectPlayback(payload, showDetails, checkedAt) {
 }
 
 const withTimeout = () => AbortSignal.timeout(6500);
+// Retry-After may be seconds or an HTTP date. Clamp extreme values.
+export function retryDelayMs(value, checkedAt = Date.now()) {
+  const seconds = typeof value === "string" && /^[0-9]+$/.test(value.trim())
+    ? Number(value.trim()) * 1000
+    : typeof value === "string" ? Date.parse(value) - checkedAt : Number.NaN;
+  return Number.isFinite(seconds)
+    ? Math.max(60_000, Math.min(900_000, seconds))
+    : 60_000;
+}
+class HoldRequest extends Error {
+  constructor(delayMs) {
+    super("Spotify temporarily unavailable");
+    this.delayMs = delayMs;
+  }
+}
 const unavailable = (checkedAt) => ({
   version: 1, mode: "unavailable", detailsVisible: false, updatedAt: checkedAt,
 });
