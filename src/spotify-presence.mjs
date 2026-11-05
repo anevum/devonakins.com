@@ -153,7 +153,11 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
     inFlight = { key, promise };
     try {
       const data = await promise;
-      if (stamp === generation) cached = { key, data, expires: now() + ttlMs };
+      if (stamp !== generation) {
+        // A concurrent privacy-off request invalidated this in-flight result.
+        return presenceResponse({ version: 1, mode: "hidden", detailsVisible: false });
+      }
+      cached = { key, data, expires: now() + ttlMs };
       return presenceResponse(data);
     } finally {
       if (inFlight?.promise === promise) inFlight = null;
