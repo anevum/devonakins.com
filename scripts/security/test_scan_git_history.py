@@ -29,6 +29,29 @@ class HistoryScanTest(unittest.TestCase):
             self.assertIn('github-token', result.stdout)
             self.assertNotIn(token, result.stdout + result.stderr)
 
+    def test_exact_known_inert_fixture_is_exempt_but_other_assignments_are_detected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = dict(os.environ, GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Fixture',
+                       GIT_AUTHOR_EMAIL='fixture@example.test', GIT_COMMITTER_NAME='Fixture',
+                       GIT_COMMITTER_EMAIL='fixture@example.test')
+            subprocess.run(['git', 'init', '-q'], cwd=temp, env=env, check=True)
+            known = 'access_token: "placeholder_access_12345"'
+            Path(temp, 'example.txt').write_text(known)
+            subprocess.run(['git', 'add', '.'], cwd=temp, env=env, check=True)
+            subprocess.run(['git', 'commit', '-qm', 'known inert test example'], cwd=temp, env=env, check=True)
+            clean = subprocess.run([sys.executable, str(SCANNER)], cwd=temp, env=env,
+                                   capture_output=True, text=True)
+            self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+            unknown = 'access_token: ' + chr(34) + 'unknown_' + ('B' * 35) + chr(34)
+            Path(temp, 'example.txt').write_text(known + '\\n' + unknown)
+            subprocess.run(['git', 'add', '.'], cwd=temp, env=env, check=True)
+            subprocess.run(['git', 'commit', '-qm', 'add different synthetic credential'], cwd=temp, env=env, check=True)
+            flagged = subprocess.run([sys.executable, str(SCANNER)], cwd=temp, env=env,
+                                     capture_output=True, text=True)
+            self.assertEqual(flagged.returncode, 1, flagged.stdout + flagged.stderr)
+            self.assertIn('sensitive-assignment', flagged.stdout)
+            self.assertNotIn(unknown, flagged.stdout + flagged.stderr)
+
     def test_clean_history_and_binary_are_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             env = dict(os.environ, GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Fixture',

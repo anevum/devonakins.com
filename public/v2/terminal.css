@@ -972,3 +972,16 @@ h1, h2, p { margin-top: 0; }
 }
 .interface-shell[data-motion="off"] .hero-feature .hero-feature-link { transition: none; }
 
+
+/* Independently sourced public development on taller phones and tablets.
+   Small phone layouts retain their original safe-area clearance. */
+.readout-development { display: none; }
+@media (max-width: 960px) and (min-height: 761px) {
+  .telemetry { flex-basis: 112px; }
+  .telemetry-readout { grid-template-rows: 12px 33px 16px 13px; }
+  .readout-development {
+    display: block; grid-column: 1 / -1; grid-row: 4; min-width: 0;
+    margin: 0; color: #9bbec4; font-size: 9px; line-height: 1.2;
+    letter-spacing: .055em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+}

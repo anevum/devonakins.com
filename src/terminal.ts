@@ -327,6 +327,72 @@ document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("c
 // Load a public, static first-party snapshot once at startup; no private API or polling.
 void checkUsage();
 
+// Public GitHub activity is a separate signal; it never changes GPT token metrics.
+let publicTelemetryBusy = false;
+let lastPublicTelemetryCheck = 0;
+async function checkPublicTelemetry() {
+  const note = document.querySelector<HTMLElement>("#development-activity");
+  const detail = document.querySelector<HTMLElement>("#gpt-public-activity");
+  const mobile = document.querySelector<HTMLElement>("#mobile-development-activity");
+  if ((!note && !detail && !mobile) || publicTelemetryBusy || document.hidden) return;
+  publicTelemetryBusy = true;
+  lastPublicTelemetryCheck = Date.now();
+  let brief = "PUBLIC GITHUB / SIGNAL UNAVAILABLE · GPT STATS ARE DATED";
+  let expanded = "Public GitHub activity is temporarily unavailable. The ChatGPT figures on this page are historical.";
+  try {
+    const response = await fetch("/api/telemetry/public", {
+      cache: "no-store", credentials: "omit",
+      headers: {Accept: "application/json"},
+    });
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json"))
+      throw new Error("Telemetry unavailable");
+    const payload: unknown = await response.json();
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      throw new Error("Unexpected payload");
+    const data = payload as Record<string, unknown>;
+    const gpt = data.gpt as Record<string, unknown> | undefined;
+    const dev = data.development as Record<string, unknown> | undefined;
+    if (data.version !== 1 || !gpt || gpt.freshness !== "historical" ||
+      typeof gpt.asOf !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(gpt.asOf) ||
+      !dev || dev.source !== "GitHub public events API" ||
+      !["current", "unavailable"].includes(String(dev.freshness)) ||
+      !["available", "no-recent-public-development", "unavailable"].includes(String(dev.status)))
+      throw new Error("Invalid public telemetry");
+    if (dev.freshness === "current" && dev.status === "available") {
+      const kind = dev.latestActivityKind;
+      const when = dev.latestActivityAt;
+      if (!["push", "pull request", "release"].includes(String(kind)) ||
+        typeof when !== "string" || !Number.isFinite(Date.parse(when)) ||
+        Date.parse(when) > Date.now() + 60_000)
+        throw new Error("Invalid public development event");
+      const time = new Date(when).toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+      });
+      brief = "PUBLIC GITHUB / " + String(kind).toUpperCase() + " · " + time + " · GPT STATS DATED";
+      expanded = "Latest public GitHub " + String(kind) + " observed " + time +
+        ". This is not ChatGPT activity or proof of all coding work. GPT statistics remain a historical snapshot.";
+    } else if (dev.freshness === "current" && dev.status === "no-recent-public-development") {
+      brief = "PUBLIC GITHUB / NO RECENT VISIBLE EVENT · GPT STATS DATED";
+      expanded = "No recent qualifying public GitHub event in the most recent 30 profile events. Private development and ChatGPT usage are not represented.";
+    }
+  } catch {
+    // A failed source cannot be interpreted as zero events or live GPT usage.
+  } finally {
+    if (note && note.textContent !== brief) note.textContent = brief;
+    if (mobile && mobile.textContent !== brief) mobile.textContent = brief;
+    if (detail && detail.textContent !== expanded) detail.textContent = expanded;
+    publicTelemetryBusy = false;
+  }
+}
+void checkPublicTelemetry();
+const publicTelemetryTimer = window.setInterval(() => {
+  if (!document.hidden) void checkPublicTelemetry();
+}, 5 * 60_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && Date.now() - lastPublicTelemetryCheck >= 60_000)
+    void checkPublicTelemetry();
+});
+
 // Lighting changes are a purely local visual preference. No network or GPU calls.
 const portraitLights = ["amber", "teal", "violet"] as const;
 function syncLightControls() {
@@ -352,5 +418,6 @@ window.addEventListener("pagehide", (event) => {
   resetPointerDepth();
   if (event.persisted) return;
   window.clearInterval(clockTimer);
+  window.clearInterval(publicTelemetryTimer);
   window.clearTimeout(announcementTimer);
 });
