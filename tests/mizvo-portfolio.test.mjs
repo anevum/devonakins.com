@@ -40,3 +40,23 @@ test("Mizvo is a distinct portfolio identity with accurate prelaunch status", as
   assert.doesNotMatch(historic, /data-identity="rhen"/);
   assert.match(historic, /vesper-legacy/);
 });
+
+
+test("production verifier covers every published project and no stale finance title", async () => {
+  const { projects } = await import("../src/content.mjs");
+  const verifier = await readFile("scripts/verify-live.mjs", "utf8");
+  assert.match(verifier, /import \{ projects \} from "\.\.\/src\/content\.mjs"/);
+  assert.match(verifier, /projects\.map\(\(\{ slug, title \}\) =>/);
+  assert.doesNotMatch(verifier, /RHEN — Market Research/);
+  assert.match(verifier, /Vesper Legacy — Market Research/);
+  assert.match(verifier, /AGPL review build · not deployed/);
+  for (const project of projects) {
+    const html = await readFile("dist/work/" + project.slug + "/index.html", "utf8");
+    assert.ok(html.includes('class="route-title">' + project.title), project.slug + " title");
+    assert.ok(html.includes('rel="canonical" href="https://devonakins.com/work/' + project.slug + '/"'),
+      project.slug + " canonical route");
+  }
+  assert.ok(projects.some((project) => project.slug === "mizvo"));
+  assert.ok(projects.some((project) => project.slug === "vesper"));
+  assert.ok(projects.some((project) => project.slug === "rhen" && project.title.includes("Vesper Legacy")));
+});

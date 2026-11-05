@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { projects } from "../src/content.mjs";
 
 const origin = (process.env.VERIFY_ORIGIN || "https://devonakins.com").replace(/\/+$/, "");
 const expectedCommit = process.env.EXPECTED_COMMIT || process.env.GITHUB_SHA;
@@ -91,13 +92,14 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
 // Portfolio release-specific acceptance: public project pages must be live,
 // indexable, canonically linked, and powered by the same immersive shell.
 // These routes and research boundaries must survive an actual Worker deploy.
-const portfolio = [
-  ["/work/merit/", "Merit"],
-  ["/work/rhen-language/", "Rhen"],
-  ["/work/squelch/", "Squelch"],
-  ["/work/brandicade/", "Brandicade"],
-  ["/work/rhen/", "RHEN — Market Research"],
-];
+const portfolio = projects.map(({ slug, title }) => ["/work/" + slug + "/", title]);
+assert.equal(new Set(portfolio.map(([path]) => path)).size, portfolio.length, "unique public project routes");
+const archiveResponse = await request("/work/", { cache: "no-store" });
+assert.equal(archiveResponse.status, 200, "work archive response");
+const archiveMarkup = await archiveResponse.text();
+for (const [path] of portfolio) {
+  assert.ok(archiveMarkup.includes('href="' + path + '"'), path + " must appear in the public archive");
+}
 for (const [path, title] of portfolio) {
   const response = await request(path, { cache: "no-store" });
   assert.equal(response.status, 200, path + " production status");
@@ -112,7 +114,29 @@ for (const [path, title] of portfolio) {
   if (path === "/work/rhen-language/") {
     assert.match(page, /Local prototype/, "Rhen language prototype status");
     assert.match(page, /not a released compiler/, "Rhen non-release disclosure");
+    assert.match(page, /github\.com\/devonalanakins\/rhen/, "Rhen repository remains a language project");
   }
+  if (path === "/work/rhen/") {
+    assert.match(page, /Vesper Legacy — Market Research/, "historical market title is preserved");
+    assert.match(page, /github\.com\/devonalanakins\/vesper-legacy/, "historic market source has its own repository");
+  }
+  if (path === "/work/vesper/") {
+    assert.match(page, /not a live brokerage service/, "Vesper research is explicitly not live");
+    assert.match(page, /github\.com\/devonalanakins\/vesper/, "Vesper source repository");
+  }
+  if (path === "/work/mizvo/") {
+    assert.match(page, /AGPL review build · not deployed/, "Mizvo is not a live service");
+    assert.match(page, /github\.com\/devonalanakins\/mizvo/, "Mizvo source repository");
+  }
+}
+// Every first-party identity served by the release must decode and use the
+// correct Worker asset MIME, not only render in the offline preview.
+for (const name of ["merit", "rhen", "vesper", "squelch", "brandicade", "anevum", "ideaflow-mark", "devonstation-mark", "mizvo"]) {
+  const path = "/v2/identity/" + name + ".svg";
+  const response = await request(path, { cache: "no-store" });
+  assert.equal(response.status, 200, path + " identity asset");
+  assert.match(response.headers.get("content-type") || "", /image\/svg\+xml/, path + " correct SVG MIME");
+  assert.match(await response.text(), /<svg\b/, path + " actual vector content");
 }
 for (const [legacy, current] of [["aiei", "merit"], ["isl", "rhen-language"]]) {
   const response = await request("/work/" + legacy + "/?from=bookmark", { redirect: "manual" });
@@ -137,4 +161,4 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
-console.log("Passed: one GPT homepage stream, full GPT profile, Merit/Rhen featured links, canonical language/markets separation and portfolio routes, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
+console.log("Passed: GPT profile, all " + portfolio.length + " canonical portfolio pages, 9 original identity assets, Rhen/Vesper/Mizvo boundaries, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
