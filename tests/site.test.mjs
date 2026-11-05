@@ -324,8 +324,12 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
   assert.ok(verifier.includes('"/gpt/"'));
   assert.ok(verifier.includes('class="hero-feature" role="group"'));
-  for (const path of ["/work/merit/", "/work/rhen-language/", "/work/squelch/", "/work/brandicade/", "/work/rhen/"]) {
-    assert.ok(verifier.includes('"' + path + '"'), path + " must be checked after deployment");
+  const { projects } = await import("../src/content.mjs");
+  assert.ok(verifier.includes('projects.map(({ slug, title }) => ["/work/" + slug + "/", title])'),
+    "verification must dynamically include every public portfolio project");
+  for (const slug of ["merit", "rhen-language", "squelch", "brandicade", "rhen", "vesper", "mizvo"]) {
+    assert.ok(projects.some((project) => project.slug === slug),
+      slug + " must exist in generated portfolio and dynamic production verifier");
   }
   assert.ok(verifier.includes('not a released compiler'), "Rhen compiler prototype non-release disclosure checked live");
   assert.ok(verifier.includes('assert.deepEqual(await snapshotResponse.json(), expectedSnapshot'));

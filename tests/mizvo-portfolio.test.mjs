@@ -52,7 +52,8 @@ test("production verifier covers every published project and no stale finance ti
   assert.match(verifier, /AGPL review build · not deployed/);
   for (const project of projects) {
     const html = await readFile("dist/work/" + project.slug + "/index.html", "utf8");
-    assert.ok(html.includes('class="route-title">' + project.title), project.slug + " title");
+    const htmlTitle = project.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    assert.ok(html.includes('class="route-title">' + htmlTitle), project.slug + " HTML-escaped title");
     assert.ok(html.includes('rel="canonical" href="https://devonakins.com/work/' + project.slug + '/"'),
       project.slug + " canonical route");
   }
