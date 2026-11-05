@@ -539,7 +539,7 @@ def check_owner_control(browser, engine, origin, output, axe_source):
         page.on("pageerror", lambda e: errors.append(str(e)))
         label = f"owner-{engine}-{width}x{height}"
         try:
-            page.goto(origin + "/v2/", wait_until="load")
+            page.goto(origin + "/v2/listening-owner.css", wait_until="load")
             page.route("**/api/listening/admin/status", lambda route: route.fulfill(
                 status=200, content_type="application/json", body=json.dumps({
                     "connected": True, "reauthorizationRequired": False,
