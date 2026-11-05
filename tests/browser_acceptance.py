@@ -475,6 +475,28 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     page.locator("#tab-home").click()
                     page.wait_for_url(origin + "/#home")
                     assert page.locator("#panel-home").is_visible(), route + " canonical navigation"
+            if origin and (width, height) == (390, 844):
+                listening_page = page.goto(origin + "/listening/", wait_until="load")
+                assert listening_page and listening_page.status == 200
+                assert page.locator("#interface-shell").get_attribute("data-route-page") == "true"
+                assert page.locator("#interface-shell").get_attribute("data-initial-view") == "listening"
+                assert page.locator("#panel-listening").is_visible()
+                assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+                assert page.locator("#presence-ticker").is_visible()
+                check_overflow("listening deep link")
+                if axe_source:
+                    page.add_script_tag(content=axe_source)
+                    listening_violations = page.evaluate("""async () => {
+                      const r = await axe.run(document, {
+                        runOnly: {type:'tag', values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                      });
+                      return r.violations.map(v => ({id:v.id,nodes:v.nodes.map(n=>n.target).slice(0,5)}));
+                    }""")
+                    assert not listening_violations, f"/listening/ axe WCAG: {listening_violations}"
+                page.locator("#tab-home").click()
+                page.wait_for_url(origin + "/#home")
+                assert page.locator("#panel-home").is_visible()
+
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",
