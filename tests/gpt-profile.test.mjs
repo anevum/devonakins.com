@@ -94,4 +94,5 @@ test("filtered public activity panel stays distinct from dated GPT profile", () 
   assert.match(html, /id="gpt-event-state"[^>]*role="status"/);
   assert.ok(html.indexOf("gpt-public-development-heading") < html.indexOf("gpt-activity-heading"));
   assert.match(html, /not ChatGPT usage, private development/);
+  assert.match(html, /Up to eight qualifying events sampled from the latest 30/);
 });

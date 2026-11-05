@@ -143,7 +143,7 @@ export function renderPublicGptProfile(input) {
       <header class="gpt-live-heading">
         <div><span class="gpt-section-index">00 / DEVELOPMENT</span>
           <h2 id="gpt-public-development-heading">Development, in public.</h2>
-          <p>Recent public GitHub events. This feed is not ChatGPT usage, private development, or proof that coding is happening now.</p>
+          <p>Up to eight qualifying events sampled from the latest 30 public GitHub profile events. This feed is not ChatGPT usage, private development, or proof that coding is happening now.</p>
         </div>
         <span class="gpt-live-source">GITHUB / PUBLIC EVENTS</span>
       </header>

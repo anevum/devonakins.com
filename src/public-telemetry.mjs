@@ -9,6 +9,7 @@ const types = new Map([
   ["PullRequestEvent", "pull request"],
   ["ReleaseEvent", "release"],
 ]);
+const publicGithubScope = "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity";
 const iso = value => typeof value === "string" && !Number.isNaN(Date.parse(value))
   ? new Date(value).toISOString() : null;
 const safeDay = value => typeof value === "string" &&
@@ -50,7 +51,7 @@ export function projectPublicGithubEvents(events, now = new Date()) {
     .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
   return {
     source: "GitHub public events API",
-    scope: "latest event found among up to 30 public profile events; not all work",
+    scope: publicGithubScope,
     freshness: "current",
     checkedAt: now.toISOString(),
     status: observed.length ? "available" : "no-recent-public-development",
@@ -63,7 +64,7 @@ export function projectPublicGithubEvents(events, now = new Date()) {
 export function unavailablePublicGithub(now = new Date()) {
   return {
     source: "GitHub public events API",
-    scope: "latest event found among up to 30 public profile events; not all work",
+    scope: publicGithubScope,
     freshness: "unavailable",
     checkedAt: now.toISOString(),
     status: "unavailable",
@@ -86,7 +87,7 @@ export function validPublicGithubSignal(value, now = new Date()) {
   ].sort();
   if (Object.keys(value).sort().join("|") !== keys.join("|") ||
       value.source !== "GitHub public events API" ||
-      value.scope !== "latest event found among up to 30 public profile events; not all work" ||
+      value.scope !== publicGithubScope ||
       typeof value.checkedAt !== "string" ||
       !Number.isFinite(Date.parse(value.checkedAt)) ||
       new Date(value.checkedAt).toISOString() !== value.checkedAt ||

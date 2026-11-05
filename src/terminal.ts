@@ -336,6 +336,7 @@ let lastPublicTelemetryCheck = 0;
 let publicActivity: PublicActivity[] = [];
 let publicActivityState: PublicActivityState = "unavailable";
 let publicActivityFilter: "all" | PublicActivity["kind"] = "all";
+let lastPublicTelemetryCheckedAt: string | null = null;
 
 function validPublicActivity(value: unknown, now = Date.now()): value is PublicActivity[] {
   if (!Array.isArray(value) || value.length > 8) return false;
@@ -384,14 +385,19 @@ function renderPublicActivity() {
     fragment.append(row);
   }
   list.replaceChildren(fragment);
-  status.textContent = publicActivityState === "unavailable"
+  const checkedAtLabel = lastPublicTelemetryCheckedAt
+    ? " Source checked " + new Date(lastPublicTelemetryCheckedAt).toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    }) + "."
+    : "";
+  status.textContent = (publicActivityState === "unavailable"
     ? "GitHub source unavailable. No event data is presented as live."
     : publicActivityState === "empty"
       ? "No qualifying public events among the latest 30 public GitHub profile events."
       : visible.length === 0
         ? "No events match this filter within the current public sample."
         : "Showing " + visible.length + " of " + publicActivity.length +
-          " recent public events. GPT usage is a historical snapshot.";
+          " qualifying events in this bounded public sample. GPT usage remains a historical snapshot.") + checkedAtLabel;
 }
 
 document.querySelectorAll<HTMLButtonElement>("[data-gpt-event-filter]").forEach((button) => {
@@ -415,6 +421,7 @@ async function checkPublicTelemetry() {
   let expanded = "Public GitHub activity is temporarily unavailable. The ChatGPT figures on this page are historical.";
   let nextEvents: PublicActivity[] = [];
   let nextState: PublicActivityState = "unavailable";
+  let nextCheckedAt: string | null = null;
   try {
     const response = await fetch("/api/telemetry/public", {
       cache: "no-store", credentials: "omit",
@@ -435,6 +442,14 @@ async function checkPublicTelemetry() {
         !["available", "no-recent-public-development", "unavailable"].includes(String(dev.status)) ||
         !validPublicActivity(dev.recentActivity))
       throw new Error("Invalid public telemetry");
+    const checkedAt = dev.checkedAt;
+    const checkedTime = typeof checkedAt === "string" ? Date.parse(checkedAt) : NaN;
+    if (!Number.isFinite(checkedTime) ||
+        new Date(checkedTime).toISOString() !== checkedAt ||
+        checkedTime > Date.now() + 60_000 ||
+        checkedTime < Date.now() - 4 * 60 * 60_000 - 60_000)
+      throw new Error("Stale or invalid public source check time");
+    nextCheckedAt = checkedAt as string;
     if (dev.freshness === "current" && dev.status === "available") {
       const kind = dev.latestActivityKind;
       const when = dev.latestActivityAt;
@@ -467,6 +482,7 @@ async function checkPublicTelemetry() {
   } finally {
     publicActivity = nextEvents;
     publicActivityState = nextState;
+    lastPublicTelemetryCheckedAt = nextCheckedAt;
     renderPublicActivity();
     if (note && note.textContent !== brief) note.textContent = brief;
     if (mobile && mobile.textContent !== brief) mobile.textContent = brief;

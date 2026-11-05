@@ -407,6 +407,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             "gpt": {"freshness": "historical", "asOf": "2026-11-04"},
                             "development": {
                                 "source": "GitHub public events API", "freshness": "current",
+                                "checkedAt": clock.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                                 "status": "available", "latestActivityAt": events[0]["at"],
                                 "latestActivityKind": events[0]["kind"], "recentActivity": events,
                             },
@@ -436,6 +437,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
+                        assert "Source checked" in page.locator("#gpt-event-state").inner_text()
                         assert "PUBLIC PUSH" in page.locator("#gpt-event-list").inner_text()
                         page.locator('[data-gpt-event-filter="pull request"]').click()
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 1

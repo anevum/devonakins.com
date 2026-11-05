@@ -65,6 +65,7 @@ assert.deepEqual(Object.keys(publicValue.development).sort(),
   ["checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
    "recentActivity", "scope", "source", "status"]);
 assert.equal(publicValue.development.source, "GitHub public events API");
+assert.equal(publicValue.development.scope, "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity");
 assert.ok(Array.isArray(publicValue.development.recentActivity));
 assert.ok(publicValue.development.recentActivity.length <= 8);
 let lastEventTime = Infinity;

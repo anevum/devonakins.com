@@ -68,8 +68,11 @@ test("public event timeline is bounded, sanitized and cache-poisoning resistant"
   }));
   const result = projectPublicGithubEvents(events, date);
   assert.equal(result.recentActivity.length, 8);
+  assert.equal(result.scope, "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity");
+  assert.equal(unavailablePublicGithub(date).scope, result.scope);
   assert.deepEqual(result.recentActivity[0], {at: date.toISOString(), kind: "push"});
   assert.equal(validPublicGithubSignal(result, date), true);
+  assert.equal(validPublicGithubSignal({...result, scope: "latest event only"}, date), false);
   assert.doesNotMatch(JSON.stringify(result), /privateNote|private payload|do-not-publish/);
   assert.equal(validPublicGithubSignal({...result, recentActivity: [
     {...result.recentActivity[0], repository: "private"}, ...result.recentActivity.slice(1),

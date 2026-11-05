@@ -83,6 +83,8 @@ assert.equal(telemetry.gpt.count, expectedSnapshot.count, "historical token coun
 assert.equal(telemetry.gpt.asOf, expectedSnapshot.asOf, "historical capture date preserved");
 assert.equal(telemetry.gpt.freshness, "historical", "no false claim of live ChatGPT data");
 assert.equal(telemetry.development.source, "GitHub public events API");
+assert.equal(telemetry.development.scope,
+  "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity", "source sampling boundaries accurately described");
 assert.ok(Array.isArray(telemetry.development.recentActivity) &&
   telemetry.development.recentActivity.length <= 8,
   "bounded public GitHub timeline required");
