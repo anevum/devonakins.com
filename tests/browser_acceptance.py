@@ -437,6 +437,15 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator("#gpt-event-list").count() == 1
                         assert page.locator(".gpt-live-panel").is_visible()
                         assert page.locator("[data-gpt-event-filter]").count() == 4
+                        if width == 320:
+                            # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
+                            buttons = page.locator("[data-gpt-event-filter]")
+                            boxes = [buttons.nth(i).bounding_box() for i in range(4)]
+                            assert all(box and box["height"] >= 44 for box in boxes)
+                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2
+                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2
+                            assert boxes[2]["y"] > boxes[0]["y"] + 40
+                            assert boxes[0]["x"] < boxes[1]["x"]
                         page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
