@@ -14,7 +14,7 @@
   <path d="M14 24L43 24M25 36H54M20 93H38" stroke="#ffa6d2" stroke-width="3" stroke-linecap="round" opacity=".8"/>
   <path d="M123 20V94" stroke="#eb73bb" stroke-width="1" opacity=".65"/>
   <g transform="skewX(-7)" stroke="url(#metal)" stroke-width="10.5" stroke-linecap="square" stroke-linejoin="miter">
-    <path d="M169 29H214L169 56H214L169 82H214"/>
+    <path d="M215 29H181C167 29 164 38 164 43C164 51 170 55 182 55H199C211 55 215 60 215 68C215 76 207 81 196 81H165"/>
     <path d="M245 29C225 29 222 43 222 55C222 70 232 81 245 81C260 81 269 72 269 55C269 38 260 29 245 29ZM246 70L274 90"/>
     <path d="M300 29V66C300 88 351 88 351 66V29"/>
     <path d="M384 29V81M384 29H429M384 55H422M384 81H429"/>
