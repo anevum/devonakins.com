@@ -447,6 +447,24 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator('[data-gpt-event-filter="all"]').get_attribute("aria-pressed") == "false"
                         page.locator('[data-gpt-event-filter="all"]').click()
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                        # Falsify freshness: a stale upstream checkedAt must fail closed
+                        # and replace every previously displayed card with unavailable.
+                        valid_checked_at = public_fixture["development"]["checkedAt"]
+                        public_fixture["development"]["checkedAt"] = "2000-01-01T00:00:00.000Z"
+                        page.reload(wait_until="load")
+                        page.wait_for_function("""() =>
+                            document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'unavailable'
+                        """)
+                        assert page.locator("#gpt-event-list .gpt-event-card").count() == 0
+                        assert "unavailable" in page.locator("#gpt-event-state").inner_text().lower()
+                        # A fresh, independently validated provider response can recover.
+                        public_fixture["development"]["checkedAt"] = valid_checked_at
+                        page.reload(wait_until="load")
+                        page.wait_for_function("""() =>
+                            document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'ready'
+                        """)
+                        assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                        assert "Source checked" in page.locator("#gpt-event-state").inner_text()
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
