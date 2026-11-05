@@ -7,7 +7,7 @@
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdir, open, lstat, rename } from "node:fs/promises";
+import { mkdir, open, lstat, rename, chmod } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -56,7 +56,8 @@ export function parseCallback(target, expectedState, port = DEFAULT_PORT) {
   if (typeof target !== "string" || target.length > 4800)
     throw new Error("Invalid callback");
   const callback = new URL(target, redirectURI(port));
-  if (callback.pathname !== "/callback" || callback.searchParams.getAll("state").length !== 1)
+  if (callback.origin !== new URL(redirectURI(port)).origin ||
+      callback.pathname !== "/callback" || callback.searchParams.getAll("state").length !== 1)
     throw new Error("Invalid callback");
   if (!stateMatches(callback.searchParams.get("state"), expectedState))
     throw new Error("OAuth state mismatch");
@@ -72,6 +73,9 @@ export function parseCallback(target, expectedState, port = DEFAULT_PORT) {
 export async function exchangeCode({ clientId, code, verifier, port = DEFAULT_PORT, fetcher = fetch }) {
   if (typeof code !== "string" || code.length === 0 || code.length > 4000)
     throw new Error("Invalid authorization code");
+  if (typeof clientId !== "string" || !/^[A-Za-z0-9]{16,64}$/.test(clientId))
+    throw new Error("Invalid Spotify client ID");
+  challengeFromVerifier(verifier);
   const response = await fetcher("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -107,6 +111,7 @@ async function secureDirectory(directory) {
   const info = await lstat(directory);
   if (!info.isDirectory() || info.isSymbolicLink())
     throw new Error("Credential directory is not a real directory");
+  if (info.mode & 0o077) await chmod(directory, 0o700);
 }
 async function writeSecret(path, contents, replace = false) {
   // Refuse overwriting a prior authorization unless the owner requests it.
@@ -127,6 +132,13 @@ export async function saveCredentials({ directory, clientId, refreshToken, scope
   await secureDirectory(directory);
   const secretPath = join(directory, "spotify-refresh-token");
   const metadataPath = join(directory, "spotify-connection.json");
+  if (!replace) {
+    // Prevent a half-complete previous authorization being silently reused.
+    for (const path of [secretPath, metadataPath]) {
+      try { await lstat(path); throw new Error("Spotify credentials already exist. Use --replace to reauthorize."); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+    }
+  }
   // Keep metadata non-secret. Never print token content or store access tokens.
   await writeSecret(secretPath, refreshToken + "\n", replace);
   const metadata = {
@@ -148,11 +160,11 @@ function response(request, status, message) {
   });
   request.end(message + "\n");
 }
-export async function runLocalAuthorization({ clientId, port = DEFAULT_PORT, replace = false, output = console, fetcher = fetch } = {}) {
+export async function runLocalAuthorization({ clientId, port = DEFAULT_PORT, replace = false, output = console, fetcher = fetch, directory = resolve(process.cwd(), ".local") } = {}) {
   const verifier = makeVerifier();
   const state = makeState();
   const url = authorizationURL({ clientId, port, verifier, state });
-  const localDirectory = resolve(process.cwd(), ".local");
+  const localDirectory = directory;
   let rejectWait;
   let resolveWait;
   let attempts = 0;
