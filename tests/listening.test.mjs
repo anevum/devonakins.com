@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import assets from "../.release/assets.mjs";
 import { createHandler } from "../src/worker.mjs";
-import { createPresenceReader, projectPlayback } from "../src/spotify-presence.mjs";
+import { createPresenceReader, projectPlayback, retryDelayMs } from "../src/spotify-presence.mjs";
 
 const site = createHandler(assets, { version: "test", commit: "synthetic" });
 const url = (path, init) => site.fetch(new Request("https://devonakins.com" + path, init));
@@ -187,4 +187,38 @@ test("Listening panel, canonical route and persistent navigation are available a
   assert.equal((await url("/listening")).status, 308);
   const siteMap = await (await url("/sitemap.xml")).text();
   assert.match(siteMap, /https:\/\/devonakins.com\/listening\//);
+});
+
+
+test("PKCE refresh omits the client secret; rate limiting respects Retry-After", async () => {
+  let timestamp = Date.parse("2026-11-05T00:00:00.000Z");
+  let refreshCount = 0, playerCount = 0;
+  const fetcher = async (url, options) => {
+    if (url.includes("accounts.spotify.com")) {
+      refreshCount++;
+      const body = new URLSearchParams(options.body);
+      assert.equal(body.get("client_id"), "sample-client");
+      assert.equal(body.get("grant_type"), "refresh_token");
+      assert.equal(options.headers.Authorization, undefined);
+      return new Response(JSON.stringify({ access_token: "placeholder_access_12345", expires_in: 3600 }), { status: 200 });
+    }
+    playerCount++;
+    if (playerCount === 1)
+      return new Response("429", { status: 429, headers: { "Retry-After": "120" } });
+    return new Response(JSON.stringify(sample()), { status: 200 });
+  };
+  const reader = createPresenceReader({ fetcher, now: () => timestamp, ttlMs: 60_000 });
+  const env = { SPOTIFY_PUBLIC_NOW_PLAYING: "true", SPOTIFY_SHARE_TRACK_DETAILS: "true",
+    SPOTIFY_CLIENT_ID: "sample-client", SPOTIFY_REFRESH_TOKEN: "placeholder_refresh" };
+  assert.equal((await (await reader(env)).json()).mode, "unavailable");
+  timestamp += 65_000;
+  assert.equal((await (await reader(env)).json()).mode, "unavailable");
+  assert.equal(playerCount, 1, "cooldown must prevent a repeated rate-limited call");
+  timestamp += 56_000;
+  assert.equal((await (await reader(env)).json()).mode, "playing");
+  assert.equal(playerCount, 2);
+  assert.equal(refreshCount, 1, "cached access token must be reused");
+  assert.equal(retryDelayMs("120"), 120_000);
+  assert.equal(retryDelayMs("not-a-delay"), 60_000);
+  assert.equal(retryDelayMs("9999999"), 900_000);
 });
