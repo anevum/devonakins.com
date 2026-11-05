@@ -116,6 +116,12 @@ function contentFor(path, projects, gptSnapshot) {
     };
   }
 
+  if (path === "/listening/") {
+    return {
+      view: "listening", title: "Listening — Devon Alan Akins",
+      description: "Music, the work behind it, and a private-by-default Spotify listening signal.",
+    };
+  }
   if (path === "/gpt/") {
     return {
       view: "home", title: "GPT profile — Devon Alan Akins",
@@ -222,7 +228,7 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnaps
     (path === "/gpt/" ? '\n  <link rel="stylesheet" href="/v2/gpt-profile.css">' : ""), "style");
   replaceExactly('class="brand" href="#home"', 'class="brand" href="/#home"', "brand link");
   replaceExactly('<span class="topbar-version">/ ORIGINAL WORKS</span>',
-    '<span class="topbar-version">/ ' + (data.view === "work" ? "WORK FILES" : data.view === "contact" ? "OPEN CHANNEL" : "PERSONAL RECORD") + '</span>', "header context");
+    '<span class="topbar-version">/ ' + (data.view === "work" ? "WORK FILES" : data.view === "contact" ? "OPEN CHANNEL" : data.view === "listening" ? "LISTENING" : "PERSONAL RECORD") + '</span>', "header context");
   replaceExactly('data-view="home" data-motion="off" data-light="amber"',
     'data-view="' + data.view + '" data-initial-view="' + data.view + '" data-route-page="true" data-motion="off" data-light="amber"', "initial route view");
 
@@ -236,6 +242,10 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnaps
     html = html.replace(otherTab, (tag) => tag.replace('aria-selected="false" tabindex="-1"', 'aria-selected="true" tabindex="0"'));
   }
 
+  // The Listening route shares the full custom interactive panel with /#listening.
+  // Replacing it with a generic deep-link layout would remove accessible
+  // Spotify state elements and make the live ticker silently non-functional.
+  if (path !== "/listening/") {
   const section = new RegExp('(<section class="panel[^"]*" id="panel-' + data.view + '"[^>]*>)[\\s\\S]*?(</section>)', "g");
   const hits = [...html.matchAll(section)];
   if (hits.length !== 1) throw new Error("Missing or ambiguous target panel on route " + path);
@@ -245,6 +255,7 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnaps
     body: data.body, actions: data.actions, brand: data.brand,
   });
   html = html.replace(section, (_, open, close) => open + '\n' + content + '\n' + close);
+  }
   if (path === "/404/") {
     // The Worker already sends the correct 404 status. Don't index missing pages.
     html = html.replace('<link rel="canonical" href="https://devonakins.com/404/">',

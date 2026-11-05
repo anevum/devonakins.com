@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -324,6 +325,59 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             check_overflow("contact")
             assert "devon@anevum.com" in page.locator("#panel-contact").inner_text()
 
+            # New sixth view and site-wide presence signal: inspect real layout
+            # and keyboard/touch behavior on all supported responsive sizes.
+            assert page.locator("#tab-listening").count() == 1
+            assert page.locator("#presence-ticker").is_visible()
+            presence_box = page.locator("#presence-ticker").bounding_box()
+            assert presence_box and presence_box["width"] >= 70, (label, presence_box)
+            assert presence_box["x"] >= 0 and (
+                presence_box["x"] + presence_box["width"] <= width + 1
+            ), (label, "ticker clipped", presence_box)
+            page.locator("#tab-listening").click()
+            assert page.locator("#panel-listening").is_visible()
+            check_overflow("listening")
+            assert page.locator("#listening-track-title").is_visible()
+            assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+            if origin and (width, height) in [(390, 844), (1440, 900)]:
+                presence_path = "**/api/listening/now"
+                live_body = json.dumps({
+                    "version": 1,
+                    "mode": "playing",
+                    "detailsVisible": True,
+                    "updatedAt": page.evaluate("new Date().toISOString()"),
+                    "track": {
+                        "title": "Synthetic QA track",
+                        "artist": "Synthetic QA artist",
+                        "url": "https://open.spotify.com/track/1234567890123456789012",
+                    },
+                })
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json", body=live_body
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#presence-ticker-label')?.textContent === 'IN THE ZONE'
+                """)
+                assert page.locator("#listening-track-title").inner_text() == "Synthetic QA track"
+                assert page.locator("#listening-open-track").get_attribute("href").startswith(
+                    "https://open.spotify.com/track/"
+                )
+                page.unroute(presence_path)
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json",
+                    body='{"version":1,"mode":"hidden","detailsVisible":false}'
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#presence-ticker-label')?.textContent === 'LISTENING PRIVATE'
+                """)
+                assert "Synthetic QA track" not in page.locator("#panel-listening").inner_text()
+                assert page.locator("#listening-open-track").is_hidden()
+                page.unroute(presence_path)
+            page.locator("#tab-contact").click()
+            assert page.locator("#panel-contact").is_visible()
+
             violations = []
             if axe_source:
                 page.add_script_tag(content=axe_source)
@@ -422,6 +476,28 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     page.locator("#tab-home").click()
                     page.wait_for_url(origin + "/#home")
                     assert page.locator("#panel-home").is_visible(), route + " canonical navigation"
+            if origin and (width, height) == (390, 844):
+                listening_page = page.goto(origin + "/listening/", wait_until="load")
+                assert listening_page and listening_page.status == 200
+                assert page.locator("#interface-shell").get_attribute("data-route-page") == "true"
+                assert page.locator("#interface-shell").get_attribute("data-initial-view") == "listening"
+                assert page.locator("#panel-listening").is_visible()
+                assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+                assert page.locator("#presence-ticker").is_visible()
+                check_overflow("listening deep link")
+                if axe_source:
+                    page.add_script_tag(content=axe_source)
+                    listening_violations = page.evaluate("""async () => {
+                      const r = await axe.run(document, {
+                        runOnly: {type:'tag', values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                      });
+                      return r.violations.map(v => ({id:v.id,nodes:v.nodes.map(n=>n.target).slice(0,5)}));
+                    }""")
+                    assert not listening_violations, f"/listening/ axe WCAG: {listening_violations}"
+                page.locator("#tab-home").click()
+                page.wait_for_url(origin + "/#home")
+                assert page.locator("#panel-home").is_visible()
+
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",
@@ -438,6 +514,77 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.screenshot(path=str(output / f"failed-{label}.png"), full_page=True)
             except Exception:
                 pass
+            raise
+        finally:
+            context.close()
+    return results
+
+
+
+def check_owner_control(browser, engine, origin, output, axe_source):
+    """Inspect the real first-party owner markup without any Spotify account."""
+    if not origin:
+        return []
+    markup = subprocess.check_output([
+        "node", "--input-type=module", "-e",
+        "import {renderListeningOwner} from './src/listening-owner-page.mjs';"
+        "process.stdout.write(renderListeningOwner());",
+    ], text=True)
+    results = []
+    for width, height in [(320, 700), (390, 844), (768, 900), (1440, 900)]:
+        context = browser.new_context(viewport={"width": width, "height": height},
+                                      reduced_motion="reduce")
+        page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        label = f"owner-{engine}-{width}x{height}"
+        try:
+            page.goto(origin + "/v2/listening-owner.css", wait_until="load")
+            page.route("**/api/listening/admin/status", lambda route: route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({
+                    "connected": True, "reauthorizationRequired": False,
+                    "publishingAllowed": False, "publicEnabled": False,
+                    "showDetails": False, "reauthorizeBy": "2027-05-05T00:00:00.000Z"
+                })
+            ))
+            page.set_content(markup, wait_until="load")
+            page.wait_for_function("""() =>
+              document.querySelector('#connection-state')?.textContent === 'CONNECTED'
+            """)
+            assert page.locator("#connect").is_enabled()
+            assert page.locator("#disconnect").is_enabled()
+            assert page.locator("#public-status").is_disabled()
+            assert page.locator("#track-details").is_disabled()
+            assert page.locator("#save-settings").is_disabled()
+            assert page.locator("h1").inner_text().startswith("Listen anywhere.")
+            geometry = page.evaluate("""() => ({
+              overflow: document.documentElement.scrollWidth - innerWidth,
+              button: document.querySelector('#connect').getBoundingClientRect(),
+              width: innerWidth,
+            })""")
+            assert geometry["overflow"] <= 1, (label, "horizontal overflow", geometry)
+            assert geometry["button"]["width"] >= 80, (label, "tiny touch control", geometry)
+            if axe_source:
+                page.add_script_tag(content=axe_source)
+                violations = page.evaluate("""async () => {
+                  const result = await axe.run(document, {
+                    runOnly: {type:'tag',
+                      values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                  });
+                  return result.violations.map(v => ({
+                    id:v.id, nodes:v.nodes.map(n=>n.target).slice(0,5)
+                  }));
+                }""")
+                assert not violations, f"{label} accessibility: {violations}"
+            assert not errors, f"{label} script errors: {errors}"
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"{label}.png"), full_page=True)
+            results.append({"engine": engine, "viewport": [width, height],
+                            "owner_page": "passed", "axe": "passed" if axe_source else "not-run"})
+            print(f"PASS {label}: private UI, reflow, safe defaults, accessibility")
+        except Exception:
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"failed-{label}.png"), full_page=True)
             raise
         finally:
             context.close()
@@ -485,6 +632,9 @@ def main():
                 try:
                     all_results.extend(
                         check(browser, name, html, css, script, axe_source, args.out, origin)
+                    )
+                    all_results.extend(
+                        check_owner_control(browser, name, origin, args.out, axe_source)
                     )
                 finally:
                     browser.close()

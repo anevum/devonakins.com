@@ -240,6 +240,12 @@ export const pages = [
       "Devon Akins is a stay-at-home father, writer, and software builder helping improve real workflows and developing ANEVUM.",
   },
   {
+    path: "/listening/",
+    key: "listening",
+    title: "Listening — Devon Alan Akins",
+    description: "The music behind my work, with a private-by-default live listening signal and curated collections.",
+  },
+  {
     path: "/gpt/",
     key: "gpt",
     title: "GPT profile — Devon Alan Akins",

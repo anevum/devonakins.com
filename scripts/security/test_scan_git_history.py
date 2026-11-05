@@ -29,6 +29,29 @@ class HistoryScanTest(unittest.TestCase):
             self.assertIn('github-token', result.stdout)
             self.assertNotIn(token, result.stdout + result.stderr)
 
+    def test_exact_historical_mock_is_exempt_but_other_assignments_are_detected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = dict(os.environ, GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Fixture',
+                       GIT_AUTHOR_EMAIL='fixture@example.test', GIT_COMMITTER_NAME='Fixture',
+                       GIT_COMMITTER_EMAIL='fixture@example.test')
+            subprocess.run(['git', 'init', '-q'], cwd=temp, env=env, check=True)
+            known = 'access_token: "placeholder_access_12345"'
+            Path(temp, 'test.txt').write_text(known)
+            subprocess.run(['git', 'add', '.'], cwd=temp, env=env, check=True)
+            subprocess.run(['git', 'commit', '-qm', 'known inert example'], cwd=temp, env=env, check=True)
+            clean = subprocess.run([sys.executable, str(SCANNER)], cwd=temp, env=env,
+                                   capture_output=True, text=True)
+            self.assertEqual(clean.returncode, 0, clean.stdout)
+            unsafe = 'api_key: "' + 'A' * 36 + '"'
+            Path(temp, 'test.txt').write_text(known + '\\n' + unsafe)
+            subprocess.run(['git', 'add', '.'], cwd=temp, env=env, check=True)
+            subprocess.run(['git', 'commit', '-qm', 'other synthetic credential'], cwd=temp, env=env, check=True)
+            blocked = subprocess.run([sys.executable, str(SCANNER)], cwd=temp, env=env,
+                                     capture_output=True, text=True)
+            self.assertEqual(blocked.returncode, 1)
+            self.assertIn('sensitive-assignment', blocked.stdout)
+            self.assertNotIn(unsafe, blocked.stdout)
+
     def test_clean_history_and_binary_are_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             env = dict(os.environ, GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Fixture',

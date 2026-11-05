@@ -348,9 +348,144 @@ for (const button of lightButtons) {
   });
 }
 
+
+// Public listening signal. Playback is a personal "coding mode" convention,
+// NOT independently verified IDE activity. Only a same-origin public Worker
+// projection is read; no Spotify credentials or OAuth flows run in the browser.
+type PublicPresence = {
+  version: 1;
+  mode: "hidden" | "off_air" | "playing" | "unavailable";
+  detailsVisible: boolean;
+  updatedAt?: string;
+  track?: {
+    title: string;
+    artist: string;
+    album?: string;
+    url: string;
+    image?: string | null;
+  };
+};
+
+let presenceRequestActive = false;
+const presenceTicker = document.querySelector<HTMLAnchorElement>("#presence-ticker");
+const presenceLabel = document.querySelector<HTMLElement>("#presence-ticker-label");
+const presenceDetail = document.querySelector<HTMLElement>("#presence-ticker-detail");
+const listeningState = document.querySelector<HTMLElement>("#listening-state");
+const listeningVisibility = document.querySelector<HTMLElement>("#listening-visibility");
+const listeningKicker = document.querySelector<HTMLElement>("#listening-now-label");
+const listeningTitle = document.querySelector<HTMLElement>("#listening-track-title");
+const listeningArtist = document.querySelector<HTMLElement>("#listening-track-artist");
+const listeningUpdated = document.querySelector<HTMLElement>("#listening-updated-at");
+const listeningTrackLink = document.querySelector<HTMLAnchorElement>("#listening-open-track");
+const listeningArtwork = document.querySelector<HTMLImageElement>("#listening-cover-image");
+
+const presenceText = (element: HTMLElement | null, value: string) => {
+  if (element) element.textContent = value;
+};
+
+function applyPresence(candidate: unknown) {
+  let data: PublicPresence = {
+    version: 1, mode: "unavailable", detailsVisible: false,
+  };
+  if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+    const value = candidate as Partial<PublicPresence>;
+    if (value.version === 1 &&
+        ["hidden", "off_air", "playing", "unavailable"].includes(value.mode ?? "")) {
+      data = value as PublicPresence;
+    }
+  }
+  let mode = data.mode;
+  if (mode === "playing") {
+    const updatedMs = Date.parse(data.updatedAt || "");
+    // A frozen tab or stale cache must never falsely claim current playback.
+    if (!Number.isFinite(updatedMs) || Math.abs(Date.now() - updatedMs) > 150_000) mode = "unavailable";
+  }
+
+  const details = mode === "playing" && data.detailsVisible === true &&
+    data.track && typeof data.track.title === "string" &&
+    typeof data.track.artist === "string" &&
+    /^https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}$/.test(data.track.url)
+    ? data.track : null;
+
+  if (presenceTicker) {
+    presenceTicker.dataset.mode = mode;
+    const label = mode === "playing" ? "IN THE ZONE"
+      : mode === "off_air" ? "OFF AIR"
+      : mode === "hidden" ? "LISTENING PRIVATE" : "SIGNAL UNAVAILABLE";
+    presenceTicker.setAttribute("aria-label", label + ". Open listening section.");
+    presenceText(presenceLabel, label);
+  }
+  if (presenceDetail) {
+    presenceDetail.hidden = !details;
+    presenceDetail.textContent = details ? details.title + " — " + details.artist : "";
+  }
+  presenceText(listeningState, mode === "playing" ? "ON AIR"
+    : mode === "unavailable" ? "UNAVAILABLE" : "OFF AIR");
+  presenceText(listeningVisibility, mode === "hidden" ? "PRIVATE BY DEFAULT"
+    : mode === "unavailable" ? "SIGNAL UNAVAILABLE" : "PUBLIC SIGNAL ENABLED");
+  presenceText(listeningKicker, mode === "playing" ? "CODING MODE / SPOTIFY ACTIVE"
+    : mode === "hidden" ? "NOT BROADCASTING"
+    : mode === "off_air" ? "NO ACTIVE PLAYBACK" : "NO CURRENT SIGNAL");
+  presenceText(listeningTitle, details ? details.title :
+    mode === "playing" ? "In the zone." :
+    mode === "off_air" ? "Between tracks." :
+    mode === "hidden" ? "The soundtrack stays personal." : "Signal temporarily unavailable.");
+  presenceText(listeningArtist, details ? details.artist :
+    mode === "playing" ? "Spotify playback is my chosen coding-mode signal." :
+    mode === "off_air" ? "Spotify isn't currently playing. That doesn't mean I've stopped creating." :
+    mode === "hidden" ? "Connect and opt in to Spotify sharing to show the music behind my work." :
+    "Listening data could not be refreshed. No old track is presented as live.");
+  presenceText(listeningUpdated, mode === "playing" ? "ACTIVE SPOTIFY PLAYBACK"
+    : mode === "hidden" ? "PUBLIC SHARING OFF"
+    : mode === "off_air" ? "NO CURRENT TRACK" : "NOT VERIFIED LIVE");
+
+  if (listeningTrackLink) {
+    listeningTrackLink.hidden = !details;
+    if (details) listeningTrackLink.href = details.url;
+    else listeningTrackLink.removeAttribute("href");
+  }
+  if (listeningArtwork) {
+    const image = details?.image;
+    const allowed = typeof image === "string" &&
+      /^https:\/\/i\.scdn\.co\/image\/[A-Za-z0-9]+$/.test(image);
+    if (allowed && image) {
+      listeningArtwork.referrerPolicy = "no-referrer";
+      listeningArtwork.src = image;
+      listeningArtwork.hidden = false;
+    } else {
+      listeningArtwork.hidden = true;
+      listeningArtwork.removeAttribute("src");
+    }
+  }
+}
+async function refreshPresence() {
+  if (presenceRequestActive || document.hidden) return;
+  presenceRequestActive = true;
+  try {
+    const result = await fetch("/api/listening/now", {
+      credentials: "omit",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!result.ok || !result.headers.get("Content-Type")?.includes("application/json"))
+      throw new Error("No public listening projection");
+    applyPresence(await result.json());
+  } catch {
+    applyPresence(null);
+  } finally {
+    presenceRequestActive = false;
+  }
+}
+void refreshPresence();
+const presenceTimer = window.setInterval(() => { void refreshPresence(); }, 90_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void refreshPresence();
+});
+
 window.addEventListener("pagehide", (event) => {
   resetPointerDepth();
   if (event.persisted) return;
   window.clearInterval(clockTimer);
+  window.clearInterval(presenceTimer);
   window.clearTimeout(announcementTimer);
 });
