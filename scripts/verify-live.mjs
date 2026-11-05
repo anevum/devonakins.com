@@ -75,7 +75,7 @@ assert.deepEqual(await snapshotResponse.json(), expectedSnapshot, "published sna
 const telemetryResponse = await request("/api/telemetry/public", {cache: "no-store"});
 assert.equal(telemetryResponse.status, 200, "live public telemetry endpoint");
 assert.match(telemetryResponse.headers.get("content-type") || "",
-  /application\\/json/, "public telemetry JSON MIME");
+  /application\/json/, "public telemetry JSON MIME");
 const telemetry = await telemetryResponse.json();
 assert.equal(telemetry.version, 1, "public telemetry schema version");
 assert.equal(telemetry.gpt.metric, expectedSnapshot.metric, "GPT metric scope preserved");
