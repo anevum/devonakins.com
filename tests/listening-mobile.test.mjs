@@ -119,3 +119,78 @@ test("iPhone PKCE callback stores encrypted tokens and resets public sharing", a
     assert.equal(calls.length, 1);
   } finally { close(); }
 });
+
+
+test("owner privacy controls are locked by default and disconnect removes credentials", async () => {
+  const { env, db, close } = await fixture();
+  const auth = createListeningOwnerApi({ clock: () => now, fetcher: async () => new Response(
+    JSON.stringify({ token_type: "Bearer", scope: "user-read-currently-playing",
+      access_token: access, refresh_token: refresh, expires_in: 3600 }), { status: 200 }) });
+  const setting = (publicEnabled, showDetails) => req("/api/listening/admin/settings", {
+    method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ publicEnabled, showDetails }),
+  });
+  try {
+    await connect(auth, env);
+    assert.equal((await auth(setting(true, true), env, ctx)).status, 403);
+    const read = createD1PresenceReader({ clock: () => now,
+      fetcher: () => { throw Error("Spotify must not be contacted while hidden"); } });
+    assert.equal((await (await read(env)).json()).mode, "hidden");
+    env.LISTENING_PUBLIC_RELEASE_APPROVED = "true";
+    const updated = await auth(setting(true, true), env, ctx);
+    assert.equal(updated.status, 200);
+    assert.equal((await updated.json()).publicEnabled, true);
+    const reader = createD1PresenceReader({ clock: () => now, fetcher: async (url) => {
+      assert.equal(url, "https://api.spotify.com/v1/me/player/currently-playing");
+      return new Response(JSON.stringify(track()), { status: 200 });
+    } });
+    const live = await (await reader(env)).json();
+    assert.equal(live.mode, "playing");
+    assert.equal(live.track.title, "Fixture song");
+    assert.equal((await (await reader(env)).json()).mode, "playing");
+    const off = await auth(setting(false, false), env, ctx);
+    assert.equal(off.status, 200);
+    assert.equal((await (await reader(env)).json()).mode, "hidden");
+    assert.equal((await auth(setting(true, false), env, {})).status, 403);
+    assert.equal((await auth(req("/api/listening/admin/disconnect", { method:"POST", headers: { Origin: "https://cross-site.invalid" } }), env, ctx)).status, 403);
+    assert.equal((await auth(ownerPost("/api/listening/admin/disconnect"), env, ctx)).status, 200);
+    const row = await db.prepare("SELECT * FROM listening_account WHERE id=1").first();
+    assert.equal(row.refresh_cipher, null);
+    assert.equal(row.public_enabled, 0);
+    assert.equal(row.projection_json, null);
+  } finally { close(); }
+});
+
+test("single DB lease prevents concurrent probes from resurrecting disabled playback", async () => {
+  const { env, db, close } = await fixture();
+  const api = createListeningOwnerApi({ clock: () => now, fetcher: async () => new Response(
+    JSON.stringify({ token_type: "Bearer", scope: "user-read-currently-playing",
+      access_token: access, refresh_token: refresh, expires_in: 3600 }), { status: 200 }) });
+  const setting = req("/api/listening/admin/settings", {
+    method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ publicEnabled: true, showDetails: true }),
+  });
+  let releaseRequest;
+  let started;
+  const pending = new Promise(resolve => { started = resolve; });
+  const fetcher = async () => {
+    started();
+    return new Promise(resolve => { releaseRequest = resolve; });
+  };
+  try {
+    await connect(api, env);
+    env.LISTENING_PUBLIC_RELEASE_APPROVED = "true";
+    assert.equal((await api(setting, env, ctx)).status, 200);
+    const firstReader = createD1PresenceReader({ fetcher, clock: () => now });
+    const secondReader = createD1PresenceReader({ fetcher, clock: () => now });
+    const first = firstReader(env);
+    await pending;
+    assert.equal((await (await secondReader(env)).json()).mode, "unavailable");
+    assert.equal((await api(ownerPost("/api/listening/admin/disconnect"), env, ctx)).status, 200);
+    releaseRequest(new Response(JSON.stringify(track()), { status: 200 }));
+    assert.equal((await (await first).json()).mode, "hidden");
+    const account = await db.prepare("SELECT * FROM listening_account WHERE id=1").first();
+    assert.equal(account.projection_json, null);
+    assert.equal(account.refresh_cipher, null);
+  } finally { close(); }
+});
