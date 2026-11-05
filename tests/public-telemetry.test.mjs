@@ -170,3 +170,14 @@ test("packaged Cloudflare Worker resolves both telemetry and Listening modules",
   const listening = await builtSite.fetch(new Request("https://devonakins.com/api/listening/now"));
   assert.deepEqual(await listening.json(), {version:1, mode:"hidden", detailsVisible:false});
 });
+
+test("taller mobile Observatory exposes sanitized public activity without replacing GPT statistics", async () => {
+  const html = await readFile(new URL("../v2/index.html", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/v2/terminal.css", import.meta.url), "utf8");
+  const client = await readFile(new URL("../src/terminal.ts", import.meta.url), "utf8");
+  assert.match(html, /id="mobile-development-activity" role="status" aria-live="polite"/);
+  assert.match(html, /id="usage-value"/, "retain independent GPT count");
+  assert.match(css, /@media \(max-width: 960px\) and \(min-height: 761px\)/);
+  assert.match(css, /\.readout-development \{[^}]*display: block/s);
+  assert.match(client, /mobile\.textContent = brief/);
+});
