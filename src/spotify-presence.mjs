@@ -79,17 +79,21 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
     if (token?.key === key && token.expires > now()) return token.value;
     if (tokenPending?.key === key) return tokenPending.promise;
     const promise = (async () => {
-      const basic = btoa(env.SPOTIFY_CLIENT_ID + ":" + env.SPOTIFY_CLIENT_SECRET);
+      const params = new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: env.SPOTIFY_REFRESH_TOKEN,
+      });
+      const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+      // A PKCE refresh uses client_id without a client secret.
+      if (env.SPOTIFY_CLIENT_SECRET) {
+        headers.Authorization = "Basic " + btoa(env.SPOTIFY_CLIENT_ID + ":" + env.SPOTIFY_CLIENT_SECRET);
+      } else {
+        params.set("client_id", env.SPOTIFY_CLIENT_ID);
+      }
       const result = await fetcher("https://accounts.spotify.com/api/token", {
         method: "POST",
-        headers: {
-          Authorization: "Basic " + basic,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: env.SPOTIFY_REFRESH_TOKEN,
-        }).toString(),
+        headers,
+        body: params.toString(),
         signal: withTimeout(),
       });
       if (!result.ok) throw new Error("Spotify token request unavailable");
@@ -143,7 +147,7 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
       env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET,
       env.SPOTIFY_REFRESH_TOKEN, env.SPOTIFY_SHARE_TRACK_DETAILS,
     ].join("\u0000");
-    if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET || !env.SPOTIFY_REFRESH_TOKEN)
+    if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_REFRESH_TOKEN)
       return presenceResponse(unavailable(new Date(now()).toISOString()));
 
     if (cached?.key === key && cached.expires > now())
