@@ -72,6 +72,32 @@ assert.equal(snapshotResponse.status, 200, "public GPT activity snapshot");
 assert.match(snapshotResponse.headers.get("content-type") || "", /application\/json/, "snapshot MIME");
 assert.deepEqual(await snapshotResponse.json(), expectedSnapshot, "published snapshot must match tested build");
 
+const telemetryResponse = await request("/api/telemetry/public", {cache: "no-store"});
+assert.equal(telemetryResponse.status, 200, "live public telemetry endpoint");
+assert.match(telemetryResponse.headers.get("content-type") || "",
+  /application\\/json/, "public telemetry JSON MIME");
+const telemetry = await telemetryResponse.json();
+assert.equal(telemetry.version, 1, "public telemetry schema version");
+assert.equal(telemetry.gpt.metric, expectedSnapshot.metric, "GPT metric scope preserved");
+assert.equal(telemetry.gpt.count, expectedSnapshot.count, "historical token count unchanged");
+assert.equal(telemetry.gpt.asOf, expectedSnapshot.asOf, "historical capture date preserved");
+assert.equal(telemetry.gpt.freshness, "historical", "no false claim of live ChatGPT data");
+assert.equal(telemetry.development.source, "GitHub public events API");
+assert.ok(["current", "unavailable"].includes(telemetry.development.freshness),
+  "explicit data source freshness required even if GitHub is rate-limited");
+assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
+  "public GitHub source must include a checked-at timestamp");
+if (telemetry.development.freshness === "unavailable") {
+  assert.equal(telemetry.development.status, "unavailable");
+  assert.equal(telemetry.development.latestActivityAt, null);
+} else {
+  assert.ok(["available", "no-recent-public-development"].includes(telemetry.development.status));
+}
+assert.doesNotMatch(JSON.stringify(telemetry),
+  /refresh_cipher|access_token|client_secret|commit_message|repository_name/i,
+  "telemetry public response cannot contain provider credentials or private event payloads");
+
+
 for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/"]) {
   const response = await request(path);
   assert.equal(response.status, 200, path + " status");
@@ -162,4 +188,4 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
-console.log("Passed: GPT profile, all " + portfolio.length + " canonical portfolio pages, 9 original identity assets, Rhen/Vesper/Mizvo boundaries, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
+console.log("Passed: GPT profile, provenance-aware telemetry API, all " + portfolio.length + " canonical portfolio pages, 9 original identity assets, Rhen/Vesper/Mizvo boundaries, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
