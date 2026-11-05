@@ -116,6 +116,36 @@ test("enabled presence caches Spotify reads, returns sanitized track and respect
   assert.equal(Object.hasOwn(detailsOff, "track"), false);
 });
 
+test("concurrent privacy shutoff suppresses a previously in-flight public track", async () => {
+  let releaseSpotify;
+  let beganSpotify;
+  const spotifyStarted = new Promise((resolve) => { beganSpotify = resolve; });
+  const fetcher = async (href) => {
+    if (href === "https://accounts.spotify.com/api/token") {
+      return new Response(JSON.stringify({ access_token: "mock_access_token_12345", expires_in: 3600 }), {
+        status: 200,
+      });
+    }
+    beganSpotify();
+    return new Promise((resolve) => { releaseSpotify = resolve; });
+  };
+  const read = createPresenceReader({ fetcher });
+  const activeEnv = {
+    SPOTIFY_PUBLIC_NOW_PLAYING: "true",
+    SPOTIFY_SHARE_TRACK_DETAILS: "true",
+    SPOTIFY_CLIENT_ID: "client",
+    SPOTIFY_CLIENT_SECRET: "secret",
+    SPOTIFY_REFRESH_TOKEN: "refresh",
+  };
+  const inFlight = read(activeEnv);
+  await spotifyStarted;
+  const off = await (await read({ ...activeEnv, SPOTIFY_PUBLIC_NOW_PLAYING: "false" })).json();
+  assert.deepEqual(off, { version: 1, mode: "hidden", detailsVisible: false });
+  releaseSpotify(new Response(JSON.stringify(sample()), { status: 200 }));
+  const priorRequest = await (await inFlight).json();
+  assert.equal(priorRequest.mode, "hidden", "in-flight public response must not resume after kill switch");
+});
+
 test("provider errors, missing configuration and malformed responses fail closed", async () => {
   const env = {
     SPOTIFY_PUBLIC_NOW_PLAYING: "true",
