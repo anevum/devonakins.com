@@ -72,6 +72,8 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
   let cached = null;
   let inFlight = null;
   let generation = 0;
+  let blockedUntil = 0;
+  let blockedKey = null;
 
   async function accessToken(env, key) {
     if (token?.key === key && token.expires > now()) return token.value;
