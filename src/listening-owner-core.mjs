@@ -34,9 +34,13 @@ export function constantEqual(a, b) {
   return diff === 0;
 }
 export async function isListeningOwner(env, ctx) {
+  // One Access app may cover all paths, or distinct path-scoped apps may
+  // supply separate AUD values. A missing/mismatched AUD always fails closed.
+  const audiences = String(env.LISTENING_ACCESS_AUDS || env.LISTENING_ACCESS_AUD || "")
+    .split(",").map(value => value.trim()).filter(Boolean);
   if (typeof env.LISTENING_OWNER_EMAIL !== "string" ||
-      typeof env.LISTENING_ACCESS_AUD !== "string" ||
-      !ctx?.access || ctx.access.aud !== env.LISTENING_ACCESS_AUD) return false;
+      audiences.length === 0 || !ctx?.access ||
+      !audiences.includes(ctx.access.aud)) return false;
   try {
     const identity = await ctx.access.getIdentity();
     return typeof identity?.email === "string" &&
