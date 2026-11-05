@@ -130,6 +130,20 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
   if (path === "/gpt/") {
     const profile = await response.text();
     assert.match(profile, /id="gpt-profile"/);
+    assert.match(profile, /class="gpt-section gpt-live-panel"/,
+      "public event timeline markup is deployed");
+    assert.match(profile, /id="gpt-event-list"[^>]*role="list"/,
+      "accessible public event list is deployed");
+    assert.match(profile, /id="gpt-event-state"[^>]*role="status"/,
+      "source status for public events is present");
+    for (const eventFilter of ["all", "push", "pull request", "release"]) {
+      assert.ok(profile.includes('data-gpt-event-filter="' + eventFilter + '"'),
+        eventFilter + " public activity filter deployed");
+    }
+    assert.match(profile, /latest 30 public GitHub profile events/,
+      "public GitHub sampling limitation shown");
+    assert.match(profile, /not ChatGPT usage, private development/,
+      "GitHub activity must not be mistaken for personal GPT usage");
     assert.match(profile, /314\.2M|314,200,000/, "peak tokens reflected in published profile");
     assert.match(profile, /Skills &amp; workflows|Skills & workflows/);
     assert.doesNotMatch(profile, /Showcase Sites|gpt-sites-heading|gpt-showcase-card/, "public profile must exclude Sites");

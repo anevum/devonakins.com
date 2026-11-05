@@ -44,7 +44,22 @@ assert.match(result.headers.get("content-type") || "", /application\/json/);
 assert.equal(historical.status, 200, "static snapshot remains available");
 assert.deepEqual(await historical.json(), snapshot, "historical GPT artifact unchanged");
 assert.equal(profile.status, 200, "independent GPT profile HTML is available");
-assert.match(await profile.text(), /id="gpt-profile"/);
+const profileMarkup = await profile.text();
+assert.match(profileMarkup, /id="gpt-profile"/);
+assert.match(profileMarkup, /class="gpt-section gpt-live-panel"/,
+  "new public development timeline must ship in the Worker HTML");
+assert.match(profileMarkup, /id="gpt-event-list"[^>]*role="list"/,
+  "timeline must contain the accessible event list");
+assert.match(profileMarkup, /id="gpt-event-state"[^>]*role="status"/,
+  "timeline must disclose source states");
+for (const eventFilter of ["all", "push", "pull request", "release"]) {
+  assert.ok(profileMarkup.includes('data-gpt-event-filter="' + eventFilter + '"'),
+    eventFilter + " event filter must exist in deployed HTML");
+}
+assert.match(profileMarkup, /latest 30 public GitHub profile events/,
+  "timeline sampling limitations must be visible");
+assert.match(profileMarkup, /not ChatGPT usage, private development/,
+  "GitHub event feed must not be represented as live GPT usage");
 assert.equal(head.status, 200, "HEAD accepted without provider work");
 assert.equal((await head.text()).length, 0, "HEAD response has no body");
 assert.equal(denied.status, 405, "write method denied");
