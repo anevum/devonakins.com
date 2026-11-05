@@ -361,6 +361,8 @@ function renderPublicActivity() {
   document.querySelectorAll<HTMLButtonElement>("[data-gpt-event-filter]").forEach((button) =>
     button.setAttribute("aria-pressed", String(button.dataset.gptEventFilter === publicActivityFilter)));
   if (!list || !status) return;
+  const panel = list.closest<HTMLElement>(".gpt-live-panel");
+  if (panel) panel.dataset.sourceState = publicActivityState;
   const visible = publicActivity.filter((event) =>
     publicActivityFilter === "all" || event.kind === publicActivityFilter);
   const fragment = document.createDocumentFragment();

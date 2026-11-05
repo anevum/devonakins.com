@@ -223,7 +223,7 @@ test("invalid cached values cannot inject extra fields or silently appear fresh"
   assert.equal(validPublicGithubSignal({...projected, latestActivityKind: "unknown"}, date), false);
   assert.equal(validPublicGithubSignal({...projected, checkedAt: "tomorrow"}, date), false);
   const poison = new Response(JSON.stringify({
-    version: 2,
+    version: 3,
     expiresAt: new Date(date.getTime() + 240_000).toISOString(),
     value: {...projected, repository: "private-repository-name"},
   }), {headers: {"Content-Type":"application/json"}});

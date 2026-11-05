@@ -83,6 +83,19 @@ assert.equal(telemetry.gpt.count, expectedSnapshot.count, "historical token coun
 assert.equal(telemetry.gpt.asOf, expectedSnapshot.asOf, "historical capture date preserved");
 assert.equal(telemetry.gpt.freshness, "historical", "no false claim of live ChatGPT data");
 assert.equal(telemetry.development.source, "GitHub public events API");
+assert.ok(Array.isArray(telemetry.development.recentActivity) &&
+  telemetry.development.recentActivity.length <= 8,
+  "bounded public GitHub timeline required");
+let previousGitHubTimestamp = Infinity;
+for (const event of telemetry.development.recentActivity) {
+  assert.deepEqual(Object.keys(event).sort(), ["at", "kind"],
+    "only allowlisted timeline fields may be publicly exposed");
+  assert.ok(["push", "pull request", "release"].includes(event.kind));
+  const time = Date.parse(event.at);
+  assert.ok(Number.isFinite(time) && new Date(time).toISOString() === event.at);
+  assert.ok(time <= previousGitHubTimestamp, "public timeline must be in descending order");
+  previousGitHubTimestamp = time;
+}
 assert.ok(["current", "unavailable"].includes(telemetry.development.freshness),
   "explicit data source freshness required even if GitHub is rate-limited");
 assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
@@ -90,8 +103,16 @@ assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
 if (telemetry.development.freshness === "unavailable") {
   assert.equal(telemetry.development.status, "unavailable");
   assert.equal(telemetry.development.latestActivityAt, null);
+  assert.deepEqual(telemetry.development.recentActivity, []);
 } else {
   assert.ok(["available", "no-recent-public-development"].includes(telemetry.development.status));
+  if (telemetry.development.status === "available") {
+    assert.ok(telemetry.development.recentActivity.length > 0);
+    assert.equal(telemetry.development.latestActivityAt, telemetry.development.recentActivity[0].at);
+    assert.equal(telemetry.development.latestActivityKind, telemetry.development.recentActivity[0].kind);
+  } else {
+    assert.deepEqual(telemetry.development.recentActivity, []);
+  }
 }
 assert.doesNotMatch(JSON.stringify(telemetry),
   /refresh_cipher|access_token|client_secret|commit_message|repository_name/i,

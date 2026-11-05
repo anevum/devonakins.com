@@ -63,8 +63,19 @@ assert.equal(publicValue.gpt.count, snapshot.count);
 assert.equal(publicValue.gpt.approximate, true);
 assert.deepEqual(Object.keys(publicValue.development).sort(),
   ["checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
-   "scope", "source", "status"]);
+   "recentActivity", "scope", "source", "status"]);
 assert.equal(publicValue.development.source, "GitHub public events API");
+assert.ok(Array.isArray(publicValue.development.recentActivity));
+assert.ok(publicValue.development.recentActivity.length <= 8);
+let lastEventTime = Infinity;
+for (const entry of publicValue.development.recentActivity) {
+  assert.deepEqual(Object.keys(entry).sort(), ["at", "kind"], "only allowlisted event fields");
+  assert.ok(["push", "pull request", "release"].includes(entry.kind));
+  const at = Date.parse(entry.at);
+  assert.ok(Number.isFinite(at) && new Date(at).toISOString() === entry.at);
+  assert.ok(at <= lastEventTime, "recent events must be newest-first");
+  lastEventTime = at;
+}
 assert.ok(["current", "unavailable"].includes(publicValue.development.freshness));
 const timestamp = Date.parse(publicValue.development.checkedAt);
 assert.ok(Number.isFinite(timestamp));
@@ -74,9 +85,19 @@ if (publicValue.development.freshness === "unavailable") {
   assert.equal(publicValue.development.status, "unavailable");
   assert.equal(publicValue.development.latestActivityAt, null);
   assert.equal(publicValue.development.latestActivityKind, null);
+  assert.deepEqual(publicValue.development.recentActivity, []);
 } else {
   assert.ok(["available", "no-recent-public-development"]
     .includes(publicValue.development.status));
+  if (publicValue.development.status === "available") {
+    assert.ok(publicValue.development.recentActivity.length > 0);
+    assert.equal(publicValue.development.latestActivityAt,
+      publicValue.development.recentActivity[0].at);
+    assert.equal(publicValue.development.latestActivityKind,
+      publicValue.development.recentActivity[0].kind);
+  } else {
+    assert.deepEqual(publicValue.development.recentActivity, []);
+  }
 }
 assert.doesNotMatch(JSON.stringify(publicValue),
   /access_token|refresh_token|api_key|password|repository_name|commits|actor|payload/i,
