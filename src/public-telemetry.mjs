@@ -9,6 +9,7 @@ const types = new Map([
   ["PullRequestEvent", "pull request"],
   ["ReleaseEvent", "release"],
 ]);
+const publicGithubScope = "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity";
 const iso = value => typeof value === "string" && !Number.isNaN(Date.parse(value))
   ? new Date(value).toISOString() : null;
 const safeDay = value => typeof value === "string" &&
@@ -47,27 +48,29 @@ export function projectPublicGithubEvents(events, now = new Date()) {
     .filter(e => e && e.public === true && types.has(e.type))
     .map(e => ({at: iso(e.created_at), kind: types.get(e.type)}))
     .filter(e => e.at && Date.parse(e.at) >= earliest && Date.parse(e.at) <= until)
-    .sort((a, b) => b.at.localeCompare(a.at))[0];
+    .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
   return {
     source: "GitHub public events API",
-    scope: "latest event found among up to 30 public profile events; not all work",
+    scope: publicGithubScope,
     freshness: "current",
     checkedAt: now.toISOString(),
-    status: observed ? "available" : "no-recent-public-development",
-    latestActivityAt: observed?.at ?? null,
-    latestActivityKind: observed?.kind ?? null,
+    status: observed.length ? "available" : "no-recent-public-development",
+    latestActivityAt: observed[0]?.at ?? null,
+    latestActivityKind: observed[0]?.kind ?? null,
+    recentActivity: observed,
   };
 }
 
 export function unavailablePublicGithub(now = new Date()) {
   return {
     source: "GitHub public events API",
-    scope: "latest event found among up to 30 public profile events; not all work",
+    scope: publicGithubScope,
     freshness: "unavailable",
     checkedAt: now.toISOString(),
     status: "unavailable",
     latestActivityAt: null,
     latestActivityKind: null,
+    recentActivity: [],
   };
 }
 
@@ -80,31 +83,41 @@ export function validPublicGithubSignal(value, now = new Date()) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const keys = [
     "checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
-    "scope", "source", "status",
+    "recentActivity", "scope", "source", "status",
   ].sort();
   if (Object.keys(value).sort().join("|") !== keys.join("|") ||
       value.source !== "GitHub public events API" ||
-      value.scope !== "latest event found among up to 30 public profile events; not all work" ||
+      value.scope !== publicGithubScope ||
       typeof value.checkedAt !== "string" ||
       !Number.isFinite(Date.parse(value.checkedAt)) ||
       new Date(value.checkedAt).toISOString() !== value.checkedAt ||
-      Date.parse(value.checkedAt) > now.getTime() + 60_000) return false;
-  if (value.freshness === "unavailable") {
+      Date.parse(value.checkedAt) > now.getTime() + 60_000 ||
+      !Array.isArray(value.recentActivity) ||
+      value.recentActivity.length > 8) return false;
+  let previous = Infinity;
+  for (const item of value.recentActivity) {
+    if (!item || typeof item !== "object" || Array.isArray(item) ||
+        Object.keys(item).sort().join("|") !== "at|kind" ||
+        !["push", "pull request", "release"].includes(item.kind) ||
+        typeof item.at !== "string" ||
+        !Number.isFinite(Date.parse(item.at)) ||
+        new Date(item.at).toISOString() !== item.at) return false;
+    const timestamp = Date.parse(item.at);
+    if (timestamp < now.getTime() - 30 * 86400000 - 4 * 60 * 60 * 1000 ||
+        timestamp > now.getTime() + 60_000 || timestamp > previous) return false;
+    previous = timestamp;
+  }
+  if (value.freshness === "unavailable")
     return value.status === "unavailable" &&
-      value.latestActivityAt === null && value.latestActivityKind === null;
-  }
+      value.latestActivityAt === null && value.latestActivityKind === null &&
+      value.recentActivity.length === 0;
   if (value.freshness !== "current") return false;
-  if (value.status === "no-recent-public-development") {
-    return value.latestActivityAt === null && value.latestActivityKind === null;
-  }
-  if (value.status !== "available" ||
-      !["push", "pull request", "release"].includes(value.latestActivityKind) ||
-      typeof value.latestActivityAt !== "string" ||
-      !Number.isFinite(Date.parse(value.latestActivityAt))) return false;
-  const time = Date.parse(value.latestActivityAt);
-  return new Date(value.latestActivityAt).toISOString() === value.latestActivityAt &&
-    time >= now.getTime() - 30 * 86400000 - 4 * 60 * 60 * 1000 &&
-    time <= now.getTime() + 60_000;
+  if (value.status === "no-recent-public-development")
+    return value.latestActivityAt === null && value.latestActivityKind === null &&
+      value.recentActivity.length === 0;
+  return value.status === "available" && value.recentActivity.length > 0 &&
+    value.latestActivityAt === value.recentActivity[0].at &&
+    value.latestActivityKind === value.recentActivity[0].kind;
 }
 
 /**

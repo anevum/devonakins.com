@@ -83,6 +83,21 @@ assert.equal(telemetry.gpt.count, expectedSnapshot.count, "historical token coun
 assert.equal(telemetry.gpt.asOf, expectedSnapshot.asOf, "historical capture date preserved");
 assert.equal(telemetry.gpt.freshness, "historical", "no false claim of live ChatGPT data");
 assert.equal(telemetry.development.source, "GitHub public events API");
+assert.equal(telemetry.development.scope,
+  "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity", "source sampling boundaries accurately described");
+assert.ok(Array.isArray(telemetry.development.recentActivity) &&
+  telemetry.development.recentActivity.length <= 8,
+  "bounded public GitHub timeline required");
+let previousGitHubTimestamp = Infinity;
+for (const event of telemetry.development.recentActivity) {
+  assert.deepEqual(Object.keys(event).sort(), ["at", "kind"],
+    "only allowlisted timeline fields may be publicly exposed");
+  assert.ok(["push", "pull request", "release"].includes(event.kind));
+  const time = Date.parse(event.at);
+  assert.ok(Number.isFinite(time) && new Date(time).toISOString() === event.at);
+  assert.ok(time <= previousGitHubTimestamp, "public timeline must be in descending order");
+  previousGitHubTimestamp = time;
+}
 assert.ok(["current", "unavailable"].includes(telemetry.development.freshness),
   "explicit data source freshness required even if GitHub is rate-limited");
 assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
@@ -90,8 +105,16 @@ assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
 if (telemetry.development.freshness === "unavailable") {
   assert.equal(telemetry.development.status, "unavailable");
   assert.equal(telemetry.development.latestActivityAt, null);
+  assert.deepEqual(telemetry.development.recentActivity, []);
 } else {
   assert.ok(["available", "no-recent-public-development"].includes(telemetry.development.status));
+  if (telemetry.development.status === "available") {
+    assert.ok(telemetry.development.recentActivity.length > 0);
+    assert.equal(telemetry.development.latestActivityAt, telemetry.development.recentActivity[0].at);
+    assert.equal(telemetry.development.latestActivityKind, telemetry.development.recentActivity[0].kind);
+  } else {
+    assert.deepEqual(telemetry.development.recentActivity, []);
+  }
 }
 assert.doesNotMatch(JSON.stringify(telemetry),
   /refresh_cipher|access_token|client_secret|commit_message|repository_name/i,
@@ -107,6 +130,20 @@ for (const path of ["/v2/", "/gpt/", "/work/", "/about/", "/source/", "/contact/
   if (path === "/gpt/") {
     const profile = await response.text();
     assert.match(profile, /id="gpt-profile"/);
+    assert.match(profile, /class="gpt-section gpt-live-panel"/,
+      "public event timeline markup is deployed");
+    assert.match(profile, /id="gpt-event-list"[^>]*role="list"/,
+      "accessible public event list is deployed");
+    assert.match(profile, /id="gpt-event-state"[^>]*role="status"/,
+      "source status for public events is present");
+    for (const eventFilter of ["all", "push", "pull request", "release"]) {
+      assert.ok(profile.includes('data-gpt-event-filter="' + eventFilter + '"'),
+        eventFilter + " public activity filter deployed");
+    }
+    assert.match(profile, /latest 30 public GitHub profile events/,
+      "public GitHub sampling limitation shown");
+    assert.match(profile, /not ChatGPT usage, private development/,
+      "GitHub activity must not be mistaken for personal GPT usage");
     assert.match(profile, /314\.2M|314,200,000/, "peak tokens reflected in published profile");
     assert.match(profile, /Skills &amp; workflows|Skills & workflows/);
     assert.doesNotMatch(profile, /Showcase Sites|gpt-sites-heading|gpt-showcase-card/, "public profile must exclude Sites");

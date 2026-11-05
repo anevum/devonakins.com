@@ -137,6 +137,26 @@ export function renderPublicGptProfile(input) {
         '<h3>' + esc(plugin.name) + '</h3><p>' + esc(plugin.description) +
         '</p></article>').join("") + '</div>'
     : '<p class="gpt-empty">No integrations listed in the current snapshot.</p>';
+  const publicActivityMarkup = `
+    <section class="gpt-section gpt-live-panel" aria-labelledby="gpt-public-development-heading">
+      <div class="gpt-live-kicker"><span class="gpt-live-lamp" aria-hidden="true"></span> PUBLIC SIGNAL / AUTOMATIC SOURCE</div>
+      <header class="gpt-live-heading">
+        <div><span class="gpt-section-index">00 / DEVELOPMENT</span>
+          <h2 id="gpt-public-development-heading">Development, in public.</h2>
+          <p>Up to eight qualifying events sampled from the latest 30 public GitHub profile events. This feed is not ChatGPT usage, private development, or proof that coding is happening now.</p>
+        </div>
+        <span class="gpt-live-source">GITHUB / PUBLIC EVENTS</span>
+      </header>
+      <p id="gpt-public-activity" class="gpt-live-status" role="status" aria-live="polite">Checking public events. GPT statistics remain a dated November 4 snapshot.</p>
+      <div class="gpt-live-filters" role="group" aria-label="Filter public development events">
+        <button type="button" data-gpt-event-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-gpt-event-filter="push" aria-pressed="false">Pushes</button>
+        <button type="button" data-gpt-event-filter="pull request" aria-pressed="false">Pull requests</button>
+        <button type="button" data-gpt-event-filter="release" aria-pressed="false">Releases</button>
+      </div>
+      <div id="gpt-event-list" class="gpt-event-list" role="list" aria-label="Recent public GitHub events"></div>
+      <p id="gpt-event-state" class="gpt-event-state" role="status">Checking the public source. Historical GPT activity does not update automatically.</p>
+    </section>`;
   return '<div class="gpt-profile" id="gpt-profile">' +
     '<div class="gpt-profile-identity"><img class="gpt-profile-avatar" src="/v2/crossed-arms.webp" alt="" width="62" height="62" loading="lazy">' +
     '<div class="gpt-profile-person"><span class="gpt-profile-eyebrow">PUBLIC WORKFLOW PROFILE</span>' +
@@ -148,7 +168,7 @@ export function renderPublicGptProfile(input) {
     '<strong>≈' + esc(compact(s.count)) + '</strong><span class="gpt-primary-date">SNAPSHOT / ' +
     '<time datetime="' + esc(s.asOf) + '">' + esc(longDate) + '</time></span>' +
     '<p>' + esc(p.scope) + ' Manually captured; historical figures are not updated in real time.</p></div>' +
-    weekly +
+    weekly + publicActivityMarkup +
     '<section class="gpt-section" aria-labelledby="gpt-activity-heading">' +
     heading("gpt-activity-heading", "01 / PROFILE", "By the numbers",
       "Profile-level figures captured " + longDate +
@@ -189,10 +209,6 @@ export function renderPublicGptProfile(input) {
     metric("FAST MODE", ins.fastModePercent + "%", "Profile-reported proportion") +
     metric("MOST USED REASONING", ins.mostUsedReasoning, "Profile insight; not a benchmark") +
     '</div></section>' +
-    '<section class="gpt-section" aria-labelledby="gpt-public-development-heading">' +
-    heading("gpt-public-development-heading", "06 / PUBLIC", "Development signal",
-      "Latest publicly visible GitHub activity, independent of ChatGPT and Work/Codex usage.") +
-    '<p id="gpt-public-activity" class="gpt-signal-context" role="status" aria-live="polite">Checking public development activity. The GPT statistics above remain historical.</p></section>' +
     '<footer class="gpt-profile-foot"><strong>DATED PUBLIC SNAPSHOT / NO PRIVATE ACCOUNT ACCESS</strong>' +
     '<p>As of <time datetime="' + esc(s.asOf) + '">' + esc(longDate) + '</time>. ' +
     'Reconciled from owner-provided recordings. Updates are published through this repository; ' +

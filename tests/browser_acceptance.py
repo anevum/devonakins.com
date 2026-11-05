@@ -380,16 +380,45 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     }""")
                     assert not root_violations, f"Canonical home axe violations: {root_violations}"
 
-            if origin and (width, height) == (390, 844):
-                # All legacy deep links must render the cinematic shell,
-                # retain their own content, and return via the canonical tabs.
-                for route in [
-                    "/work/", "/source/", "/about/", "/contact/", "/gpt/",
-                    "/work/operations/", "/work/writing/", "/work/anevum/",
-                    "/work/ideaflow/", "/work/devonstation/",
-                    "/work/merit/", "/work/mizvo/", "/work/rhen-language/", "/work/vesper/", "/work/squelch/",
-                    "/work/brandicade/", "/work/rhen/",
-                ]:
+            if origin and (width, height) in [(320, 568), (390, 844), (1440, 900)]:
+                # Exercise the actual GPT route on small mobile, standard mobile and desktop
+                # in both browser engines. Other legacy routes are covered at 390x844.
+                deep_routes = ["/gpt/"]
+                if (width, height) == (390, 844):
+                    deep_routes.extend([
+                        "/work/", "/source/", "/about/", "/contact/",
+                        "/work/operations/", "/work/writing/", "/work/anevum/",
+                        "/work/ideaflow/", "/work/devonstation/",
+                        "/work/merit/", "/work/mizvo/", "/work/rhen-language/",
+                        "/work/vesper/", "/work/squelch/", "/work/brandicade/", "/work/rhen/",
+                    ])
+                for route in deep_routes:
+                    if route == "/gpt/":
+                        # Deterministic browser fixture exercises populated data without
+                        # depending on GitHub egress, real accounts or private content.
+                        from datetime import datetime, timedelta, timezone
+                        clock = datetime.now(timezone.utc)
+                        def event_time(minutes_ago):
+                            return (clock - timedelta(minutes=minutes_ago)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                        events = [
+                            {"at": event_time(1), "kind": "push"},
+                            {"at": event_time(3), "kind": "pull request"},
+                            {"at": event_time(5), "kind": "release"},
+                        ]
+                        public_fixture = {
+                            "version": 1,
+                            "gpt": {"freshness": "historical", "asOf": "2026-11-04"},
+                            "development": {
+                                "source": "GitHub public events API", "freshness": "current",
+                                "checkedAt": clock.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                                "status": "available", "latestActivityAt": events[0]["at"],
+                                "latestActivityKind": events[0]["kind"], "recentActivity": events,
+                            },
+                        }
+                        page.route("**/api/telemetry/public", lambda route: route.fulfill(
+                            status=200, content_type="application/json",
+                            body=json.dumps(public_fixture),
+                        ))
                     response = page.goto(origin + route, wait_until="load")
                     assert response and response.status == 200, route
                     assert page.locator("#interface-shell").get_attribute("data-route-page") == "true", route
@@ -405,6 +434,58 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "621.7M" in page.locator("#gpt-profile").inner_text()
                         assert "Showcase Sites" not in page.locator("#gpt-profile").inner_text()
                         assert page.locator(".gpt-weekly-metric").count() == 4
+                        assert page.locator("#gpt-event-list").count() == 1
+                        assert page.locator(".gpt-live-panel").is_visible()
+                        assert page.locator("[data-gpt-event-filter]").count() == 4
+                        if width == 320:
+                            # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
+                            buttons = page.locator("[data-gpt-event-filter]")
+                            boxes = [buttons.nth(i).bounding_box() for i in range(4)]
+                            assert all(box and box["height"] >= 44 for box in boxes)
+                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2
+                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2
+                            assert boxes[2]["y"] > boxes[0]["y"] + 40
+                            assert boxes[0]["x"] < boxes[1]["x"]
+                        page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
+                        assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                        assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
+                        assert "Source checked" in page.locator("#gpt-event-state").inner_text()
+                        assert "PUBLIC PUSH" in page.locator("#gpt-event-list").inner_text()
+                        # Screenshot only the sanitized synthetic data, never live account details.
+                        # The element screenshot captures the whole panel, even inside the
+                        # smaller viewport's scrolling content region.
+                        output.mkdir(parents=True, exist_ok=True)
+                        page.locator(".gpt-live-panel").screenshot(
+                            path=str(output / f"synthetic-gpt-feed-{label}.png"),
+                            animations="disabled",
+                        )
+                        page.locator('[data-gpt-event-filter="pull request"]').click()
+                        assert page.locator("#gpt-event-list .gpt-event-card").count() == 1
+                        assert "PULL REQUEST" in page.locator("#gpt-event-list").inner_text()
+                        assert "PUBLIC PUSH" not in page.locator("#gpt-event-list").inner_text()
+                        assert page.locator('[data-gpt-event-filter="pull request"]').get_attribute("aria-pressed") == "true"
+                        assert page.locator('[data-gpt-event-filter="all"]').get_attribute("aria-pressed") == "false"
+                        page.locator('[data-gpt-event-filter="all"]').click()
+                        assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                        if (width, height) == (390, 844):
+                            # Falsify freshness: a stale upstream checkedAt must fail closed
+                            # and replace every previously displayed card with unavailable.
+                            valid_checked_at = public_fixture["development"]["checkedAt"]
+                            public_fixture["development"]["checkedAt"] = "2000-01-01T00:00:00.000Z"
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'unavailable'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 0
+                            assert "unavailable" in page.locator("#gpt-event-state").inner_text().lower()
+                            # A fresh, independently validated provider response can recover.
+                            public_fixture["development"]["checkedAt"] = valid_checked_at
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'ready'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                            assert "Source checked" in page.locator("#gpt-event-state").inner_text()
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()

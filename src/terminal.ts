@@ -327,9 +327,89 @@ document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("c
 // Load a public, static first-party snapshot once at startup; no private API or polling.
 void checkUsage();
 
-// Public GitHub activity is a separate signal; it never changes GPT token metrics.
+// Public GitHub events remain strictly separate from historical GPT usage.
+type PublicActivity = {at: string; kind: "push" | "pull request" | "release"};
+type PublicActivityState = "ready" | "empty" | "unavailable";
+const activityKinds = ["push", "pull request", "release"] as const;
 let publicTelemetryBusy = false;
 let lastPublicTelemetryCheck = 0;
+let publicActivity: PublicActivity[] = [];
+let publicActivityState: PublicActivityState = "unavailable";
+let publicActivityFilter: "all" | PublicActivity["kind"] = "all";
+let lastPublicTelemetryCheckedAt: string | null = null;
+
+function validPublicActivity(value: unknown, now = Date.now()): value is PublicActivity[] {
+  if (!Array.isArray(value) || value.length > 8) return false;
+  let previous = Infinity;
+  for (const event of value) {
+    if (!event || typeof event !== "object" || Array.isArray(event)) return false;
+    const record = event as Record<string, unknown>;
+    if (Object.keys(record).sort().join("|") !== "at|kind" ||
+        !activityKinds.includes(record.kind as PublicActivity["kind"]) ||
+        typeof record.at !== "string") return false;
+    const time = Date.parse(record.at);
+    if (!Number.isFinite(time) || new Date(time).toISOString() !== record.at ||
+        time > now + 60_000 || time < now - 30 * 86400000 - 4 * 60 * 60_000 ||
+        time > previous) return false;
+    previous = time;
+  }
+  return true;
+}
+
+function renderPublicActivity() {
+  const list = document.querySelector<HTMLElement>("#gpt-event-list");
+  const status = document.querySelector<HTMLElement>("#gpt-event-state");
+  document.querySelectorAll<HTMLButtonElement>("[data-gpt-event-filter]").forEach((button) =>
+    button.setAttribute("aria-pressed", String(button.dataset.gptEventFilter === publicActivityFilter)));
+  if (!list || !status) return;
+  const panel = list.closest<HTMLElement>(".gpt-live-panel");
+  if (panel) panel.dataset.sourceState = publicActivityState;
+  const visible = publicActivity.filter((event) =>
+    publicActivityFilter === "all" || event.kind === publicActivityFilter);
+  const fragment = document.createDocumentFragment();
+  for (const event of visible) {
+    const row = document.createElement("div");
+    row.className = "gpt-event-card";
+    row.setAttribute("role", "listitem");
+    const label = document.createElement("span");
+    label.className = "gpt-event-kind";
+    label.textContent = event.kind === "push" ? "PUBLIC PUSH" :
+      event.kind === "pull request" ? "PULL REQUEST" : "RELEASE";
+    const time = document.createElement("time");
+    time.dateTime = event.at;
+    time.textContent = new Date(event.at).toLocaleString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit",
+    });
+    row.append(label, time);
+    fragment.append(row);
+  }
+  list.replaceChildren(fragment);
+  const checkedAtLabel = lastPublicTelemetryCheckedAt
+    ? " Source checked " + new Date(lastPublicTelemetryCheckedAt).toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    }) + "."
+    : "";
+  status.textContent = (publicActivityState === "unavailable"
+    ? "GitHub source unavailable. No event data is presented as live."
+    : publicActivityState === "empty"
+      ? "No qualifying public events among the latest 30 public GitHub profile events."
+      : visible.length === 0
+        ? "No events match this filter within the current public sample."
+        : "Showing " + visible.length + " of " + publicActivity.length +
+          " qualifying events in this bounded public sample. GPT usage remains a historical snapshot.") + checkedAtLabel;
+}
+
+document.querySelectorAll<HTMLButtonElement>("[data-gpt-event-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const value = button.dataset.gptEventFilter;
+    if (value === "all" || activityKinds.some((kind) => kind === value)) {
+      publicActivityFilter = value as typeof publicActivityFilter;
+      renderPublicActivity();
+    }
+  });
+});
+
 async function checkPublicTelemetry() {
   const note = document.querySelector<HTMLElement>("#development-activity");
   const detail = document.querySelector<HTMLElement>("#gpt-public-activity");
@@ -337,8 +417,11 @@ async function checkPublicTelemetry() {
   if ((!note && !detail && !mobile) || publicTelemetryBusy || document.hidden) return;
   publicTelemetryBusy = true;
   lastPublicTelemetryCheck = Date.now();
-  let brief = "PUBLIC GITHUB / SIGNAL UNAVAILABLE · GPT STATS ARE DATED";
+  let brief = "PUBLIC GITHUB / SIGNAL UNAVAILABLE - GPT STATS ARE DATED";
   let expanded = "Public GitHub activity is temporarily unavailable. The ChatGPT figures on this page are historical.";
+  let nextEvents: PublicActivity[] = [];
+  let nextState: PublicActivityState = "unavailable";
+  let nextCheckedAt: string | null = null;
   try {
     const response = await fetch("/api/telemetry/public", {
       cache: "no-store", credentials: "omit",
@@ -353,31 +436,54 @@ async function checkPublicTelemetry() {
     const gpt = data.gpt as Record<string, unknown> | undefined;
     const dev = data.development as Record<string, unknown> | undefined;
     if (data.version !== 1 || !gpt || gpt.freshness !== "historical" ||
-      typeof gpt.asOf !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(gpt.asOf) ||
-      !dev || dev.source !== "GitHub public events API" ||
-      !["current", "unavailable"].includes(String(dev.freshness)) ||
-      !["available", "no-recent-public-development", "unavailable"].includes(String(dev.status)))
+        typeof gpt.asOf !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(gpt.asOf) ||
+        !dev || dev.source !== "GitHub public events API" ||
+        !["current", "unavailable"].includes(String(dev.freshness)) ||
+        !["available", "no-recent-public-development", "unavailable"].includes(String(dev.status)) ||
+        !validPublicActivity(dev.recentActivity))
       throw new Error("Invalid public telemetry");
+    const checkedAt = dev.checkedAt;
+    const checkedTime = typeof checkedAt === "string" ? Date.parse(checkedAt) : NaN;
+    if (!Number.isFinite(checkedTime) ||
+        new Date(checkedTime).toISOString() !== checkedAt ||
+        checkedTime > Date.now() + 60_000 ||
+        checkedTime < Date.now() - 4 * 60 * 60_000 - 60_000)
+      throw new Error("Stale or invalid public source check time");
+    nextCheckedAt = checkedAt as string;
     if (dev.freshness === "current" && dev.status === "available") {
       const kind = dev.latestActivityKind;
       const when = dev.latestActivityAt;
-      if (!["push", "pull request", "release"].includes(String(kind)) ||
-        typeof when !== "string" || !Number.isFinite(Date.parse(when)) ||
-        Date.parse(when) > Date.now() + 60_000)
+      if (!activityKinds.includes(kind as PublicActivity["kind"]) ||
+          typeof when !== "string" || !Number.isFinite(Date.parse(when)) ||
+          Date.parse(when) > Date.now() + 60_000 ||
+          (dev.recentActivity as PublicActivity[]).length === 0 ||
+          (dev.recentActivity as PublicActivity[])[0].kind !== kind ||
+          (dev.recentActivity as PublicActivity[])[0].at !== when)
         throw new Error("Invalid public development event");
+      nextEvents = dev.recentActivity as PublicActivity[];
+      nextState = "ready";
       const time = new Date(when).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
       });
-      brief = "PUBLIC GITHUB / " + String(kind).toUpperCase() + " · " + time + " · GPT STATS DATED";
-      expanded = "Latest public GitHub " + String(kind) + " observed " + time +
-        ". This is not ChatGPT activity or proof of all coding work. GPT statistics remain a historical snapshot.";
-    } else if (dev.freshness === "current" && dev.status === "no-recent-public-development") {
-      brief = "PUBLIC GITHUB / NO RECENT VISIBLE EVENT · GPT STATS DATED";
-      expanded = "No recent qualifying public GitHub event in the most recent 30 profile events. Private development and ChatGPT usage are not represented.";
+      brief = "PUBLIC GITHUB / " + String(kind).toUpperCase() + " - " + time + " - GPT STATS DATED";
+      expanded = "Latest qualifying public GitHub " + String(kind) + " observed " + time +
+        ". This is not ChatGPT activity or proof of all coding work. GPT statistics remain historical.";
+    } else if (dev.freshness === "current" && dev.status === "no-recent-public-development" &&
+        (dev.recentActivity as PublicActivity[]).length === 0) {
+      nextState = "empty";
+      brief = "PUBLIC GITHUB / NO RECENT VISIBLE EVENT - GPT STATS DATED";
+      expanded = "No recent qualifying public GitHub event in the latest 30 public profile events. Private development and ChatGPT usage are not represented.";
+    } else if (!(dev.freshness === "unavailable" && dev.status === "unavailable" &&
+        (dev.recentActivity as PublicActivity[]).length === 0)) {
+      throw new Error("Contradictory public source state");
     }
   } catch {
-    // A failed source cannot be interpreted as zero events or live GPT usage.
+    // Invalid/stale provider results must never masquerade as current usage.
   } finally {
+    publicActivity = nextEvents;
+    publicActivityState = nextState;
+    lastPublicTelemetryCheckedAt = nextCheckedAt;
+    renderPublicActivity();
     if (note && note.textContent !== brief) note.textContent = brief;
     if (mobile && mobile.textContent !== brief) mobile.textContent = brief;
     if (detail && detail.textContent !== expanded) detail.textContent = expanded;

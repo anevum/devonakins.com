@@ -85,3 +85,14 @@ test("renderer escapes all curated text and retains secure links", () => {
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.match(html, /rel="noopener noreferrer"/);
 });
+
+test("filtered public activity panel stays distinct from dated GPT profile", () => {
+  const html = renderPublicGptProfile(clone());
+  assert.match(html, /id="gpt-event-list"[^>]*role="list"/);
+  assert.match(html, /data-gpt-event-filter="all" aria-pressed="true"/);
+  assert.match(html, /data-gpt-event-filter="pull request" aria-pressed="false"/);
+  assert.match(html, /id="gpt-event-state"[^>]*role="status"/);
+  assert.ok(html.indexOf("gpt-public-development-heading") < html.indexOf("gpt-activity-heading"));
+  assert.match(html, /not ChatGPT usage, private development/);
+  assert.match(html, /Up to eight qualifying events sampled from the latest 30/);
+});
