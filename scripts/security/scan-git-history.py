@@ -21,6 +21,11 @@ RULES = {
 }
 PATTERNS = {name: re.compile(pattern) for name, pattern in RULES.items()}
 
+# One known synthetic fixture was committed to this draft branch and remains
+# reachable in Git history. Exempt ONLY its exact literal bytes, not the file,
+# blob, sensitive-assignment rule, or any other credential-like value.
+SYNTHETIC_FIXTURE = b'access_token: "placeholder_access_12345"'
+
 
 def main():
     objects = subprocess.run(['git', 'rev-list', '--objects', '--all', '--no-object-names'],
@@ -49,7 +54,8 @@ def main():
                 continue
             scanned += 1
             for name, pattern in PATTERNS.items():
-                if pattern.search(body):
+                inspected = body.replace(SYNTHETIC_FIXTURE, b'') if name == 'sensitive-assignment' else body
+                if pattern.search(inspected):
                     findings.append((oid.decode('ascii'), name))
     finally:
         process.stdin.close()
