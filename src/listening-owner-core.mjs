@@ -54,7 +54,7 @@ export const ownerRow = db => db.prepare("SELECT * FROM listening_account WHERE 
 export const publicReleaseApproved = env => env.LISTENING_PUBLIC_RELEASE_APPROVED === "true";
 export const ownerStatus = (row, env) => ({
   connected: !!row?.refresh_cipher,
-  reauthorizationRequired: !!row?.reauth_required,
+  reauthorizationRequired: !!row?.reauth_required || (!!row?.reauth_due && row.reauth_due <= Date.now()),
   publicEnabled: !!row?.public_enabled && publicReleaseApproved(env),
   showDetails: !!row?.show_details,
   publishingAllowed: publicReleaseApproved(env),
