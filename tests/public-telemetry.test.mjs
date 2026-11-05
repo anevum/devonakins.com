@@ -153,3 +153,20 @@ test("integrated Worker keeps Spotify private and owner routes protected while s
   const ownerText = await owner.text();
   assert.doesNotMatch(ownerText, /refresh_cipher|access_cipher|secret/);
 });
+
+test("packaged Cloudflare Worker resolves both telemetry and Listening modules", async () => {
+  const [{createHandler: builtHandler}, {default: builtAssets}] = await Promise.all([
+    import("../.release/handler.mjs"),
+    import("../.release/assets.mjs"),
+  ]);
+  assert.ok(builtAssets["/v2/usage-snapshot.json"], "historical bundled source is present");
+  const builtSite = builtHandler(builtAssets, {version: "test"}, {
+    now, cache: null,
+    githubFetch: async () => new Response(JSON.stringify([publicEvent])),
+  });
+  const t = await builtSite.fetch(new Request("https://devonakins.com/api/telemetry/public"));
+  assert.equal(t.status, 200);
+  assert.equal((await t.json()).gpt.asOf, "2026-11-04");
+  const listening = await builtSite.fetch(new Request("https://devonakins.com/api/listening/now"));
+  assert.deepEqual(await listening.json(), {version:1, mode:"hidden", detailsVisible:false});
+});
