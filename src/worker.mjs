@@ -1,4 +1,3 @@
-import { createPresenceReader } from "./spotify-presence.mjs";
 import { createD1PresenceReader } from "./listening-d1-presence.mjs";
 import { createListeningOwnerApi } from "./listening-owner-api.mjs";
 
@@ -13,7 +12,6 @@ export const securityHeaders = {
 };
 export function createHandler(assets, release) {
   const decoded = new Map();
-  const readPresence = createPresenceReader();
   const readDbPresence = createD1PresenceReader();
   const ownerApi = createListeningOwnerApi();
   return {
@@ -66,7 +64,7 @@ export function createHandler(assets, release) {
       if (url.pathname === "/api/listening/now") {
         const result = request.method === "HEAD"
           ? new Response(null, { headers: { "Cache-Control": "no-store" } })
-          : await (env.LISTENING_DB ? readDbPresence(env) : readPresence(env));
+          : await readDbPresence(env);
         return new Response(request.method === "HEAD" ? null : result.body, {
           status: result.status,
           headers: { ...securityHeaders, ...Object.fromEntries(result.headers) },
