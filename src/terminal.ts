@@ -333,7 +333,8 @@ let lastPublicTelemetryCheck = 0;
 async function checkPublicTelemetry() {
   const note = document.querySelector<HTMLElement>("#development-activity");
   const detail = document.querySelector<HTMLElement>("#gpt-public-activity");
-  if ((!note && !detail) || publicTelemetryBusy || document.hidden) return;
+  const mobile = document.querySelector<HTMLElement>("#mobile-development-activity");
+  if ((!note && !detail && !mobile) || publicTelemetryBusy || document.hidden) return;
   publicTelemetryBusy = true;
   lastPublicTelemetryCheck = Date.now();
   let brief = "PUBLIC GITHUB / SIGNAL UNAVAILABLE · GPT STATS ARE DATED";
@@ -377,8 +378,9 @@ async function checkPublicTelemetry() {
   } catch {
     // A failed source cannot be interpreted as zero events or live GPT usage.
   } finally {
-    if (note) note.textContent = brief;
-    if (detail) detail.textContent = expanded;
+    if (note && note.textContent !== brief) note.textContent = brief;
+    if (mobile && mobile.textContent !== brief) mobile.textContent = brief;
+    if (detail && detail.textContent !== expanded) detail.textContent = expanded;
     publicTelemetryBusy = false;
   }
 }
