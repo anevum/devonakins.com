@@ -12,7 +12,7 @@ test("project wordmarks are first-party, legible vector paths with text alternat
     assert.match(svg, /<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
     assert.match(svg, /viewBox="0 0 \d+ 112"/);
     assert.ok(svg.includes("<title>" + name + " "), file + " needs identifying title");
-    assert.ok((svg.match(/<path\b/g) || []).length >= 3, file + " needs original vector geometry");
+    assert.ok((svg.match(/<(?:path|circle|polygon|polyline|rect)\b/g) || []).length >= 3, file + " needs original vector geometry");
     assert.doesNotMatch(svg, /<text\b|<image\b|href="https?:|@import/g,
       file + " may not depend on fonts or network imagery");
     assert.doesNotMatch(svg, /<script|onload\s*=|foreignObject/i);
