@@ -129,3 +129,27 @@ test("cross-isolate edge cache reuses sanitized provider values", async () => {
   assert.equal(remoteCalls, 1);
   assert.equal(result.development.latestActivityKind, "push");
 });
+
+test("integrated Worker keeps Spotify private and owner routes protected while serving public telemetry", async () => {
+  const site = createHandler(publicAssets, {version:"test"}, {
+    now,
+    cache: null,
+    githubFetch: async () => new Response(JSON.stringify([publicEvent])),
+  });
+  const [telemetry, listening, owner] = await Promise.all([
+    request(site),
+    site.fetch(new Request("https://devonakins.com/api/listening/now")),
+    site.fetch(new Request("https://devonakins.com/api/listening/admin/status")),
+  ]);
+  assert.equal(telemetry.status, 200);
+  assert.equal((await telemetry.json()).gpt.freshness, "historical");
+  assert.equal(listening.status, 200);
+  assert.equal(listening.headers.get("Cache-Control"), "private, no-store, max-age=0");
+  assert.deepEqual(await listening.json(),
+    {version:1, mode:"hidden", detailsVisible:false},
+    "no credentials, bindings or owner opt-in means no broadcast");
+  assert.equal(owner.status, 403,
+    "new public telemetry must not weaken Spotify's owner authentication");
+  const ownerText = await owner.text();
+  assert.doesNotMatch(ownerText, /refresh_cipher|access_cipher|secret/);
+});
