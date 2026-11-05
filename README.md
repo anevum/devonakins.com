@@ -125,11 +125,17 @@ sourced records:
 
 The Cloudflare Worker only publishes a constrained allowlist of values; it
 does not publish repository paths, commit messages, private account details,
-provider error bodies or credentials. On-demand reads use a five-minute
-in-isolate cache plus optional Cloudflare Cache API across isolates, avoiding
-new databases, paid jobs, or cron schedules. Client refresh while visible is
-also five minutes, and failed requests never convert a historical metric into
-a live one. The existing static /gpt/ capture remains accessible without JS.
+provider error bodies or credentials. On-demand reads use a five-minute successful-response cache in the Worker
+isolate, plus optional Cloudflare Cache API (per data center) to reduce repeat
+upstream calls. GitHub 403/429 responses trigger a bounded 10-minute-to-four-hour
+cooldown informed by `Retry-After` and `X-RateLimit-Reset` when provided.
+Malformed provider data and other failures are cached briefly as explicitly
+unavailable, never as a zero-activity result. Only strict, sanitized cache
+values are reused; provider error bodies and rate-limit headers are not public.
+No new databases, paid jobs, or cron schedules are used. Client refresh while
+visible remains five minutes, but it may receive an explicitly unavailable
+state throughout the server backoff period. Cloudflare Cache API does not
+provide global coordination; cross-data-center limits remain possible. The existing static /gpt/ capture remains accessible without JS.
 
 **Cost and eligibility:** The proposed first-party GitHub endpoint does
 not require a GitHub token, OpenAI API payment or new Cloudflare service.

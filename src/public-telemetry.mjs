@@ -71,6 +71,67 @@ export function unavailablePublicGithub(now = new Date()) {
   };
 }
 
+/**
+ * Validate the exact public envelope before reusing an edge-cached record.
+ * GitHub API event payloads and cache entries must never become arbitrary HTML
+ * or carry raw account/repository content into a public response.
+ */
+export function validPublicGithubSignal(value, now = new Date()) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = [
+    "checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
+    "scope", "source", "status",
+  ].sort();
+  if (Object.keys(value).sort().join("|") !== keys.join("|") ||
+      value.source !== "GitHub public events API" ||
+      value.scope !== "latest event found among up to 30 public profile events; not all work" ||
+      typeof value.checkedAt !== "string" ||
+      !Number.isFinite(Date.parse(value.checkedAt)) ||
+      new Date(value.checkedAt).toISOString() !== value.checkedAt ||
+      Date.parse(value.checkedAt) > now.getTime() + 60_000) return false;
+  if (value.freshness === "unavailable") {
+    return value.status === "unavailable" &&
+      value.latestActivityAt === null && value.latestActivityKind === null;
+  }
+  if (value.freshness !== "current") return false;
+  if (value.status === "no-recent-public-development") {
+    return value.latestActivityAt === null && value.latestActivityKind === null;
+  }
+  if (value.status !== "available" ||
+      !["push", "pull request", "release"].includes(value.latestActivityKind) ||
+      typeof value.latestActivityAt !== "string" ||
+      !Number.isFinite(Date.parse(value.latestActivityAt))) return false;
+  const time = Date.parse(value.latestActivityAt);
+  return new Date(value.latestActivityAt).toISOString() === value.latestActivityAt &&
+    time >= now.getTime() - 30 * 86400000 - 4 * 60 * 60 * 1000 &&
+    time <= now.getTime() + 60_000;
+}
+
+/**
+ * Back off without additional traffic if GitHub returns 403/429. Honour
+ * Retry-After / x-ratelimit-reset, clamp abusive server headers, and extend
+ * the cooldown after repeated throttles. No credentials are required.
+ */
+export function githubCooldownMs(response, at = new Date(), failures = 1) {
+  const base = 10 * 60 * 1000;
+  const max = 4 * 60 * 60 * 1000;
+  const count = Number.isSafeInteger(failures) ? Math.max(1, failures) : 1;
+  let requested = base * Math.pow(2, Math.min(count - 1, 5));
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = /^\d{1,8}$/.test(retryAfter) ? Number(retryAfter) : NaN;
+    const until = Number.isFinite(seconds)
+      ? seconds * 1000
+      : Date.parse(retryAfter) - at.getTime();
+    if (Number.isFinite(until)) requested = Math.max(requested, until);
+  }
+  const reset = response.headers.get("x-ratelimit-reset");
+  if (reset && /^\d{9,12}$/.test(reset)) {
+    requested = Math.max(requested, Number(reset) * 1000 - at.getTime());
+  }
+  return Math.min(max, Math.max(base, requested));
+}
+
 export function projectPublicTelemetry(snapshot, github, now = new Date()) {
   return {
     version: 1,
