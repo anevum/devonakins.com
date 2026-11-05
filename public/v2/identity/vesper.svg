@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="590" height="112" viewBox="0 0 590 112" fill="none">
+<title>Vesper — original custom vector identity concept</title>
+<defs>
+  <linearGradient id="prism" x1="15" y1="18" x2="93" y2="93" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#dcdffe"/><stop offset=".47" stop-color="#94a6d0"/><stop offset=".77" stop-color="#f6f9ff"/><stop offset="1" stop-color="#a8d7ba"/>
+  </linearGradient>
+  <linearGradient id="metal" x1="135" y1="28" x2="530" y2="91" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#b6c3ea"/><stop offset=".33" stop-color="#f9fbff"/><stop offset=".73" stop-color="#acb9d6"/><stop offset="1" stop-color="#dbf8e4"/>
+  </linearGradient>
+</defs>
+<path d="M16 25L53 91L91 25" stroke="url(#prism)" stroke-width="9.5" stroke-linecap="square" stroke-linejoin="miter"/>
+<path d="M33 25L53 62L73 25" stroke="#9bbac6" stroke-width="3" stroke-linecap="square"/>
+<path d="M18 101H90" stroke="#8cacba" stroke-width="1.8" opacity=".8"/>
+<path d="M105 20V93" stroke="#8e9eb9" stroke-width="1" opacity=".7"/>
+<g stroke="url(#metal)" stroke-width="9.5" stroke-linecap="square" stroke-linejoin="miter">
+  <path d="M129 30L151 81L173 30"/>
+  <path d="M196 30V81M196 30H234M196 55H228M196 81H234"/>
+  <path d="M292 30H261C248 30 245 37 245 44C245 51 254 55 266 55H275C289 55 294 61 294 69C294 78 283 81 270 81H244"/>
+  <path d="M320 81V30H343C360 30 368 39 368 50C368 62 359 68 343 68H320"/>
+  <path d="M391 30V81M391 30H430M391 55H423M391 81H430"/>
+  <path d="M457 81V30H481C498 30 506 38 506 49C506 59 498 66 482 66H457M482 66L508 81"/>
+</g>
+<path d="M131 96H235M391 96H508" stroke="#94b4c7" stroke-width="1.8" opacity=".85"/>
+<path d="M526 33H558M526 43H546M526 53H568" stroke="#b8e9c1" stroke-width="2.5" stroke-linecap="square"/>
+</svg>

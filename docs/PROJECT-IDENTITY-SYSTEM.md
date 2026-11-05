@@ -33,3 +33,8 @@ Run source/build/Node and Chromium + WebKit responsive/accessibility acceptance 
 The historical market-research `/work/rhen/` route deliberately has no Rhen programming-language identity; draft PR #31 is independently responsible for updating Vesper links and routes. Every branded archive card remains a native link with readable project descriptions and status, image alternative text or visible text, contrast-aware focus, and reduced-motion support. On detail routes, the logo is decorative and a normal H1 is preserved.
 
 **Acceptance:** exact-commit CI build/Node tests; Chromium and WebKit responsive/keyboard/axe checks; visual review of 320/390/768/1440px screenshots, including navigation clearance and logo legibility. No merge, deploy, or final trademark approval is claimed by these changes.
+
+
+## Vesper portfolio integration — November 4, 2026
+
+The new independent Vesper financial-research project is added to the selected public Work archive by the Rhen/Vesper source-link correction, and now receives an original brushed-silver/prismatic vector identity. This is an **exploratory portfolio concept**, not financial performance evidence, investment advice, final trademark clearance, or an already approved branding change to the Vesper application. The shape references precision and research rather than trading signals or profitability. The preserved `/work/rhen/` historical finance route retains its own unbranded title, and `/work/rhen-language/` keeps the separate cyan compiler identity. This change introduces no financial APIs, account information, trading endpoints, or new dependencies.

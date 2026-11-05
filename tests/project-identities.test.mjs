@@ -46,6 +46,7 @@ test("public archive and detail routes use correct, independent visual identitie
   const wordmarks = [
     ["merit", "Merit", "merit.svg"],
     ["rhen-language", "Rhen", "rhen.svg"],
+    ["vesper", "Vesper", "vesper.svg"],
     ["squelch", "Squelch", "squelch.svg"],
     ["brandicade", "Brandicade", "brandicade.svg"],
     ["anevum", "Anevum", "anevum.svg"],
