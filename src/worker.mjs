@@ -1,3 +1,4 @@
+import { projectPublicGithubEvents, unavailablePublicGithub, projectPublicTelemetry, validPublicGithubSignal, githubCooldownMs } from "./public-telemetry.mjs";
 import { createD1PresenceReader } from "./listening-d1-presence.mjs";
 import { createListeningOwnerApi } from "./listening-owner-api.mjs";
 
@@ -10,10 +11,108 @@ export const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
   "Strict-Transport-Security": "max-age=31536000",
 };
-export function createHandler(assets, release) {
+export function createHandler(assets, release, options = {}) {
   const decoded = new Map();
   const readDbPresence = createD1PresenceReader();
   const ownerApi = createListeningOwnerApi();
+  const now = options.now || (() => new Date());
+  const githubFetch = options.githubFetch || fetch;
+  const successfulTtlMs = 5 * 60_000;
+  const failureTtlMs = 10 * 60_000;
+  const maxTtlMs = 4 * 60 * 60_000;
+  // Bump cache key when the sanitized format or validation contract changes.
+  const cacheKey = new Request("https://devonakins.com/__cache/public-github-v2");
+  let lastGithub = null;
+  let pendingGithub = null;
+  let failureStreak = 0;
+  let historicalSnapshot = null;
+  const githubSignal = async (at) => {
+    const atMs = at.getTime();
+    if (lastGithub && lastGithub.expiresAt > atMs)
+      return lastGithub.value;
+    if (pendingGithub) return pendingGithub;
+    pendingGithub = (async () => {
+      const edgeCache = options.cache === undefined
+        ? (typeof caches !== "undefined" ? caches.default : null)
+        : options.cache;
+      if (edgeCache) {
+        try {
+          const hit = await edgeCache.match(cacheKey);
+          if (hit?.ok) {
+            const saved = await hit.json();
+            const expiresAt = Date.parse(saved?.expiresAt);
+            if (saved?.version === 2 && Number.isFinite(expiresAt) &&
+                expiresAt > atMs && expiresAt <= atMs + maxTtlMs &&
+                validPublicGithubSignal(saved.value, at) &&
+                atMs - Date.parse(saved.value.checkedAt) <= maxTtlMs) {
+              lastGithub = {expiresAt, value: saved.value};
+              return saved.value;
+            }
+          }
+        } catch { /* Cache is never a trusted source of data or availability. */ }
+      }
+      let value;
+      let ttlMs = successfulTtlMs;
+      try {
+        const response = await githubFetch(
+          "https://api.github.com/users/devonalanakins/events/public?per_page=30",
+          {
+            headers: {
+              "Accept": "application/vnd.github+json",
+              "User-Agent": "devonakins-public-signal",
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+            signal: AbortSignal.timeout(5000),
+          },
+        );
+        if (!response.ok) {
+          ttlMs = response.status === 403 || response.status === 429
+            ? githubCooldownMs(response, at, failureStreak + 1)
+            : failureTtlMs;
+          throw new Error("Public activity provider unavailable");
+        }
+        value = projectPublicGithubEvents(await response.json(), at);
+        failureStreak = 0;
+      } catch {
+        value = unavailablePublicGithub(at);
+        failureStreak = Math.min(failureStreak + 1, 6);
+        if (ttlMs === successfulTtlMs) ttlMs = failureTtlMs;
+      }
+      const expiresAt = atMs + ttlMs;
+      lastGithub = {expiresAt, value};
+      if (edgeCache) {
+        try {
+          await edgeCache.put(cacheKey, new Response(JSON.stringify({
+            version: 2, expiresAt: new Date(expiresAt).toISOString(), value,
+          }), {
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "public, max-age=" + Math.ceil(ttlMs / 1000),
+            },
+          }));
+        } catch { /* Neither a cache write nor a denied cache service can fail the read. */ }
+      }
+      return value;
+    })();
+    try {
+      return await pendingGithub;
+    } finally {
+      pendingGithub = null;
+    }
+  };
+  const snapshot = async () => {
+    if (!historicalSnapshot) {
+      historicalSnapshot = (async () => {
+        const bundled = assets["/v2/usage-snapshot.json"];
+        if (!bundled) throw new Error("Historical source missing");
+        const bytes = Uint8Array.from(atob(bundled.gzip), (c) => c.charCodeAt(0));
+        return await new Response(
+          new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")),
+        ).json();
+      })();
+    }
+    return historicalSnapshot;
+  };
   return {
     async fetch(request, env = {}, ctx = {}) {
       const url = new URL(request.url);
@@ -83,6 +182,24 @@ export function createHandler(assets, release) {
             },
           },
         );
+      if (url.pathname === "/api/telemetry/public") {
+        const headers = {
+          ...securityHeaders,
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "public, max-age=0, must-revalidate",
+        };
+        if (request.method === "HEAD")
+          return new Response(null, {headers});
+        try {
+          const at = now();
+          const data = projectPublicTelemetry(await snapshot(), await githubSignal(at), at);
+          return new Response(JSON.stringify(data), {headers});
+        } catch {
+          return new Response(JSON.stringify({error: "Telemetry unavailable"}), {
+            status: 503, headers: {...headers, "Cache-Control": "no-store"},
+          });
+        }
+      }
       if (url.pathname === "/favicon.ico") return redirect("/favicon-32.png");
       let path;
       try {

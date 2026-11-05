@@ -323,6 +323,9 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('data.version === expectedVersion'));
   assert.ok(verifier.includes('../dist/v2/usage-snapshot.json'));
   assert.ok(verifier.includes('"/gpt/"'));
+  assert.ok(verifier.includes('"/api/telemetry/public"'), "production verifier checks public telemetry endpoint");
+  assert.ok(verifier.includes('telemetry.gpt.freshness'), "historical GPT provenance checked after deployment");
+  assert.ok(verifier.includes('telemetry.development.source'), "separate public GitHub source checked after deployment");
   assert.ok(verifier.includes('class="hero-feature" role="group"'));
   const { projects } = await import("../src/content.mjs");
   assert.ok(verifier.includes('projects.map(({ slug, title }) => ["/work/" + slug + "/", title])'),
