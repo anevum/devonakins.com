@@ -109,7 +109,8 @@ for (const [path, title] of portfolio) {
     path + " canonical metadata");
   assert.match(page, /class="route-content"/, path + " immersive route content");
   assert.match(page, /data-route-page="true"/, path + " immersive route shell");
-  assert.ok(page.includes(title), path + " title");
+  const escapedTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\x27/g, "&#39;");
+  assert.ok(page.includes('<h1 class="route-title">' + escapedTitle), path + " exact escaped H1 title");
   assert.doesNotMatch(page, /name="robots" content="noindex"/, path + " must be indexable");
   if (path === "/work/rhen-language/") {
     assert.match(page, /Local prototype/, "Rhen language prototype status");

@@ -50,6 +50,7 @@ test("production verifier covers every published project and no stale finance ti
   assert.doesNotMatch(verifier, /RHEN — Market Research/);
   assert.match(verifier, /Vesper Legacy — Market Research/);
   assert.match(verifier, /AGPL review build · not deployed/);
+  assert.ok(verifier.includes('page.includes(\'<h1 class="route-title">\' + escapedTitle)'), "escaped rendered titles checked at runtime");
   for (const project of projects) {
     const html = await readFile("dist/work/" + project.slug + "/index.html", "utf8");
     const htmlTitle = project.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
