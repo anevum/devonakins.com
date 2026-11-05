@@ -35,7 +35,7 @@ jobs:
         timeout-minutes: 4
         run: |
           set -eu
-          npx --yes wrangler@4.158.0 dev --local --ip localhost --port 8787 > /tmp/devonakins-workerd.log 2>&1 &
+          npx --yes wrangler@4.158.0 dev --local --ip localhost --port 8787 --infer-origin-from-routes=false > /tmp/devonakins-workerd.log 2>&1 &
           worker_pid=$!
           trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
           if ! node scripts/verify-local-telemetry.mjs; then
