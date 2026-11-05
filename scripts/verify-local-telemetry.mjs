@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
-const origin = "http://127.0.0.1:8787";
+const origin = "http://localhost:8787";
 const snapshot = JSON.parse(await readFile(
   new URL("../public/v2/usage-snapshot.json", import.meta.url), "utf8",
 ));
