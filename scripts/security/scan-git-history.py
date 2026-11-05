@@ -21,6 +21,10 @@ RULES = {
 }
 PATTERNS = {name: re.compile(pattern) for name, pattern in RULES.items()}
 
+# Existing history contains this exact, publicly documented inert test value.
+# Match the full literal only; never exempt a file, object, key name or rule.
+SYNTHETIC_FIXTURE = b'access_token: "placeholder_access_12345"'
+
 
 def main():
     objects = subprocess.run(['git', 'rev-list', '--objects', '--all', '--no-object-names'],
@@ -49,7 +53,12 @@ def main():
                 continue
             scanned += 1
             for name, pattern in PATTERNS.items():
-                if pattern.search(body):
+                matches = pattern.finditer(body)
+                if name == 'sensitive-assignment':
+                    matched = any(m.group(0) != SYNTHETIC_FIXTURE for m in matches)
+                else:
+                    matched = any(True for _ in matches)
+                if matched:
                     findings.append((oid.decode('ascii'), name))
     finally:
         process.stdin.close()
