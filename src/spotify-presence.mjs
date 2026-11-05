@@ -151,7 +151,11 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
       if (!result.ok) return unavailable(checkedAt);
       const body = await result.json();
       return projectPlayback(body, env.SPOTIFY_SHARE_TRACK_DETAILS === "true", checkedAt);
-    } catch {
+    } catch (error) {
+      if (error instanceof HoldRequest) {
+        blockedKey = key;
+        blockedUntil = Math.max(blockedUntil, now() + error.delayMs);
+      }
       // Never include provider error text, credentials or account identifiers
       // in a public response.
       return unavailable(checkedAt);
@@ -166,6 +170,9 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
       cached = null;
       inFlight = null;
       token = null;
+      tokenPending = null;
+      blockedKey = null;
+      blockedUntil = 0;
       return presenceResponse({ version: 1, mode: "hidden", detailsVisible: false });
     }
     const key = [
@@ -175,6 +182,8 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
     if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_REFRESH_TOKEN)
       return presenceResponse(unavailable(new Date(now()).toISOString()));
 
+    if (blockedKey === key && blockedUntil > now())
+      return presenceResponse(unavailable(new Date(now()).toISOString()));
     if (cached?.key === key && cached.expires > now())
       return presenceResponse(cached.data);
     if (inFlight?.key === key) return presenceResponse(await inFlight.promise);
