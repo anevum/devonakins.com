@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -519,6 +520,77 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
     return results
 
 
+
+def check_owner_control(browser, engine, origin, output, axe_source):
+    """Inspect the real first-party owner markup without any Spotify account."""
+    if not origin:
+        return []
+    markup = subprocess.check_output([
+        "node", "--input-type=module", "-e",
+        "import {renderListeningOwner} from './src/listening-owner-page.mjs';"
+        "process.stdout.write(renderListeningOwner());",
+    ], text=True)
+    results = []
+    for width, height in [(320, 700), (390, 844), (768, 900), (1440, 900)]:
+        context = browser.new_context(viewport={"width": width, "height": height},
+                                      reduced_motion="reduce")
+        page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        label = f"owner-{engine}-{width}x{height}"
+        try:
+            page.goto(origin + "/v2/", wait_until="load")
+            page.route("**/api/listening/admin/status", lambda route: route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({
+                    "connected": True, "reauthorizationRequired": False,
+                    "publishingAllowed": False, "publicEnabled": False,
+                    "showDetails": False, "reauthorizeBy": "2027-05-05T00:00:00.000Z"
+                })
+            ))
+            page.set_content(markup, wait_until="load")
+            page.wait_for_function("""() =>
+              document.querySelector('#connection-state')?.textContent === 'CONNECTED'
+            """)
+            assert page.locator("#connect").is_enabled()
+            assert page.locator("#disconnect").is_enabled()
+            assert page.locator("#public-status").is_disabled()
+            assert page.locator("#track-details").is_disabled()
+            assert page.locator("#save-settings").is_disabled()
+            assert page.locator("h1").inner_text().startswith("Listen anywhere.")
+            geometry = page.evaluate("""() => ({
+              overflow: document.documentElement.scrollWidth - innerWidth,
+              button: document.querySelector('#connect').getBoundingClientRect(),
+              width: innerWidth,
+            })""")
+            assert geometry["overflow"] <= 1, (label, "horizontal overflow", geometry)
+            assert geometry["button"]["width"] >= 80, (label, "tiny touch control", geometry)
+            if axe_source:
+                page.add_script_tag(content=axe_source)
+                violations = page.evaluate("""async () => {
+                  const result = await axe.run(document, {
+                    runOnly: {type:'tag',
+                      values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                  });
+                  return result.violations.map(v => ({
+                    id:v.id, nodes:v.nodes.map(n=>n.target).slice(0,5)
+                  }));
+                }""")
+                assert not violations, f"{label} accessibility: {violations}"
+            assert not errors, f"{label} script errors: {errors}"
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"{label}.png"), full_page=True)
+            results.append({"engine": engine, "viewport": [width, height],
+                            "owner_page": "passed", "axe": "passed" if axe_source else "not-run"})
+            print(f"PASS {label}: private UI, reflow, safe defaults, accessibility")
+        except Exception:
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"failed-{label}.png"), full_page=True)
+            raise
+        finally:
+            context.close()
+    return results
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=Path("dist"))
@@ -560,6 +632,9 @@ def main():
                 try:
                     all_results.extend(
                         check(browser, name, html, css, script, axe_source, args.out, origin)
+                    )
+                    all_results.extend(
+                        check_owner_control(browser, name, origin, args.out, axe_source)
                     )
                 finally:
                     browser.close()
