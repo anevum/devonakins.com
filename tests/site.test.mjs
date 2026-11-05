@@ -409,7 +409,7 @@ test("current engineering showcase distinguishes Merit, Rhen language and RHEN m
   assert.match(home, /Human-first programming language/);
   assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
-  for (const slug of ["merit", "rhen-language", "squelch", "brandicade", "rhen"]) {
+  for (const slug of ["merit", "rhen-language", "vesper", "squelch", "brandicade", "rhen"]) {
     assert.ok(archive.includes('href="/work/' + slug + '/"'), slug);
     const response = await get("/work/" + slug + "/");
     assert.equal(response.status, 200, slug);
@@ -425,11 +425,16 @@ test("current engineering showcase distinguishes Merit, Rhen language and RHEN m
   assert.match(language, /Rhen/);
   assert.match(language, /Local prototype/);
   assert.match(language, /not a released compiler/);
+  assert.match(language, /https:\/\/github\.com\/devonalanakins\/rhen/);
   assert.doesNotMatch(language, /https:\/\/github\.com\/devonalanakins\/isl/);
   const markets = await (await get("/work/rhen/")).text();
   assert.match(markets, /Market Research/);
-  assert.match(markets, /https:\/\/github\.com\/devonalanakins\/rhen/);
+  assert.match(markets, /https:\/\/github\.com\/devonalanakins\/vesper-legacy/);
   assert.match(markets, /not the experimental Rhen programming language/);
+  const vesper = await (await get("/work/vesper/")).text();
+  assert.match(vesper, /Vesper/);
+  assert.match(vesper, /https:\/\/github\.com\/devonalanakins\/vesper/);
+  assert.match(vesper, /not a live brokerage service/);
   const source = await (await get("/source/")).text();
   assert.match(source, /Merit — engineering integrity toolkit/);
   assert.match(source, /Rhen — experimental language/);

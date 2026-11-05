@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="770" height="112" viewBox="0 0 770 112" fill="none">
+  <title>Squelch — original custom vector identity concept</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="16" x2="500.5" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff80bc"/><stop offset=".42" stop-color="#fffaf2"/><stop offset=".72" stop-color="#ff80bc"/><stop offset="1" stop-color="#9c78ec"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="118" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff80bc"/><stop offset=".58" stop-color="#9c78ec"/><stop offset="1" stop-color="#ff80bc"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M16 76L67 23H105L68 62H108L54 102H15L54 76Z" fill="url(#accent)"/>
+  <path d="M14 24L43 24M25 36H54M20 93H38" stroke="#ffa6d2" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  <path d="M123 20V94" stroke="#eb73bb" stroke-width="1" opacity=".65"/>
+  <g transform="skewX(-7)" stroke="url(#metal)" stroke-width="10.5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M215 29H181C167 29 164 38 164 43C164 51 170 55 182 55H199C211 55 215 60 215 68C215 76 207 81 196 81H165"/>
+    <path d="M245 29C225 29 222 43 222 55C222 70 232 81 245 81C260 81 269 72 269 55C269 38 260 29 245 29ZM246 70L274 90"/>
+    <path d="M300 29V66C300 88 351 88 351 66V29"/>
+    <path d="M384 29V81M384 29H429M384 55H422M384 81H429"/>
+    <path d="M462 29V81H507"/>
+    <path d="M572 35C555 23 526 26 522 50C517 75 542 88 569 75"/>
+    <path d="M602 29V81M655 29V81M602 55H655"/>
+  </g>
+  <path d="M164 96H331M385 96H518" stroke="#f36caf" stroke-width="2.2"/>
+  <g stroke="#eb72bf" stroke-width="3" stroke-linecap="round" opacity=".88">
+    <path d="M687 60V50M697 67V43M707 75V35M717 65V45M727 83V27M737 65V45M747 73V37"/>
+  </g>
+
+</svg>

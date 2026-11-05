@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112" fill="none">
+  <title>DevonStation — original custom vector identity concept</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="16" x2="72.8" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b3ed8c"/><stop offset=".42" stop-color="#fffaf2"/><stop offset=".72" stop-color="#b3ed8c"/><stop offset="1" stop-color="#558e8b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="118" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b3ed8c"/><stop offset=".58" stop-color="#558e8b"/><stop offset="1" stop-color="#b3ed8c"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M21 17H55C84 17 98 33 98 56S84 95 55 95H21V17Z" fill="none" stroke="url(#accent)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M45 36H57C71 36 79 43 79 56S71 76 57 76H45" stroke="#d3f7b9" stroke-width="6" stroke-linecap="round"/>
+  <path d="M10 55H37M56 7V30" stroke="#81bd94" stroke-width="3"/>
+
+</svg>
