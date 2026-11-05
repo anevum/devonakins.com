@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="570" height="112" viewBox="0 0 570 112" fill="none">
+<title>Mizvo — provisional architectural portal identity</title>
+<defs>
+  <linearGradient id="arch" x1="5" y1="15" x2="103" y2="99" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#f6d7b4"/><stop offset=".32" stop-color="#d3a379"/><stop offset=".70" stop-color="#805038"/><stop offset="1" stop-color="#f5c8a1"/>
+  </linearGradient>
+  <linearGradient id="metal" x1="131" y1="20" x2="531" y2="85" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#dca77d"/><stop offset=".28" stop-color="#fff6e9"/><stop offset=".64" stop-color="#d3a379"/><stop offset="1" stop-color="#f7dfc9"/>
+  </linearGradient>
+</defs>
+<!-- Original architectural portal: repeated spans, not a recycled verification M. -->
+<path d="M11 87V53C11 29 29 14 53 14C78 14 96 29 96 53V87" stroke="url(#arch)" stroke-width="8.5" stroke-linecap="square"/>
+<path d="M29 87V54C29 40 38 32 53 32C69 32 78 40 78 54V87" stroke="#e9bc91" stroke-width="6" stroke-linecap="square"/>
+<path d="M47 87V61H59V87" stroke="#a26642" stroke-width="5" stroke-linecap="square"/>
+<path d="M12 96H96M17 101H91" stroke="#bf8c69" stroke-width="1.8" opacity=".84"/>
+<path d="M113 19V94" stroke="#b37f60" stroke-width="1" opacity=".65"/>
+<!-- Sculpted, completely path-drawn lettering, no system or network font. -->
+<g stroke="url(#metal)" stroke-width="9.6" stroke-linecap="square" stroke-linejoin="miter">
+  <path d="M137 83V30L166 61L194 30V83"/>
+  <path d="M223 30H266M244.5 30V83M223 83H266"/>
+  <path d="M287 30H347L286 83H348"/>
+  <path d="M370 30L398 83L427 30"/>
+  <path d="M488 28C469 28 455 40 455 56C455 74 469 85 488 85C508 85 522 73 522 56C522 39 508 28 488 28Z"/>
+</g>
+<path d="M137 97H266M374 97H523" stroke="#ca9874" stroke-width="1.8" opacity=".85"/>
+<path d="M543 41H558M543 50H553M543 59H558" stroke="#f0d0ae" stroke-width="2.2" stroke-linecap="square"/>
+</svg>
