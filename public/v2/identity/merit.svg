@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="112" viewBox="0 0 580 112" fill="none">
+  <title>Merit — original custom vector identity concept</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="16" x2="377" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#eabb7d"/><stop offset=".42" stop-color="#fffaf2"/><stop offset=".72" stop-color="#eabb7d"/><stop offset="1" stop-color="#ad704b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="118" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#eabb7d"/><stop offset=".58" stop-color="#ad704b"/><stop offset="1" stop-color="#eabb7d"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M9 89V24L52 64L95 24V89L78 89V60L52 85L26 60V89Z" fill="url(#accent)"/>
+  <path d="M26 88L52 99L80 88" stroke="#ffe7bb" stroke-width="5" stroke-linecap="square"/>
+  <path d="M15 23L52 57L89 23" stroke="#fff1d3" stroke-width="3" opacity=".75"/>
+  <path d="M115 22V90" stroke="#cd9a69" stroke-width="1" opacity=".7"/>
+  <g stroke="url(#metal)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M143 81V29L168 56L193 29V81"/>
+    <path d="M218 29V81M218 29H270M218 55H260M218 81H270"/>
+    <path d="M295 81V29H325C343 29 353 35 353 46C353 58 343 63 325 63H296M326 63L354 81"/>
+    <path d="M382 29V81"/>
+    <path d="M410 29H482M446 29V81"/>
+  </g>
+  <path d="M142 95H354" stroke="#d9a46e" stroke-width="2"/>
+  <path d="M468 94H523M523 94L534 83" stroke="#d9a46e" stroke-width="2"/>
+  <path d="M508 27H535" stroke="#fbe6c5" stroke-width="2" opacity=".8"/>
+
+</svg>

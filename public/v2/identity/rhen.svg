@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="112" viewBox="0 0 560 112" fill="none">
+  <title>Rhen — original custom vector identity concept</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="16" x2="364" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8de9ea"/><stop offset=".42" stop-color="#fffaf2"/><stop offset=".72" stop-color="#8de9ea"/><stop offset="1" stop-color="#1e9fb6"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="118" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8de9ea"/><stop offset=".58" stop-color="#1e9fb6"/><stop offset="1" stop-color="#8de9ea"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M19 87V28H61C89 28 101 42 95 56C90 70 68 76 42 70M43 70L95 94" stroke="url(#accent)" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M16 96C42 85 60 82 83 91" stroke="#a5f9ee" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+  <path d="M117 22V91" stroke="#65c0cb" stroke-width="1" opacity=".68"/>
+  <g stroke="url(#metal)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M146 81V30H179C197 30 204 37 204 48C204 59 194 65 178 65H146M177 65L205 81"/>
+    <path d="M235 29V81M280 29V81M235 55H280"/>
+    <path d="M313 29V81M313 29H363M313 55H353M313 81H363"/>
+    <path d="M396 81V29L449 81V29"/>
+  </g>
+  <path d="M146 95H235M397 95H452" stroke="#5ad9df" stroke-width="2" opacity=".9"/>
+  <path d="M468 39C482 30 491 48 504 39S528 30 541 39" stroke="#4fcad7" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M468 50C482 41 491 59 504 50S528 41 541 50" stroke="#4fcad7" stroke-width="2" opacity=".65" stroke-linecap="round"/>
+
+</svg>

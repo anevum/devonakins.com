@@ -1,0 +1,49 @@
+/* Project identity layer: original vector lockups, no external fonts or image providers.
+   Text alternatives remain in HTML; the source SVGs contain path-drawn lettering. */
+.hero-feature .focus-project-copy .project-wordmark,
+#panel-work .work-card-core .project-wordmark {
+  display:block; width:min(100%,168px); height:30px; margin:0; padding:0;
+  font-size:0; line-height:0; flex:none;
+}
+.hero-feature .focus-project-copy .project-wordmark img,
+#panel-work .work-card-core .project-wordmark img {
+  display:block; width:100%; height:100%; object-fit:contain; object-position:left center;
+  max-width:100%; filter:drop-shadow(0 1px 9px rgba(237,176,125,.14));
+}
+.hero-feature .focus-project-rhen-language .project-wordmark img,
+#panel-work .work-card-rhen-language .project-wordmark img {
+  filter:drop-shadow(0 1px 9px rgba(99,221,226,.14));
+}
+.hero-feature .focus-project-copy { gap:3px; }
+#panel-work .work-card-spotlight .project-wordmark {
+  width:min(100%,234px); height:45px;
+}
+#panel-work .work-card-support .project-wordmark {
+  width:min(100%,169px); height:29px;
+}
+#panel-work .work-card-support .project-wordmark-squelch img {
+  filter:drop-shadow(0 1px 8px rgba(245,112,185,.15));
+}
+#panel-work .work-card-support .support-project-title {
+  display:inline-flex; align-items:center; gap:8px; max-width:100%; margin:0;
+  font-size:16px; line-height:1.12; font-weight:590;
+}
+#panel-work .support-project-title img {
+  width:25px; height:25px; flex:0 0 25px; object-fit:contain;
+}
+@media (max-width:960px) {
+  .hero-feature .focus-project-copy .project-wordmark { width:min(100%,151px); height:27px; }
+  #panel-work .work-card-spotlight .project-wordmark { width:min(100%,210px); height:40px; }
+}
+@media (max-width:460px) {
+  .hero-feature .focus-project-copy .project-wordmark { width:min(100%,143px); height:25px; }
+  #panel-work .work-card-spotlight .project-wordmark { width:min(100%,194px); height:36px; }
+  #panel-work .work-card-support .project-wordmark { width:min(100%,162px); height:25px; }
+  #panel-work .support-project-title img { width:21px; height:21px; flex-basis:21px; }
+}
+@media (max-width:360px) {
+  .hero-feature .focus-project-copy .project-wordmark { width:min(100%,128px); height:23px; }
+}
+@media (prefers-contrast:more) {
+  .hero-feature .project-wordmark img, #panel-work .project-wordmark img { filter:none; }
+}

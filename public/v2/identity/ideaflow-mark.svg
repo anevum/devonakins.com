@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112" fill="none">
+  <title>IdeaFlow — original custom vector identity concept</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="16" x2="72.8" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#91e6ff"/><stop offset=".42" stop-color="#fffaf2"/><stop offset=".72" stop-color="#91e6ff"/><stop offset="1" stop-color="#478bb8"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="118" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#91e6ff"/><stop offset=".58" stop-color="#478bb8"/><stop offset="1" stop-color="#91e6ff"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M11 56C26 27 44 27 56 56S86 85 101 56C86 27 68 27 56 56S26 85 11 56Z" stroke="url(#accent)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21 80C34 88 43 86 56 77M91 32C80 24 69 26 56 35" stroke="#d5f7ff" stroke-width="3" stroke-linecap="round" opacity=".82"/>
+  <circle cx="56" cy="56" r="5" fill="#ddf8ff"/>
+
+</svg>
