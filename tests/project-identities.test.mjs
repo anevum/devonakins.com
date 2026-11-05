@@ -38,3 +38,44 @@ test("project wordmarks are first-party, legible vector paths with text alternat
     assert.equal((html.match(/src="\/v2\/identity\/rhen\.svg"/g) || []).length, 2);
   }
 });
+
+
+test("public archive and detail routes use correct, independent visual identities", async () => {
+  const archive = await readFile("dist/work/index.html", "utf8");
+  const routesCss = await readFile("dist/v2/routes.css", "utf8");
+  const wordmarks = [
+    ["merit", "Merit", "merit.svg"],
+    ["rhen-language", "Rhen", "rhen.svg"],
+    ["squelch", "Squelch", "squelch.svg"],
+    ["brandicade", "Brandicade", "brandicade.svg"],
+    ["anevum", "Anevum", "anevum.svg"],
+  ];
+  for (const [slug, name, file] of wordmarks) {
+    assert.ok(archive.includes('class="route-project route-project-' + slug + '" data-identity="' + slug + '"'), slug);
+    assert.ok(archive.includes('src="/v2/identity/' + file + '" alt="' + name + '"'), name + " alternative");
+    const detail = await readFile("dist/work/" + slug + "/index.html", "utf8");
+    assert.ok(detail.includes('class="route-header route-header-with-brand"'), slug);
+    assert.ok(detail.includes('src="/v2/identity/' + file + '" alt=""'), "decorative detail accent");
+    assert.match(detail, /class="route-title"/);
+  }
+  for (const [slug, name, file] of [
+    ["ideaflow", "IdeaFlow", "ideaflow-mark.svg"],
+    ["devonstation", "DevonStation", "devonstation-mark.svg"],
+  ]) {
+    assert.ok(archive.includes('data-identity="' + slug + '"'), slug);
+    assert.ok(archive.includes('src="/v2/identity/' + file + '" alt=""'));
+    assert.ok(archive.includes("<span>" + name + "</span>"));
+  }
+  assert.match(archive, /class="route-project" href="\/work\/rhen\/"/);
+  assert.doesNotMatch(archive, /data-identity="rhen"/);
+  assert.match(routesCss, /\.route-project\[data-identity\]/);
+  assert.match(routesCss, /prefers-reduced-motion: reduce/);
+  assert.match(routesCss, /prefers-contrast: more/);
+  for (const name of ["anevum","brandicade"]) {
+    const svg = await readFile("dist/v2/identity/" + name + ".svg", "utf8");
+    assert.match(svg, /<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+    assert.match(svg, /<title>/);
+    assert.ok((svg.match(/<path\b/g)||[]).length >= 6);
+    assert.doesNotMatch(svg, /<text\b|<image\b|<script\b|foreignObject|@import/i);
+  }
+});

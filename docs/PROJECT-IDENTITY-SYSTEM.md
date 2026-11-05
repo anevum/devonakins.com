@@ -24,3 +24,12 @@ Design and review distinctive wordmarks/emblems for Mizvo, Vesper, Anevum, Brand
 ## Release gate
 
 Run source/build/Node and Chromium + WebKit responsive/accessibility acceptance on the exact PR head. Review generated screenshot artifacts at 320/390/1440 widths, including short-height first-fold clipping, SVG network loading, keyboard focus, and contrast. Seek review before merge or production deployment. No Cloudflare deployment has been requested by this document.
+
+
+## Full Work archive and project details — visual quality increment
+
+**Source implementation proposed, not production released.** The public Work archive reuses the Merit, Rhen-language, Squelch, IdeaFlow and DevonStation vector assets from the homepage and introduces concept wordmarks for Brandicade (forest-green arcade control) and Anevum (violet orbital A). Product and creative ownership remain separate; no new project brand, claim of released software, or client/customer disclosure is introduced.
+
+The historical market-research `/work/rhen/` route deliberately has no Rhen programming-language identity; draft PR #31 is independently responsible for updating Vesper links and routes. Every branded archive card remains a native link with readable project descriptions and status, image alternative text or visible text, contrast-aware focus, and reduced-motion support. On detail routes, the logo is decorative and a normal H1 is preserved.
+
+**Acceptance:** exact-commit CI build/Node tests; Chromium and WebKit responsive/keyboard/axe checks; visual review of 320/390/768/1440px screenshots, including navigation clearance and logo legibility. No merge, deploy, or final trademark approval is claimed by these changes.

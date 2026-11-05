@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="646" height="112" viewBox="0 0 646 112" fill="none">
+<title>Brandicade — original custom vector identity concept</title>
+<defs><linearGradient id="color" x1="15" y1="6" x2="70" y2="94" gradientUnits="userSpaceOnUse"><stop stop-color="#a6ff82"/><stop offset=".58" stop-color="#42d787"/><stop offset="1" stop-color="#a6ff82"/></linearGradient>
+<linearGradient id="word" x1="90" y1="20" x2="646" y2="90" gradientUnits="userSpaceOnUse"><stop stop-color="#a6ff82"/><stop offset=".50" stop-color="#f8fff2"/><stop offset="1" stop-color="#42d787"/></linearGradient></defs>
+<path d="M15 20H49C69 20 81 33 81 49C81 65 69 78 49 78H15V20Z" fill="none" stroke="url(#color)" stroke-width="8"/>
+<path d="M31 39V60M21 49H41" stroke="#dcffc7" stroke-width="5" stroke-linecap="square"/>
+<circle cx="60" cy="42" r="4" fill="#f1ffdd"/><circle cx="69" cy="51" r="4" fill="#82e9a4"/>
+<path d="M90 17V81" stroke="#42d787" stroke-width="1" opacity=".54"/>
+<g stroke="url(#word)" stroke-width="5.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 4V56H27C41 56 42 35 27 32H5M5 32H26C40 32 41 4 26 4Z" transform="translate(94 13)"/>
+<path d="M5 56V4H27C43 4 43 31 27 31H5M23 31L42 56" transform="translate(147 13)"/>
+<path d="M3 56L22 4L41 56M10 39H34" transform="translate(200 13)"/>
+<path d="M5 56V4L41 56V4" transform="translate(253 13)"/>
+<path d="M5 4V56H22C49 56 49 4 22 4Z" transform="translate(306 13)"/>
+<path d="M5 4H38M21.5 4V56M5 56H38" transform="translate(359 13)"/>
+<path d="M41 9C2 -10 2 70 41 51" transform="translate(412 13)"/>
+<path d="M3 56L22 4L41 56M10 39H34" transform="translate(465 13)"/>
+<path d="M5 4V56H22C49 56 49 4 22 4Z" transform="translate(518 13)"/>
+<path d="M40 4H5V56H40M5 30H32" transform="translate(571 13)"/></g>
+<path d="M94 83H610" stroke="#77e99c" stroke-width="1.5" opacity=".7"/><path d="M616 83H645" stroke="#bdffbc" stroke-width="3"/>
+</svg>

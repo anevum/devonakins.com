@@ -47,3 +47,14 @@
 @media (prefers-contrast:more) {
   .hero-feature .project-wordmark img, #panel-work .project-wordmark img { filter:none; }
 }
+
+
+/* A slight contrast and tap-target improvement without increasing UI density. */
+#panel-work .work-card-spotlight small { color: #d6dde6; }
+#panel-work .work-card-support small { color: #cbd5e0; }
+#panel-work .work-card-spotlight .card-open { font-size: 10px; letter-spacing: .015em; }
+@media (max-width: 600px) {
+  #panel-work .work-card-spotlight small { font-size: 11px; line-height: 1.43; }
+  #panel-work .work-card-support small { font-size: 10.5px; line-height: 1.35; }
+  #panel-work .work-card-support .project-wordmark-squelch { width: min(100%,189px); height: 28px; }
+}
