@@ -324,6 +324,59 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             check_overflow("contact")
             assert "devon@anevum.com" in page.locator("#panel-contact").inner_text()
 
+            # New sixth view and site-wide presence signal: inspect real layout
+            # and keyboard/touch behavior on all supported responsive sizes.
+            assert page.locator("#tab-listening").count() == 1
+            assert page.locator("#presence-ticker").is_visible()
+            presence_box = page.locator("#presence-ticker").bounding_box()
+            assert presence_box and presence_box["width"] >= 70, (label, presence_box)
+            assert presence_box["x"] >= 0 and (
+                presence_box["x"] + presence_box["width"] <= width + 1
+            ), (label, "ticker clipped", presence_box)
+            page.locator("#tab-listening").click()
+            assert page.locator("#panel-listening").is_visible()
+            check_overflow("listening")
+            assert page.locator("#listening-track-title").is_visible()
+            assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+            if origin and (width, height) in [(390, 844), (1440, 900)]:
+                presence_path = "**/api/listening/now"
+                live_body = json.dumps({
+                    "version": 1,
+                    "mode": "playing",
+                    "detailsVisible": True,
+                    "updatedAt": page.evaluate("new Date().toISOString()"),
+                    "track": {
+                        "title": "Synthetic QA track",
+                        "artist": "Synthetic QA artist",
+                        "url": "https://open.spotify.com/track/1234567890123456789012",
+                    },
+                })
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json", body=live_body
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#presence-ticker-label')?.textContent === 'IN THE ZONE'
+                """)
+                assert page.locator("#listening-track-title").inner_text() == "Synthetic QA track"
+                assert page.locator("#listening-open-track").get_attribute("href").startswith(
+                    "https://open.spotify.com/track/"
+                )
+                page.unroute(presence_path)
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json",
+                    body='{"version":1,"mode":"hidden","detailsVisible":false}'
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#presence-ticker-label')?.textContent === 'LISTENING PRIVATE'
+                """)
+                assert "Synthetic QA track" not in page.locator("#panel-listening").inner_text()
+                assert page.locator("#listening-open-track").is_hidden()
+                page.unroute(presence_path)
+            page.locator("#tab-contact").click()
+            assert page.locator("#panel-contact").is_visible()
+
             violations = []
             if axe_source:
                 page.add_script_tag(content=axe_source)
