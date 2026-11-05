@@ -1,3 +1,5 @@
+import { createPresenceReader } from "./spotify-presence.mjs";
+
 export const securityHeaders = {
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
@@ -9,8 +11,9 @@ export const securityHeaders = {
 };
 export function createHandler(assets, release) {
   const decoded = new Map();
+  const readPresence = createPresenceReader();
   return {
-    async fetch(request) {
+    async fetch(request, env = {}) {
       const url = new URL(request.url);
       const redirect = (target, status = 308) =>
         new Response(null, {
@@ -42,6 +45,15 @@ export function createHandler(assets, release) {
             "Cache-Control": "no-store",
           },
         });
+      // Same-origin public projection; privacy OFF until the owner explicitly
+      // opts in through server-side environment settings. Never cache in CDN.
+      if (url.pathname === "/api/listening/now") {
+        const result = await readPresence(env);
+        return new Response(request.method === "HEAD" ? null : result.body, {
+          status: result.status,
+          headers: { ...securityHeaders, ...Object.fromEntries(result.headers) },
+        });
+      }
       if (url.pathname === "/_health")
         return new Response(
           request.method === "HEAD"
