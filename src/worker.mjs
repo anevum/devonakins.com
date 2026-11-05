@@ -16,7 +16,7 @@ export function createHandler(assets, release, options = {}) {
   const failureTtlMs = 10 * 60_000;
   const maxTtlMs = 4 * 60 * 60_000;
   // Bump cache key when the sanitized format or validation contract changes.
-  const cacheKey = new Request("https://devonakins.com/__cache/public-github-v2");
+  const cacheKey = new Request("https://devonakins.com/__cache/public-github-v3");
   let lastGithub = null;
   let pendingGithub = null;
   let failureStreak = 0;
@@ -36,7 +36,7 @@ export function createHandler(assets, release, options = {}) {
           if (hit?.ok) {
             const saved = await hit.json();
             const expiresAt = Date.parse(saved?.expiresAt);
-            if (saved?.version === 2 && Number.isFinite(expiresAt) &&
+            if (saved?.version === 3 && Number.isFinite(expiresAt) &&
                 expiresAt > atMs && expiresAt <= atMs + maxTtlMs &&
                 validPublicGithubSignal(saved.value, at) &&
                 atMs - Date.parse(saved.value.checkedAt) <= maxTtlMs) {
@@ -78,7 +78,7 @@ export function createHandler(assets, release, options = {}) {
       if (edgeCache) {
         try {
           await edgeCache.put(cacheKey, new Response(JSON.stringify({
-            version: 2, expiresAt: new Date(expiresAt).toISOString(), value,
+            version: 3, expiresAt: new Date(expiresAt).toISOString(), value,
           }), {
             headers: {
               "Content-Type": "application/json; charset=utf-8",

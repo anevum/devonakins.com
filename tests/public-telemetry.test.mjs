@@ -61,6 +61,25 @@ test("public activity reduces event payload to allowlisted kind and UTC time", (
   assert.throws(() => projectPublicGithubEvents({events: []}, date));
 });
 
+test("public event timeline is bounded, sanitized and cache-poisoning resistant", () => {
+  const events = Array.from({length: 11}, (_, i) => ({
+    ...publicEvent, created_at: new Date(date.getTime() - i * 60_000).toISOString(),
+    payload: {privateNote: "never include private payload"},
+  }));
+  const result = projectPublicGithubEvents(events, date);
+  assert.equal(result.recentActivity.length, 8);
+  assert.deepEqual(result.recentActivity[0], {at: date.toISOString(), kind: "push"});
+  assert.equal(validPublicGithubSignal(result, date), true);
+  assert.doesNotMatch(JSON.stringify(result), /privateNote|private payload|do-not-publish/);
+  assert.equal(validPublicGithubSignal({...result, recentActivity: [
+    {...result.recentActivity[0], repository: "private"}, ...result.recentActivity.slice(1),
+  ]}, date), false);
+  assert.equal(validPublicGithubSignal({...result,
+    recentActivity: [...result.recentActivity].reverse()}, date), false);
+  assert.equal(validPublicGithubSignal({...result, latestActivityKind: "release"}, date), false);
+  assert.deepEqual(unavailablePublicGithub(date).recentActivity, []);
+});
+
 test("same-origin telemetry endpoint caches a provider read while preserving sources", async () => {
   let providerCalls = 0;
   const site = createHandler(publicAssets, {version:"test"}, {

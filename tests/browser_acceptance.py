@@ -405,6 +405,13 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "621.7M" in page.locator("#gpt-profile").inner_text()
                         assert "Showcase Sites" not in page.locator("#gpt-profile").inner_text()
                         assert page.locator(".gpt-weekly-metric").count() == 4
+                        assert page.locator("#gpt-event-list").count() == 1
+                        assert page.locator(".gpt-live-panel").is_visible()
+                        assert page.locator("[data-gpt-event-filter]").count() == 4
+                        page.locator('[data-gpt-event-filter="pull request"]').click()
+                        assert page.locator('[data-gpt-event-filter="pull request"]').get_attribute("aria-pressed") == "true"
+                        assert page.locator('[data-gpt-event-filter="all"]').get_attribute("aria-pressed") == "false"
+                        page.locator('[data-gpt-event-filter="all"]').click()
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()

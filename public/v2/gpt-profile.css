@@ -87,3 +87,26 @@
   .gpt-period-rail {gap:9px;font-size:9px;}
 }
 @media(prefers-reduced-motion:reduce) {.gpt-weekly * {animation:none!important;transition:none!important;}}
+
+/* Separate public GitHub activity from the dated ChatGPT profile. */
+.gpt-live-panel {position:relative;isolation:isolate;overflow:hidden;padding:clamp(19px,3.3vw,35px);border:1px solid rgba(204,176,181,.36);background:radial-gradient(ellipse at 100% 0,rgba(132,88,127,.17),transparent 52%),linear-gradient(135deg,rgba(23,29,44,.98),rgba(8,13,23,.96));}
+.gpt-live-kicker {display:flex;align-items:center;gap:10px;color:#e8bca2;font-size:10px;letter-spacing:.13em;font-weight:700;}
+.gpt-live-lamp {display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#8fc2bb;box-shadow:0 0 15px rgba(143,194,187,.45);}
+.gpt-live-heading {display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:18px 0 14px;}
+.gpt-live-heading h2 {font-size:clamp(29px,4.7vw,51px);font-weight:520;letter-spacing:-.065em;line-height:1.1;margin:8px 0 12px;}
+.gpt-live-heading p {max-width:630px;color:#b8c6d4;font-size:12px;line-height:1.7;margin:0;}
+.gpt-live-source {flex:0 0 auto;color:#9bb8c7;font-size:10px;letter-spacing:.08em;border:1px solid rgba(147,185,196,.33);padding:10px 12px;}
+.gpt-live-status {font-size:11px;color:#f0c5ae;line-height:1.65;border-top:1px solid rgba(218,204,208,.17);padding-top:16px;margin:16px 0 14px;}
+.gpt-live-filters {display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.gpt-live-filters button {min-height:40px;padding:10px 15px;font:inherit;font-size:11px;cursor:pointer;color:#acbfce;border:1px solid rgba(174,200,214,.22);background:rgba(13,21,32,.72);border-radius:6px;transition:background .16s,border-color .16s,color .16s;}
+.gpt-live-filters button[aria-pressed="true"] {color:#fff0e4;background:rgba(135,89,87,.34);border-color:rgba(228,173,142,.64);}
+.gpt-live-filters button:hover,.gpt-live-filters button:focus-visible {color:#fff;border-color:#eed3bd;outline-offset:3px;}
+.gpt-event-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.gpt-event-card {position:relative;min-width:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 17px;border:1px solid rgba(195,205,224,.17);background:linear-gradient(125deg,rgba(21,33,47,.91),rgba(11,17,28,.93));}
+.gpt-event-card::before {content:"";position:absolute;top:0;left:0;height:2px;width:42px;background:linear-gradient(90deg,#a9c7cd,#d8a38b);}
+.gpt-event-kind {color:#e9c2a9;font-size:11px;font-weight:680;letter-spacing:.065em;line-height:1.45;}
+.gpt-event-card time {color:#bacbd7;text-align:right;font-size:11px;line-height:1.6;font-variant-numeric:tabular-nums;}
+.gpt-event-state {min-height:18px;color:#a7b9c7;font-size:11px;line-height:1.65;margin:14px 0 0;}
+@media(max-width:700px) {.gpt-live-heading {align-items:flex-start;flex-direction:column;gap:10px;}.gpt-event-list {grid-template-columns:minmax(0,1fr);}}
+@media(max-width:390px) {.gpt-live-panel {padding:17px 13px;}.gpt-live-filters button {padding-inline:10px;min-height:44px;}.gpt-event-card {padding:15px 12px;}}
+@media(prefers-reduced-motion:reduce) {.gpt-live-filters button {transition:none;}}
