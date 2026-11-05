@@ -16,22 +16,62 @@ const paragraph = (content) => '<p>' + esc(content) + '</p>';
 const block = (label, body) =>
   '<article class="route-block"><p class="route-block-label">' + esc(label) + '</p>' + body + '</article>';
 
-function layout({ breadcrumb, index, title, intro, body, actions = "" }) {
+function layout({ breadcrumb, index, title, intro, body, actions = "", brand = "" }) {
   return '<div class="panel-inner route-panel-inner"><div class="route-content">' +
     '<nav class="route-breadcrumb" aria-label="Breadcrumb">' + breadcrumb + '</nav>' +
-    '<header class="route-header">' +
+    '<header class="route-header' + (brand ? ' route-header-with-brand' : '') + '">' +
     '<span class="route-kicker"><span class="route-kicker-line" aria-hidden="true"></span>' + esc(index) + '</span>' +
-    '<h1 class="route-title">' + esc(title) + '<span class="route-stop">.</span></h1>' +
+    brand + '<h1 class="route-title">' + esc(title) + '<span class="route-stop">.</span></h1>' +
     '<p class="route-lead">' + esc(intro) + '</p></header>' +
     body +
     '<nav class="route-actions" aria-label="Related destinations">' + actions + '</nav>' +
     '</div></div>';
 }
 
+const PUBLIC_PROJECT_IDENTITIES = Object.freeze({
+  merit: { file: "merit.svg", width: 580, kind: "wordmark" },
+  "rhen-language": { file: "rhen.svg", width: 560, kind: "wordmark" },
+  squelch: { file: "squelch.svg", width: 770, kind: "wordmark" },
+  brandicade: { file: "brandicade.svg", width: 646, kind: "wordmark" },
+  anevum: { file: "anevum.svg", width: 434, kind: "wordmark" },
+  ideaflow: { file: "ideaflow-mark.svg", width: 112, kind: "emblem" },
+  devonstation: { file: "devonstation-mark.svg", width: 112, kind: "emblem" },
+});
+// The historical /work/rhen/ finance page deliberately has no programming-language identity.
+// This is a fixed map: portfolio content cannot supply arbitrary image paths.
+const projectIdentity = (project) => Object.hasOwn(PUBLIC_PROJECT_IDENTITIES, project.slug)
+  ? PUBLIC_PROJECT_IDENTITIES[project.slug] : null;
+
+function projectBrandTitle(project) {
+  const asset = projectIdentity(project);
+  if (!asset) return '<strong>' + esc(project.title) + '</strong>';
+  const src = '/v2/identity/' + asset.file;
+  if (asset.kind === "emblem") {
+    return '<strong class="route-project-brand route-project-brand-compact">' +
+      '<img src="' + src + '" alt="" width="112" height="112" decoding="async" loading="lazy">' +
+      '<span>' + esc(project.title) + '</span></strong>';
+  }
+  return '<strong class="route-project-brand"><img src="' + src + '" alt="' +
+    esc(project.title) + '" width="' + asset.width +
+    '" height="112" loading="lazy" decoding="async"></strong>';
+}
+
+function detailBrand(project) {
+  const asset = projectIdentity(project);
+  if (!asset) return "";
+  // The real H1 beneath this decorative accent remains plain searchable text.
+  return '<div class="route-header-identity" aria-hidden="true"><img src="/v2/identity/' +
+    asset.file + '" alt="" width="' + asset.width + '" height="112" decoding="async"></div>';
+}
+
 function projectCard(project, index) {
-  return '<a class="route-project" href="/work/' + esc(project.slug) + '/">' +
+  const asset = projectIdentity(project);
+  const modifier = asset ? ' route-project-' + esc(project.slug) : '';
+  const brandAttribute = asset ? ' data-identity="' + esc(project.slug) + '"' : '';
+  return '<a class="route-project' + modifier + '"' + brandAttribute +
+    ' href="/work/' + esc(project.slug) + '/">' +
     '<span class="route-project-index">' + String(index + 1).padStart(2, "0") + ' / ' + esc(project.category) + '</span>' +
-    '<strong>' + esc(project.title) + '</strong>' +
+    projectBrandTitle(project) +
     '<span class="route-project-description">' + esc(project.summary) + '</span>' +
     '<span class="route-project-footer"><span>' + esc(project.status) + '</span><span aria-hidden="true">↗</span></span>' +
     '</a>';
@@ -62,6 +102,7 @@ function contentFor(path, projects, gptSnapshot) {
       index: "01 / PROJECT FILE / " + String(projectIndex + 1).padStart(2, "0"),
       heading: p.title,
       intro: p.summary,
+      brand: detailBrand(p),
       breadcrumb: parent + '<a href="/work/">Work archive</a><span aria-hidden="true"> / </span><span aria-current="page">' + esc(p.title) + '</span>',
       body: '<div class="route-meta"><span>' + esc(p.label) + '</span><span>' + esc(p.status) + '</span><span>' + esc(p.role) + '</span></div>' +
         '<div class="route-blocks">' +
@@ -199,7 +240,7 @@ export function renderImmersiveRoute(canonicalHomepage, path, projects, gptSnaps
   const content = layout({
     breadcrumb: data.breadcrumb, index: data.index,
     title: data.heading, intro: data.intro,
-    body: data.body, actions: data.actions,
+    body: data.body, actions: data.actions, brand: data.brand,
   });
   html = html.replace(section, (_, open, close) => open + '\n' + content + '\n' + close);
   if (path === "/404/") {
