@@ -60,6 +60,7 @@ await writeFile(
   "export default " + JSON.stringify(assets) + ";\n",
 );
 await writeFile(".release/handler.mjs", await readFile("src/worker.mjs"));
+await writeFile(".release/spotify-presence.mjs", await readFile("src/spotify-presence.mjs"));
 await writeFile(
   ".release/worker.mjs",
   `import assets from './assets.mjs';import {createHandler} from './handler.mjs';export default createHandler(assets,${JSON.stringify(release)});\n`,
