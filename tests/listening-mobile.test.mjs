@@ -216,3 +216,74 @@ test("real Worker entrypoint fails closed on owner paths and exposes private ass
     assert.equal((await (await site.fetch(req("/api/listening/now"), env)).json()).mode, "hidden");
   } finally { close(); }
 });
+
+
+test("expired access token refreshes through Spotify and stores a rotated refresh credential", async () => {
+  const { env, db, close } = await fixture();
+  const authorization = createListeningOwnerApi({ clock: () => now,
+    fetcher: async () => new Response(JSON.stringify({
+      token_type: "Bearer", scope: "user-read-currently-playing",
+      access_token: access, refresh_token: refresh, expires_in: 3600,
+    }), { status: 200 }) });
+  try {
+    await connect(authorization, env);
+    env.LISTENING_PUBLIC_RELEASE_APPROVED = "true";
+    const settings = req("/api/listening/admin/settings", {
+      method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ publicEnabled: true, showDetails: false }),
+    });
+    assert.equal((await authorization(settings, env, ctx)).status, 200);
+    await db.prepare("UPDATE listening_account SET access_expires=? WHERE id=1").bind(now - 1000).run();
+    const rotated = "rotated_refresh_01234";
+    let refreshed = 0;
+    const read = createD1PresenceReader({ clock: () => now, fetcher: async (url, options) => {
+      if (url.includes("accounts.spotify.com")) {
+        refreshed += 1;
+        const body = new URLSearchParams(options.body);
+        assert.equal(body.get("client_id"), clientId);
+        assert.equal(body.get("refresh_token"), refresh);
+        return new Response(JSON.stringify({
+          token_type: "Bearer", access_token: "new_access_01234",
+          refresh_token: rotated, expires_in: 3600,
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify(track()), { status: 200 });
+    } });
+    const projected = await (await read(env)).json();
+    assert.equal(projected.mode, "playing");
+    assert.equal(projected.detailsVisible, false);
+    assert.equal(Object.hasOwn(projected, "track"), false);
+    assert.equal(refreshed, 1);
+    const account = await db.prepare("SELECT * FROM listening_account WHERE id=1").first();
+    const key = await importEncryptionKey(env.LISTENING_TOKEN_KEY);
+    assert.equal(await unseal(account.refresh_cipher, key, "refresh"), rotated);
+    assert.equal(account.public_enabled, 1);
+  } finally { close(); }
+});
+
+test("Spotify rate limit holds public requests without disclosing an old song", async () => {
+  const { env, db, close } = await fixture();
+  const api = createListeningOwnerApi({ clock: () => now, fetcher: async () => new Response(
+    JSON.stringify({ token_type:"Bearer", scope:"user-read-currently-playing",
+      access_token:access, refresh_token:refresh, expires_in:3600 }), { status:200 }) });
+  try {
+    await connect(api, env);
+    env.LISTENING_PUBLIC_RELEASE_APPROVED = "true";
+    const setting = req("/api/listening/admin/settings", {
+      method:"POST", headers:{...headers,"Content-Type":"application/json"},
+      body:JSON.stringify({publicEnabled:true,showDetails:true}),
+    });
+    await api(setting, env, ctx);
+    let requestCount = 0;
+    const read = createD1PresenceReader({clock:()=>now,fetcher:async()=>{
+      requestCount += 1;
+      return new Response("",{status:429,headers:{"Retry-After":"120"}});
+    }});
+    assert.equal((await (await read(env)).json()).mode,"unavailable");
+    assert.equal((await (await read(env)).json()).mode,"unavailable");
+    assert.equal(requestCount,1);
+    const account=await db.prepare("SELECT * FROM listening_account WHERE id=1").first();
+    assert.ok(account.blocked_until >= now + 120000);
+    assert.equal(account.projection_json,null);
+  } finally { close(); }
+});
