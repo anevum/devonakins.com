@@ -7,6 +7,8 @@ import {
   projectHistoricalGpt,
   projectPublicGithubEvents,
   unavailablePublicGithub,
+  validPublicGithubSignal,
+  githubCooldownMs,
 } from "../src/public-telemetry.mjs";
 
 const snapshot = JSON.parse(await readFile(
@@ -139,4 +141,98 @@ test("taller mobile Observatory exposes sanitized public activity without replac
   assert.match(css, /@media \(max-width: 960px\) and \(min-height: 761px\)/);
   assert.match(css, /\.readout-development \{[^}]*display: block/s);
   assert.match(client, /mobile\.textContent = brief/);
+});
+
+test("bounded GitHub cooldown honors Retry-After and rate limit reset without leaking headers", () => {
+  const retry = new Response(null, {
+    status: 429, headers: {"Retry-After": "1800"},
+  });
+  assert.equal(githubCooldownMs(retry, date), 30 * 60_000);
+  const resetTime = Math.floor((date.getTime() + 45 * 60_000) / 1000);
+  const reset = new Response(null, {
+    status: 403, headers: {"X-RateLimit-Reset": String(resetTime)},
+  });
+  assert.equal(githubCooldownMs(reset, date), 45 * 60_000);
+  const extreme = new Response(null, {
+    status: 429, headers: {"Retry-After": "99999999"},
+  });
+  assert.equal(githubCooldownMs(extreme, date), 4 * 60 * 60_000);
+  const noHeaders = new Response(null, {status: 403});
+  assert.equal(githubCooldownMs(noHeaders, date, 1), 10 * 60_000);
+  assert.equal(githubCooldownMs(noHeaders, date, 3), 40 * 60_000);
+});
+
+test("unavailable public source is negatively cached through provider cooldown", async () => {
+  let clock = date.getTime();
+  let remoteCalls = 0;
+  let stored = null;
+  const cache = {
+    match: async () => stored?.clone() ?? null,
+    put: async (_key, response) => { stored = response.clone(); },
+  };
+  const options = {
+    now: () => new Date(clock), cache,
+    githubFetch: async () => {
+      remoteCalls++;
+      return remoteCalls === 1
+        ? new Response("too many requests", {status: 429, headers: {"Retry-After": "1800"}})
+        : new Response(JSON.stringify([publicEvent]));
+    },
+  };
+  const first = createHandler(publicAssets, {version: "test"}, options);
+  const firstResult = await (await request(first)).json();
+  assert.equal(firstResult.development.status, "unavailable");
+  assert.equal(remoteCalls, 1);
+  clock += 20 * 60_000;
+  const laterIsolate = createHandler(publicAssets, {version: "test"}, options);
+  const delayed = await (await request(laterIsolate)).json();
+  assert.equal(delayed.development.status, "unavailable");
+  assert.equal(remoteCalls, 1, "edge cache must share a limited provider cooldown");
+  clock += 11 * 60_000;
+  const afterReset = createHandler(publicAssets, {version: "test"}, options);
+  const recovered = await (await request(afterReset)).json();
+  assert.equal(recovered.development.status, "available");
+  assert.equal(remoteCalls, 2);
+  assert.doesNotMatch(JSON.stringify(recovered), /too many requests/i);
+});
+
+test("invalid cached values cannot inject extra fields or silently appear fresh", async () => {
+  let calls = 0;
+  const projected = projectPublicGithubEvents([publicEvent], date);
+  assert.equal(validPublicGithubSignal(projected, date), true);
+  assert.equal(validPublicGithubSignal({...projected, actor: {token: "leak"}}, date), false);
+  assert.equal(validPublicGithubSignal({...projected, latestActivityKind: "unknown"}, date), false);
+  assert.equal(validPublicGithubSignal({...projected, checkedAt: "tomorrow"}, date), false);
+  const poison = new Response(JSON.stringify({
+    version: 2,
+    expiresAt: new Date(date.getTime() + 240_000).toISOString(),
+    value: {...projected, repository: "private-repository-name"},
+  }), {headers: {"Content-Type":"application/json"}});
+  const site = createHandler(publicAssets, {version: "test"}, {
+    now, cache: {match: async () => poison.clone(), put: async () => {}},
+    githubFetch: async () => {
+      calls++;
+      return new Response(JSON.stringify([publicEvent]));
+    },
+  });
+  const result = await (await request(site)).json();
+  assert.equal(calls, 1, "invalid edge cache is rejected and provider consulted");
+  assert.equal(result.development.status, "available");
+  assert.doesNotMatch(JSON.stringify(result), /private-repository-name|repository/);
+});
+
+test("concurrent first requests deduplicate upstream provider calls", async () => {
+  let calls = 0;
+  const site = createHandler(publicAssets, {version: "test"}, {
+    now, cache: null,
+    githubFetch: async () => {
+      calls++;
+      await Promise.resolve();
+      return new Response(JSON.stringify([publicEvent]));
+    },
+  });
+  const responses = await Promise.all([request(site), request(site), request(site)]);
+  const payloads = await Promise.all(responses.map(x => x.json()));
+  assert.ok(payloads.every(x => x.development.status === "available"));
+  assert.equal(calls, 1);
 });
