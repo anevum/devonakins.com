@@ -111,6 +111,10 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
         body: params.toString(),
         signal: withTimeout(),
       });
+      if (result.status === 429)
+        throw new HoldRequest(retryDelayMs(result.headers.get("Retry-After"), now()));
+      if (result.status === 400 || result.status === 401)
+        throw new HoldRequest(900_000);
       if (!result.ok) throw new Error("Spotify token request unavailable");
       const body = await result.json();
       if (typeof body.access_token !== "string" || body.access_token.length < 10)
@@ -137,6 +141,12 @@ export function createPresenceReader({ fetcher = fetch, now = Date.now, ttlMs = 
       });
       if (result.status === 204) {
         return { version: 1, mode: "off_air", detailsVisible: false, updatedAt: checkedAt };
+      }
+      if (result.status === 429)
+        throw new HoldRequest(retryDelayMs(result.headers.get("Retry-After"), now()));
+      if (result.status === 401 || result.status === 403) {
+        token = null;
+        throw new HoldRequest(300_000);
       }
       if (!result.ok) return unavailable(checkedAt);
       const body = await result.json();
