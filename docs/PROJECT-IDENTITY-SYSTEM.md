@@ -19,7 +19,7 @@ The portfolio header, hero copy, statuses, routes, and accessible card structure
 
 ## Remaining identity work (not implemented by this increment)
 
-Design and review distinctive wordmarks/emblems for Mizvo, CristyBreathe, The Current, and other verified projects. Anevum, Brandicade, and Vesper now have preliminary portfolio identity concepts, not final product-brand approval. Treat the forest-green Kahlua identity as Brandicade-specific, and give Cristy's properties warm organic typography instead of this portfolio's metallic technical look. Avoid inventing project statuses, fictional S.L. projects, or turning discarded name Phatcake into a live brand.
+Design and review distinctive wordmarks/emblems for CristyBreathe, The Current, and other verified projects. Mizvo now has a provisional portfolio wordmark, but no brand-owner or trademark clearance for a final app/company mark. Anevum, Brandicade, and Vesper now have preliminary portfolio identity concepts, not final product-brand approval. Treat the forest-green Kahlua identity as Brandicade-specific, and give Cristy's properties warm organic typography instead of this portfolio's metallic technical look. Avoid inventing project statuses, fictional S.L. projects, or turning discarded name Phatcake into a live brand.
 
 ## Release gate
 
@@ -38,3 +38,12 @@ The historical market-research `/work/rhen/` route deliberately has no Rhen prog
 ## Vesper portfolio integration — November 4, 2026
 
 The new independent Vesper financial-research project is added to the selected public Work archive by the Rhen/Vesper source-link correction, and now receives an original brushed-silver/prismatic vector identity. This is an **exploratory portfolio concept**, not financial performance evidence, investment advice, final trademark clearance, or an already approved branding change to the Vesper application. The shape references precision and research rather than trading signals or profitability. The preserved `/work/rhen/` historical finance route retains its own unbranded title, and `/work/rhen-language/` keeps the separate cyan compiler identity. This change introduces no financial APIs, account information, trading endpoints, or new dependencies.
+
+
+## Mizvo portfolio identity — follow-up review branch
+
+This work is deliberately **stacked on PR #33**, not inserted into the already verified original portfolio overhaul. The provisional architectural portal mark and custom Mizvo lettering echo its founder-approved graphite/ivory/copper visual language without claiming that the Mizvo business mark V1 is cleared or formally adopted. The work archive and project detail explicitly identify the real public AGPL-3.0 review build while stating that there is no production deployment, formed company, staff/team, real clients, or completed enterprise engagements.
+
+Source of truth: [Mizvo public source](https://github.com/devonalanakins/mizvo), draft [implementation PR #2](https://github.com/devonalanakins/mizvo/pull/2), and its owning [Mizvo operations record](https://app.notion.com/p/40e88cc2ef14818f9afee934ee41a84a). No client information, public marketing publication, legal representation or domain purchase is authorized by a portfolio design branch. Keep Cristy's properties out of this branding and retain their own design/approval decisions.
+
+Verify that the generated `/work/mizvo/` route resolves, carries a descriptive text H1 plus a decorative brand SVG, links only to the public source, renders without overflow at 320/390/768/1440px, respects keyboard focus and reduced motion, and that the sitemap contains the new route.

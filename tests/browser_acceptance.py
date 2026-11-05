@@ -387,7 +387,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "/work/", "/source/", "/about/", "/contact/", "/gpt/",
                     "/work/operations/", "/work/writing/", "/work/anevum/",
                     "/work/ideaflow/", "/work/devonstation/",
-                    "/work/merit/", "/work/rhen-language/", "/work/vesper/", "/work/squelch/",
+                    "/work/merit/", "/work/mizvo/", "/work/rhen-language/", "/work/vesper/", "/work/squelch/",
                     "/work/brandicade/", "/work/rhen/",
                 ]:
                     response = page.goto(origin + route, wait_until="load")
@@ -409,7 +409,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
                         assert not page.locator("#home-usage-value").count()
-                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/merit/", "/work/rhen-language/", "/contact/", "/gpt/"]:
+                    if axe_source and route in ["/work/", "/work/ideaflow/", "/work/merit/", "/work/mizvo/", "/work/rhen-language/", "/contact/", "/gpt/"]:
                         page.add_script_tag(content=axe_source)
                         link_violations = page.evaluate("""async () => {
                           const tags = ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'];

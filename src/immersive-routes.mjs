@@ -30,6 +30,7 @@ function layout({ breadcrumb, index, title, intro, body, actions = "", brand = "
 
 const PUBLIC_PROJECT_IDENTITIES = Object.freeze({
   merit: { file: "merit.svg", width: 580, kind: "wordmark" },
+  mizvo: { file: "mizvo.svg", width: 570, kind: "wordmark" },
   "rhen-language": { file: "rhen.svg", width: 560, kind: "wordmark" },
   vesper: { file: "vesper.svg", width: 590, kind: "wordmark" },
   squelch: { file: "squelch.svg", width: 770, kind: "wordmark" },
