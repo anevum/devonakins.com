@@ -119,14 +119,14 @@ export function githubCooldownMs(response, at = new Date(), failures = 1) {
   let requested = base * Math.pow(2, Math.min(count - 1, 5));
   const retryAfter = response.headers.get("retry-after");
   if (retryAfter) {
-    const seconds = /^\\d{1,8}$/.test(retryAfter) ? Number(retryAfter) : NaN;
+    const seconds = /^\d{1,8}$/.test(retryAfter) ? Number(retryAfter) : NaN;
     const until = Number.isFinite(seconds)
       ? seconds * 1000
       : Date.parse(retryAfter) - at.getTime();
     if (Number.isFinite(until)) requested = Math.max(requested, until);
   }
   const reset = response.headers.get("x-ratelimit-reset");
-  if (reset && /^\\d{9,12}$/.test(reset)) {
+  if (reset && /^\d{9,12}$/.test(reset)) {
     requested = Math.max(requested, Number(reset) * 1000 - at.getTime());
   }
   return Math.min(max, Math.max(base, requested));
