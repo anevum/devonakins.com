@@ -189,6 +189,10 @@ export function renderPublicGptProfile(input) {
     metric("FAST MODE", ins.fastModePercent + "%", "Profile-reported proportion") +
     metric("MOST USED REASONING", ins.mostUsedReasoning, "Profile insight; not a benchmark") +
     '</div></section>' +
+    '<section class="gpt-section" aria-labelledby="gpt-public-development-heading">' +
+    heading("gpt-public-development-heading", "06 / PUBLIC", "Development signal",
+      "Latest publicly visible GitHub activity, independent of ChatGPT and Work/Codex usage.") +
+    '<p id="gpt-public-activity" class="gpt-signal-context" role="status" aria-live="polite">Checking public development activity. The GPT statistics above remain historical.</p></section>' +
     '<footer class="gpt-profile-foot"><strong>DATED PUBLIC SNAPSHOT / NO PRIVATE ACCOUNT ACCESS</strong>' +
     '<p>As of <time datetime="' + esc(s.asOf) + '">' + esc(longDate) + '</time>. ' +
     'Reconciled from owner-provided recordings. Updates are published through this repository; ' +

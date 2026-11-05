@@ -1,0 +1,131 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {gzipSync} from "node:zlib";
+import {createHandler} from "../src/worker.mjs";
+import {
+  projectHistoricalGpt,
+  projectPublicGithubEvents,
+  unavailablePublicGithub,
+} from "../src/public-telemetry.mjs";
+
+const snapshot = JSON.parse(await readFile(
+  new URL("../public/v2/usage-snapshot.json", import.meta.url), "utf8",
+));
+const date = new Date("2026-11-05T08:00:00.000Z");
+const now = () => date;
+const publicEvent = {
+  type: "PushEvent",
+  public: true,
+  created_at: "2026-11-05T07:58:00Z",
+  payload: {commits: [{message: "do not publish commit messages"}]},
+  repo: {name: "devonalanakins/example-private-filename"},
+  actor: {login: "do-not-publish"},
+};
+const publicAssets = {
+  "/v2/usage-snapshot.json": {
+    gzip: gzipSync(JSON.stringify(snapshot)).toString("base64"),
+  },
+};
+const request = (site, method = "GET") =>
+  site.fetch(new Request("https://devonakins.com/api/telemetry/public", {method}));
+
+test("historical GPT projection cannot accidentally publish private profile content", () => {
+  const projected = projectHistoricalGpt(snapshot);
+  assert.deepEqual(Object.keys(projected).sort(),
+    ["approximate", "asOf", "count", "freshness", "metric", "scope", "source"]);
+  assert.equal(projected.asOf, "2026-11-04");
+  assert.equal(projected.count, 2700000000);
+  assert.equal(projected.freshness, "historical");
+  for (const changed of [
+    {...snapshot, count: "2700000000"},
+    {...snapshot, attestation: "api-verified"},
+    {...snapshot, asOf: "2026-11-31"},
+  ]) assert.throws(() => projectHistoricalGpt(changed));
+});
+
+test("public activity reduces event payload to allowlisted kind and UTC time", () => {
+  const result = projectPublicGithubEvents([
+    {...publicEvent, type: "IssuesEvent", created_at: "2026-11-05T07:59:00Z"},
+    {...publicEvent, public: false, created_at: "2026-11-05T07:59:00Z"},
+    publicEvent,
+  ], date);
+  assert.equal(result.latestActivityKind, "push");
+  assert.equal(result.latestActivityAt, "2026-11-05T07:58:00.000Z");
+  assert.equal(result.status, "available");
+  assert.doesNotMatch(JSON.stringify(result), /do-not-publish|example-private|commit messages|payload|actor/);
+  assert.equal(result.checkedAt, date.toISOString());
+  assert.equal(projectPublicGithubEvents([], date).status, "no-recent-public-development");
+  assert.throws(() => projectPublicGithubEvents({events: []}, date));
+});
+
+test("same-origin telemetry endpoint caches a provider read while preserving sources", async () => {
+  let providerCalls = 0;
+  const site = createHandler(publicAssets, {version:"test"}, {
+    now, cache: null,
+    githubFetch: async (url, options) => {
+      providerCalls++;
+      assert.match(url, /^https:\/\/api\.github\.com\/users\/devonalanakins\/events\/public\?/);
+      assert.equal(options.headers.Accept, "application/vnd.github+json");
+      return new Response(JSON.stringify([publicEvent]), {
+        headers: {"Content-Type": "application/json"},
+      });
+    },
+  });
+  const first = await request(site);
+  assert.equal(first.status, 200);
+  assert.match(first.headers.get("Content-Type"), /application\/json/);
+  const result = await first.json();
+  assert.equal(result.version, 1);
+  assert.equal(result.gpt.count, snapshot.count);
+  assert.equal(result.gpt.asOf, snapshot.asOf);
+  assert.equal(result.gpt.freshness, "historical");
+  assert.equal(result.development.freshness, "current");
+  assert.equal(result.development.latestActivityKind, "push");
+  assert.equal(result.development.source, "GitHub public events API");
+  assert.equal(result.development.checkedAt, date.toISOString());
+  assert.doesNotMatch(JSON.stringify(result), /skills|topPlugins|actor|commit messages|example-private/);
+  assert.equal((await request(site)).status, 200);
+  assert.equal(providerCalls, 1, "in-isolate cache prevents repeat fetch");
+  assert.equal((await request(site, "HEAD")).status, 200);
+  assert.equal(providerCalls, 1, "HEAD does not call provider");
+  assert.equal((await request(site, "POST")).status, 405);
+});
+
+test("provider errors and malformed responses fail closed and never fabricate GPT usage", async () => {
+  for (const response of [
+    new Response("rate limited", {status: 403}),
+    new Response('{"error":"invalid response"}'),
+  ]) {
+    const site = createHandler(publicAssets, {version:"test"}, {
+      now, cache: null, githubFetch: async () => response.clone(),
+    });
+    const result = await (await request(site)).json();
+    assert.deepEqual(result.development, unavailablePublicGithub(date));
+    assert.equal(result.gpt.freshness, "historical");
+    assert.equal(result.gpt.asOf, "2026-11-04");
+    assert.doesNotMatch(JSON.stringify(result), /rate limited|invalid response/);
+  }
+});
+
+test("cross-isolate edge cache reuses sanitized provider values", async () => {
+  let remoteCalls = 0;
+  let stored = null;
+  const cache = {
+    match: async () => stored?.clone() ?? null,
+    put: async (_key, response) => {stored = response.clone();},
+  };
+  const options = {
+    now, cache,
+    githubFetch: async () => {
+      remoteCalls++;
+      return new Response(JSON.stringify([publicEvent]));
+    },
+  };
+  const first = createHandler(publicAssets, {version:"test"}, options);
+  await request(first);
+  const second = createHandler(publicAssets, {version:"test"}, options);
+  const result = await (await request(second)).json();
+  assert.equal(remoteCalls, 1);
+  assert.equal(result.development.latestActivityKind, "push");
+});
