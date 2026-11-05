@@ -108,6 +108,42 @@ The detailed `/gpt/` page excludes Showcase Sites entirely; the homepage
 retains its single activity stream. Exact daily values are not inferred from
 screen recordings. Each new capture requires a reviewed static file update.
 
+## Automatic public telemetry — separate from GPT usage
+
+The source-defined `/api/telemetry/public` endpoint is a **proposed first-party public
+signal**, not a live OpenAI account connection. It reports two independently
+sourced records:
+
+- `gpt`: a **historical**, owner-published Work/Codex token total with the
+  original capture date from `public/v2/usage-snapshot.json`. This value
+  does not increase automatically, and it is never inferred from development
+  events, model/API bills or Spotify activity.
+- `development`: the **latest observed public GitHub push, pull request or
+  release** (if available among up to 30 public profile events), with a
+  checked-at timestamp, or an explicit unavailable/no-recent-event state.
+  GitHub is not a substitute for ChatGPT statistics or complete coding time.
+
+The Cloudflare Worker only publishes a constrained allowlist of values; it
+does not publish repository paths, commit messages, private account details,
+provider error bodies or credentials. On-demand reads use a five-minute
+in-isolate cache plus optional Cloudflare Cache API across isolates, avoiding
+new databases, paid jobs, or cron schedules. Client refresh while visible is
+also five minutes, and failed requests never convert a historical metric into
+a live one. The existing static /gpt/ capture remains accessible without JS.
+
+**Cost and eligibility:** The proposed first-party GitHub endpoint does
+not require a GitHub token, OpenAI API payment or new Cloudflare service.
+Worker/Cache requests still count against the *shared* Cloudflare account
+quotas; zero incremental cost is conditional on staying inside the existing
+allowance. The OpenAI workspace Usage Analytics API may provide later
+automated GPT usage only for eligible managed workspaces with supported
+permissions; there is currently no verified entitlement or connected source.
+Do not scrape ChatGPT cookies/private endpoints to imitate a live feed.
+
+**Release:** Source-only until CI, mobile/browser checks, provider failure
+tests and explicit Cloudflare owner review; a GitHub branch or merge is not
+proof of a live website update. See [issue #36](https://github.com/devonalanakins/devonakins.com/issues/36).
+
 ## Identity assets
 
 Original paths are shared between the SVG identity and the extruded Three.js
