@@ -5,6 +5,8 @@ import { DatabaseSync } from "node:sqlite";
 import { base64url, importEncryptionKey, unseal } from "../src/listening-crypto.mjs";
 import { createListeningOwnerApi } from "../src/listening-owner-api.mjs";
 import { createD1PresenceReader } from "../src/listening-d1-presence.mjs";
+import assets from "../.release/assets.mjs";
+import { createHandler } from "../src/worker.mjs";
 
 const now = Date.parse("2026-11-05T08:00:00.000Z");
 const clientId = "0123456789abcdef0123456789abcdef";
@@ -192,5 +194,25 @@ test("single DB lease prevents concurrent probes from resurrecting disabled play
     const account = await db.prepare("SELECT * FROM listening_account WHERE id=1").first();
     assert.equal(account.projection_json, null);
     assert.equal(account.refresh_cipher, null);
+  } finally { close(); }
+});
+
+
+test("real Worker entrypoint fails closed on owner paths and exposes private assets only as inert code", async () => {
+  const site = createHandler(assets, { version: "test", commit: "synthetic" });
+  const { env, close } = await fixture();
+  try {
+    assert.equal((await site.fetch(req("/owner/listening/"))).status, 403);
+    assert.equal((await site.fetch(ownerPost("/api/listening/oauth/start"))).status, 403);
+    assert.equal((await site.fetch(req("/api/listening/admin/status"))).status, 403);
+    assert.equal((await site.fetch(req("/api/listening/oauth/callback?state=x&code=y"))).status, 403);
+    assert.equal((await site.fetch(ownerPost("/api/listening/admin/disconnect"), env, {})).status, 403);
+    const authorized = await site.fetch(req("/owner/listening/"), env, ctx);
+    assert.equal(authorized.status, 200);
+    assert.match(authorized.headers.get("X-Robots-Tag"), /noindex/);
+    assert.match(await authorized.text(), /Spotify connection/);
+    assert.equal((await site.fetch(req("/v2/listening-owner.css"))).status, 200);
+    assert.equal((await site.fetch(req("/v2/listening-owner.js"))).status, 200);
+    assert.equal((await (await site.fetch(req("/api/listening/now"), env)).json()).mode, "hidden");
   } finally { close(); }
 });
