@@ -61,6 +61,7 @@ await writeFile(
 );
 await writeFile(".release/handler.mjs", await readFile("src/worker.mjs"));
 await writeFile(".release/public-telemetry.mjs", await readFile("src/public-telemetry.mjs"));
+await writeFile(".release/gpt-observation-bridge.mjs", await readFile("src/gpt-observation-bridge.mjs"));
 await writeFile(
   ".release/worker.mjs",
   `import assets from './assets.mjs';import {createHandler} from './handler.mjs';export default createHandler(assets,${JSON.stringify(release)});\n`,

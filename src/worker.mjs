@@ -1,4 +1,5 @@
 import { projectPublicGithubEvents, unavailablePublicGithub, projectPublicTelemetry, validPublicGithubSignal, githubCooldownMs } from "./public-telemetry.mjs";
+import {handleObservationRequest, OBSERVATION_READ_PATH, OBSERVATION_WRITE_PATH} from "./gpt-observation-bridge.mjs";
 export const securityHeaders = {
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
@@ -126,7 +127,7 @@ export function createHandler(assets, release, options = {}) {
     return historicalSnapshot;
   };
   return {
-    async fetch(request) {
+    async fetch(request, env) {
       const url = new URL(request.url);
       const redirect = (target, status = 308) =>
         new Response(null, {
@@ -149,6 +150,11 @@ export function createHandler(assets, release, options = {}) {
         url.protocol = "https:";
         return redirect(url.href);
       }
+      // Disabled-by-default bridge is routed before the site-wide read-only
+      // rule. With no separately approved KV/secret/flags, it returns 404.
+      if (url.pathname === OBSERVATION_READ_PATH ||
+          url.pathname === OBSERVATION_WRITE_PATH)
+        return handleObservationRequest(request, env, now(), securityHeaders);
       if (!["GET", "HEAD"].includes(request.method))
         return new Response("Method not allowed", {
           status: 405,
