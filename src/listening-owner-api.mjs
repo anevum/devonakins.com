@@ -78,6 +78,9 @@ async function previewPlayback(env, now, fetcher, clock) {
     return ownerError("Spotify connection needs authorization", 409);
   if (account.blocked_until > now)
     return ownerError("Spotify is temporarily unavailable", 429);
+  // Throttle manual checks across Worker isolates without persisting playback metadata.
+  if (account.checked_at > now - 60_000 && account.checked_at <= now)
+    return ownerError("Private playback was checked recently; try again shortly", 429);
   const lease = secureRandom(16);
   const claimed = await db.prepare(
     "UPDATE listening_account SET lease_id=?,lease_until=? WHERE id=1 AND revision=? AND connection_key=? AND refresh_cipher IS NOT NULL AND reauth_required=0 AND (lease_id IS NULL OR lease_until<?)",
@@ -108,6 +111,11 @@ async function previewPlayback(env, now, fetcher, clock) {
       current.connection_key !== account.connection_key ||
       !current.refresh_cipher
     )
+      return ownerError("Private preview was cancelled", 409);
+    const marked = await db.prepare(
+      "UPDATE listening_account SET checked_at=? WHERE id=1 AND lease_id=? AND revision=? AND connection_key=? AND refresh_cipher IS NOT NULL",
+    ).bind(now, lease, account.revision, account.connection_key).run();
+    if (marked.meta?.changes !== 1)
       return ownerError("Private preview was cancelled", 409);
     const projection = result.projection;
     return ownerJson({
