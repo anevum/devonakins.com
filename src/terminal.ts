@@ -406,7 +406,7 @@ function renderObservation() {
   const freshness=observationFetchFailed ? "unreachable" :
     ageSeconds > 15*60 ? "stale" : "recent";
   observationPanel.dataset.freshness=freshness;
-  const units=r.unit === "percent" ? "%" : " " + observedMetricNames[r.metric];
+  const units=(r.unit === "percent" ? "% " : " ") + observedMetricNames[r.metric];
   const valueLabel=new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(r.value)+units;
   const value=document.querySelector<HTMLElement>("#gpt-observation-value");
   if (value && value.textContent !== valueLabel) value.textContent=valueLabel;

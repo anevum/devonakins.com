@@ -532,6 +532,12 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             }
                             page.reload(wait_until="load")
                             page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            observation_fixture["observation"]["metric"] = "work_codex_used_percent"
+                            observation_fixture["observation"]["unit"] = "percent"
+                            observation_fixture["observation"]["value"] = 42
+                            page.reload(wait_until="load")
+                            page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            assert "42% used" in page.locator("#gpt-observation-value").inner_text()
                             # Falsify freshness: a stale upstream checkedAt must fail closed
                             # and replace every previously displayed card with unavailable.
                             valid_checked_at = public_fixture["development"]["checkedAt"]
