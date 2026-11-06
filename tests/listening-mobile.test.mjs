@@ -99,6 +99,41 @@ async function connect(api, env) {
   return { state, cookie };
 }
 
+test("owner Spotify readiness is private and missing app setup cannot start OAuth", async () => {
+  const { env, db, close } = await fixture();
+  const api = createListeningOwnerApi();
+  const statusRequest = req("/api/listening/admin/status");
+  try {
+    assert.equal((await api(statusRequest, env, {})).status, 403);
+    const configured = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(configured.spotifyAppConfigured, true);
+    assert.equal(configured.connected, false);
+    assert.doesNotMatch(JSON.stringify(configured), new RegExp(clientId));
+    delete env.SPOTIFY_CLIENT_ID;
+    const missing = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(missing.spotifyAppConfigured, false);
+    assert.equal(missing.connected, false);
+    assert.equal(
+      (await api(ownerPost("/api/listening/oauth/start"), env, ctx)).status,
+      503,
+    );
+    const queued = await db
+      .prepare("SELECT COUNT(*) AS total FROM listening_oauth_attempt")
+      .first();
+    assert.equal(queued.total, 0);
+    env.SPOTIFY_CLIENT_ID = "invalid";
+    const invalid = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(invalid.spotifyAppConfigured, false);
+    const page = await api(req("/owner/listening/"), env, ctx);
+    const html = await page.text();
+    assert.match(html, /id="spotify-setup" hidden/);
+    assert.match(html, /https:\/\/devonakins.com\/api\/listening\/oauth\/callback/);
+    assert.match(html, /developer.spotify.com\/dashboard/);
+  } finally {
+    close();
+  }
+});
+
 test("only matching Cloudflare Access identity can reach the owner UI", async () => {
   const { env, close } = await fixture();
   const api = createListeningOwnerApi();
