@@ -114,7 +114,7 @@ export async function preparePrivateDeployment({
   fetcher = fetch,
   read = readFile,
   write = writeFile,
-  mask = value => process.stdout.write("::add-mask::" + value + "\\n"),
+  mask = value => process.stdout.write("::add-mask::" + value + "\n"),
 } = {}) {
   const account = env.CLOUDFLARE_ACCOUNT_ID;
   const token = env.CLOUDFLARE_API_TOKEN;
