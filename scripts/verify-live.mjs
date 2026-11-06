@@ -232,5 +232,14 @@ if (origin === "https://devonakins.com") {
   assert.equal(www.status, 308, "canonical www redirect");
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
 }
+if (telemetry.development.freshness === "unavailable") {
+  // A syntactically valid endpoint can still be operationally degraded.
+  // The reason and retry timestamp have already passed strict public-schema
+  // validation above, and contain no raw upstream response or credentials.
+  console.warn("::warning title=Public GitHub feed degraded::" +
+    "Reason: " + telemetry.development.failureReason +
+    "; retry eligible: " + telemetry.development.retryAt +
+    ". The site is deployed, but the GitHub event feed is unavailable.");
+}
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
 console.log("Passed: GPT profile, provenance-aware telemetry API, all " + portfolio.length + " canonical portfolio pages, 9 original identity assets, Rhen/Vesper/Mizvo boundaries, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
