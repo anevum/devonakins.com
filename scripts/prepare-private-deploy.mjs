@@ -114,6 +114,7 @@ export async function preparePrivateDeployment({
   fetcher = fetch,
   read = readFile,
   write = writeFile,
+  mask = value => process.stdout.write("::add-mask::" + value + "\\n"),
 } = {}) {
   const account = env.CLOUDFLARE_ACCOUNT_ID;
   const token = env.CLOUDFLARE_API_TOKEN;
@@ -158,11 +159,16 @@ export async function preparePrivateDeployment({
     throw Error("Dedicated database binding required");
   const database = await get("/d1/database/" + binding.id);
   const base = await read("wrangler.jsonc", "utf8");
-  await write(
-    "wrangler.deploy.jsonc",
-    privateDeploymentConfig(base, settings, database),
-    { mode: 0o600 },
-  );
+  const config = privateDeploymentConfig(base, settings, database);
+  // Wrangler prints plain-text Worker binding values during deployment.
+  // Protect owner configuration from appearing in public Actions logs.
+  if (env.GITHUB_ACTIONS === "true") {
+    for (const binding of settings.bindings) {
+      if (binding.type === "plain_text" && binding.text.length > 6)
+        mask(binding.text);
+    }
+  }
+  await write("wrangler.deploy.jsonc", config, { mode: 0o600 });
 }
 if (
   process.argv[1] &&
