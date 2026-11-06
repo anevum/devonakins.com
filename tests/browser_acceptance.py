@@ -509,6 +509,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             observation_fixture["status"] = "stale"
                             observation_fixture["observation"]["status"] = "stale"
                             observation_fixture["observation"]["observedAt"] = event_time(40)
+                            observation_fixture["observation"]["lastChangedAt"] = event_time(50)
                             page.reload(wait_until="load")
                             page.wait_for_function("""() =>
                                 document.querySelector('#gpt-observation-panel')?.dataset.freshness === 'stale'
