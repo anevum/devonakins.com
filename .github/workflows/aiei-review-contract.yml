@@ -1,0 +1,27 @@
+name: AIEI review contract
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
+permissions:
+  contents: read
+jobs:
+  review-contract:
+    # Never skip drafts: a future required check must always report a result.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # PR code is untrusted. This job has no secrets, writable token, or deploy
+      # capability. The existing website CI also tests this pull-request ref.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check required review evidence fields
+        env:
+          AIEI_PR_BODY: ${{ github.event.pull_request.body }}
+          AIEI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AIEI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/aiei-pr-contract.mjs
