@@ -118,3 +118,10 @@
 
 .gpt-live-panel[data-source-state="ready"] .gpt-live-lamp {background:#8fc2bb;box-shadow:0 0 15px rgba(143,194,187,.45);}
 .gpt-live-panel[data-source-state="unavailable"] .gpt-live-lamp {background:#bca09b;box-shadow:none;}
+
+/* Sanitary user-initiated diagnostics export, shown only when the feed is unavailable. */
+.gpt-diagnostic-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:12px;}
+.gpt-diagnostic-actions[hidden] {display:none;}
+.gpt-diagnostic-actions button {min-height:44px;padding:11px 15px;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;color:#f4e2d5;border:1px solid rgba(228,173,142,.53);background:rgba(135,89,87,.21);}
+.gpt-diagnostic-actions button:hover,.gpt-diagnostic-actions button:focus-visible {border-color:#eed3bd;background:rgba(135,89,87,.36);outline-offset:3px;}
+#gpt-copy-status {color:#aebfd0;font-size:11px;line-height:1.6;}

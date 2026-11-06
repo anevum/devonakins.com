@@ -450,6 +450,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
+                        assert page.locator("#gpt-diagnostic-actions").is_hidden()
                         assert "Source checked" in page.locator("#gpt-event-state").inner_text()
                         assert "PUBLIC PUSH" in page.locator("#gpt-event-list").inner_text()
                         # Screenshot only the sanitized synthetic data, never live account details.
@@ -506,6 +507,21 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             assert page.locator("#gpt-event-list .gpt-event-card").count() == 0
                             assert "limiting unauthenticated public requests" in page.locator("#gpt-event-state").inner_text()
                             assert "Retry is permitted after" in page.locator("#gpt-event-state").inner_text()
+                            assert page.locator("#gpt-diagnostic-actions").is_visible()
+                            page.evaluate("""() => {
+                                Object.defineProperty(navigator, 'clipboard', {
+                                    configurable: true,
+                                    value: {writeText: async (value) => {window.__copiedPublicDiagnostics = value;}},
+                                });
+                            }""")
+                            page.locator("#gpt-copy-diagnostics").click()
+                            assert "Diagnostics copied" in page.locator("#gpt-copy-status").inner_text()
+                            copied = page.evaluate("window.__copiedPublicDiagnostics")
+                            assert "Reason: rate-limited" in copied
+                            assert "Source checked (UTC): " in copied
+                            assert "Retry eligible (UTC): " in copied
+                            assert "historical snapshot (not live)" in copied
+                            assert "do not leak" not in copied
                             assert "do not leak" not in page.locator("#gpt-profile").inner_text()
                             public_fixture["development"].clear()
                             public_fixture["development"].update(original_development)
@@ -514,6 +530,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                                 document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'ready'
                             """)
                             assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                            assert page.locator("#gpt-diagnostic-actions").is_hidden()
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()

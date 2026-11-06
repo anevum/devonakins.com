@@ -386,6 +386,10 @@ function renderPublicActivity() {
   if (!list || !status) return;
   const panel = list.closest<HTMLElement>(".gpt-live-panel");
   if (panel) panel.dataset.sourceState = publicActivityState;
+  const actions = document.querySelector<HTMLElement>("#gpt-diagnostic-actions");
+  if (actions) actions.hidden = publicActivityState !== "unavailable";
+  const copyStatus = document.querySelector<HTMLElement>("#gpt-copy-status");
+  if (copyStatus) copyStatus.textContent = "";
   const visible = publicActivity.filter((event) =>
     publicActivityFilter === "all" || event.kind === publicActivityFilter);
   const fragment = document.createDocumentFragment();
@@ -421,6 +425,30 @@ function renderPublicActivity() {
         : "Showing " + visible.length + " of " + publicActivity.length +
           " qualifying events in this bounded public sample. GPT usage remains a historical snapshot.") + checkedAtLabel;
 }
+
+document.querySelector<HTMLButtonElement>("#gpt-copy-diagnostics")?.addEventListener("click", async () => {
+  if (publicActivityState !== "unavailable") return;
+  // Only explicitly validated source metadata is copied. Never include raw
+  // response bodies, account data, tokens, URLs, or browser identifiers.
+  const reason = publicFailureReason && publicFailureLabels[publicFailureReason]
+    ? publicFailureReason : "client-or-response-unavailable";
+  const report = [
+    "DevonAkins.com /gpt/ — public GitHub feed diagnostics",
+    "State: unavailable",
+    "Reason: " + reason,
+    "Source checked (UTC): " + (lastPublicTelemetryCheckedAt ?? "not available"),
+    "Retry eligible (UTC): " + (publicRetryAt ?? "not available"),
+    "ChatGPT usage statistics: historical snapshot (not live)",
+  ].join("\n");
+  const status = document.querySelector<HTMLElement>("#gpt-copy-status");
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(report);
+    if (status) status.textContent = "Diagnostics copied.";
+  } catch {
+    if (status) status.textContent = "Clipboard unavailable. Use the reason and retry time shown above.";
+  }
+});
 
 document.querySelectorAll<HTMLButtonElement>("[data-gpt-event-filter]").forEach((button) => {
   button.addEventListener("click", () => {
