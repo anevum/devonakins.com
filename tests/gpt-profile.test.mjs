@@ -92,6 +92,10 @@ test("filtered public activity panel stays distinct from dated GPT profile", () 
   assert.match(html, /data-gpt-event-filter="all" aria-pressed="true"/);
   assert.match(html, /data-gpt-event-filter="pull request" aria-pressed="false"/);
   assert.match(html, /id="gpt-event-state"[^>]*role="status"/);
+  assert.match(html, /id="gpt-diagnostic-actions"[^>]*hidden/);
+  assert.match(html, /id="gpt-copy-diagnostics"/);
+  assert.match(html, /id="gpt-copy-status" role="status"/);
+  assert.match(html, /id="gpt-diagnostic-manual"[^>]*readonly hidden/);
   assert.ok(html.indexOf("gpt-public-development-heading") < html.indexOf("gpt-activity-heading"));
   assert.match(html, /not ChatGPT usage, private development/);
   assert.match(html, /Up to eight qualifying events sampled from the latest 30/);

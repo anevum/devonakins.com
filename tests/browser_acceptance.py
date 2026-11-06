@@ -411,7 +411,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             "development": {
                                 "source": "GitHub public events API", "freshness": "current",
                                 "checkedAt": clock.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-                                "status": "available", "latestActivityAt": events[0]["at"],
+                                "status": "available", "failureReason": None, "retryAt": None,
+                                "latestActivityAt": events[0]["at"],
                                 "latestActivityKind": events[0]["kind"], "recentActivity": events,
                             },
                         }
@@ -439,16 +440,31 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator("[data-gpt-event-filter]").count() == 4
                         if width == 320:
                             # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
-                            buttons = page.locator("[data-gpt-event-filter]")
-                            boxes = [buttons.nth(i).bounding_box() for i in range(4)]
-                            assert all(box and box["height"] >= 44 for box in boxes)
-                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2
-                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2
-                            assert boxes[2]["y"] > boxes[0]["y"] + 40
-                            assert boxes[0]["x"] < boxes[1]["x"]
+                            # Read all geometry in one animation frame; sequential
+                            # locator queries can span a route-transition frame.
+                            layout = page.locator(".gpt-live-filters").evaluate("""el => {
+                                const style = getComputedStyle(el);
+                                return {
+                                    display: style.display,
+                                    columns: style.gridTemplateColumns.trim().split(/\s+/).length,
+                                    boxes: [...el.querySelectorAll('button')].map(b => {
+                                        const rect = b.getBoundingClientRect();
+                                        return {x: rect.x, y: rect.y, height: rect.height};
+                                    })
+                                };
+                            }""")
+                            assert layout["display"] == "grid", layout
+                            assert layout["columns"] == 2, layout
+                            boxes = layout["boxes"]
+                            assert len(boxes) == 4 and all(b["height"] >= 44 for b in boxes), layout
+                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2, layout
+                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2, layout
+                            assert boxes[2]["y"] > boxes[0]["y"] + 40, layout
+                            assert boxes[0]["x"] < boxes[1]["x"], layout
                         page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
+                        assert page.locator("#gpt-diagnostic-actions").is_hidden()
                         assert "Source checked" in page.locator("#gpt-event-state").inner_text()
                         assert "PUBLIC PUSH" in page.locator("#gpt-event-list").inner_text()
                         # Screenshot only the sanitized synthetic data, never live account details.
@@ -486,6 +502,68 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             """)
                             assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                             assert "Source checked" in page.locator("#gpt-event-state").inner_text()
+                            # A valid rate-limit response must explain the failure without
+                            # exposing raw upstream headers or pretending to have live data.
+                            original_development = dict(public_fixture["development"])
+                            public_fixture["development"].update({
+                                "freshness": "unavailable",
+                                "status": "unavailable",
+                                "failureReason": "rate-limited",
+                                "retryAt": event_time(-30),
+                                "latestActivityAt": None,
+                                "latestActivityKind": None,
+                                "recentActivity": [],
+                            })
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'unavailable'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 0
+                            assert "limiting unauthenticated public requests" in page.locator("#gpt-event-state").inner_text()
+                            assert "Retry is permitted after" in page.locator("#gpt-event-state").inner_text()
+                            assert page.locator("#gpt-diagnostic-actions").is_visible()
+                            page.evaluate("""() => {
+                                Object.defineProperty(navigator, 'clipboard', {
+                                    configurable: true,
+                                    value: {writeText: async (value) => {window.__copiedPublicDiagnostics = value;}},
+                                });
+                            }""")
+                            page.locator("#gpt-copy-diagnostics").click()
+                            assert "Diagnostics copied" in page.locator("#gpt-copy-status").inner_text()
+                            copied = page.evaluate("window.__copiedPublicDiagnostics")
+                            assert "Reason: rate-limited" in copied
+                            assert "Source checked (UTC): " in copied
+                            assert "Retry eligible (UTC): " in copied
+                            assert "historical snapshot (not live)" in copied
+                            assert "do not leak" not in copied
+                            assert page.locator("#gpt-diagnostic-manual").is_hidden()
+                            # Safari-style denial must expose the same sanitized report for
+                            # manual text selection instead of leaving an inert button.
+                            page.evaluate("""() => {
+                                Object.defineProperty(navigator, 'clipboard', {
+                                    configurable: true,
+                                    value: {writeText: async () => {throw new Error('denied');}},
+                                });
+                            }""")
+                            page.locator("#gpt-copy-diagnostics").click()
+                            manual = page.locator("#gpt-diagnostic-manual")
+                            assert manual.is_visible()
+                            assert "Clipboard blocked" in page.locator("#gpt-copy-status").inner_text()
+                            assert "Reason: rate-limited" in manual.input_value()
+                            assert "historical snapshot (not live)" in manual.input_value()
+                            assert "do not leak" not in manual.input_value()
+                            assert manual.evaluate("e => e.selectionStart === 0 && e.selectionEnd === e.value.length")
+                            assert "do not leak" not in page.locator("#gpt-profile").inner_text()
+                            public_fixture["development"].clear()
+                            public_fixture["development"].update(original_development)
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'ready'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
+                            assert page.locator("#gpt-diagnostic-actions").is_hidden()
+                            assert page.locator("#gpt-diagnostic-manual").is_hidden()
+                            assert page.locator("#gpt-diagnostic-manual").input_value() == ""
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()

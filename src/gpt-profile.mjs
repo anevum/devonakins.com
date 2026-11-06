@@ -156,6 +156,11 @@ export function renderPublicGptProfile(input) {
       </div>
       <div id="gpt-event-list" class="gpt-event-list" role="list" aria-label="Recent public GitHub events"></div>
       <p id="gpt-event-state" class="gpt-event-state" role="status">Checking the public source. Historical GPT activity does not update automatically.</p>
+      <div id="gpt-diagnostic-actions" class="gpt-diagnostic-actions" hidden>
+        <button type="button" id="gpt-copy-diagnostics">Copy diagnostics</button>
+        <span id="gpt-copy-status" role="status" aria-live="polite"></span>
+        <textarea id="gpt-diagnostic-manual" class="gpt-diagnostic-manual" aria-label="Diagnostics report to select and copy manually" rows="5" readonly hidden></textarea>
+      </div>
     </section>`;
   return '<div class="gpt-profile" id="gpt-profile">' +
     '<div class="gpt-profile-identity"><img class="gpt-profile-avatar" src="/v2/crossed-arms.webp" alt="" width="62" height="62" loading="lazy">' +

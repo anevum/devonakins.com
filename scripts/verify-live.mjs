@@ -104,9 +104,17 @@ assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
   "public GitHub source must include a checked-at timestamp");
 if (telemetry.development.freshness === "unavailable") {
   assert.equal(telemetry.development.status, "unavailable");
+  assert.ok(["rate-limited", "access-denied", "provider-error",
+    "invalid-response", "timeout", "network-error"].includes(telemetry.development.failureReason));
+  const retryAt = Date.parse(telemetry.development.retryAt);
+  const checkedAt = Date.parse(telemetry.development.checkedAt);
+  assert.ok(Number.isFinite(retryAt) && retryAt >= checkedAt &&
+    retryAt <= checkedAt + 4 * 60 * 60_000);
   assert.equal(telemetry.development.latestActivityAt, null);
   assert.deepEqual(telemetry.development.recentActivity, []);
 } else {
+  assert.equal(telemetry.development.failureReason, null);
+  assert.equal(telemetry.development.retryAt, null);
   assert.ok(["available", "no-recent-public-development"].includes(telemetry.development.status));
   if (telemetry.development.status === "available") {
     assert.ok(telemetry.development.recentActivity.length > 0);
@@ -223,6 +231,15 @@ if (origin === "https://devonakins.com") {
   });
   assert.equal(www.status, 308, "canonical www redirect");
   assert.equal(www.headers.get("location"), "https://devonakins.com/");
+}
+if (telemetry.development.freshness === "unavailable") {
+  // A syntactically valid endpoint can still be operationally degraded.
+  // The reason and retry timestamp have already passed strict public-schema
+  // validation above, and contain no raw upstream response or credentials.
+  console.warn("::warning title=Public GitHub feed degraded::" +
+    "Reason: " + telemetry.development.failureReason +
+    "; retry eligible: " + telemetry.development.retryAt +
+    ". The site is deployed, but the GitHub event feed is unavailable.");
 }
 console.log("Verified live release " + active.version + " at exact commit " + expectedCommit);
 console.log("Passed: GPT profile, provenance-aware telemetry API, all " + portfolio.length + " canonical portfolio pages, 9 original identity assets, Rhen/Vesper/Mizvo boundaries, dated snapshot JSON, security headers, preview, image, 404 and www redirect");
