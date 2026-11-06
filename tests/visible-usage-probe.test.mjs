@@ -126,8 +126,8 @@ test("opt-in selection takes only one numeric node and samples every five second
   await settled();
   assert.equal(x.store["devon-visible-usage-probe-v1"].state,"stale");
   await x.command("USAGE_PROBE_STOP");
-  await settled();
-  assert.equal(x.store["devon-visible-usage-probe-v1"].reading,null);
+  assert.equal(x.store["devon-visible-usage-probe-v1"].reading,null,
+    "stop acknowledgment must follow trusted local storage clearance");
 });
 
 test("trusted worker rejects wrong host, raw injected text and invalid scope", async () => {
