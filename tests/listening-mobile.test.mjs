@@ -780,6 +780,140 @@ test("cached projections reject extra fields and cannot bypass the owner track-d
   }
 });
 
+test("disconnect and a newer authorization fence out an older in-flight OAuth callback", async () => {
+  for (const reconnect of [false, true]) {
+    const f = await fixture();
+    let release, enter;
+    let calls = 0;
+    const started = new Promise((r) => {
+      enter = r;
+    });
+    const api = createListeningOwnerApi({
+      clock: () => now,
+      fetcher: async () => {
+        calls++;
+        if (calls === 1) {
+          enter();
+          return new Promise((r) => {
+            release = r;
+          });
+        }
+        return Response.json({
+          token_type: "Bearer",
+          scope: "user-read-currently-playing",
+          access_token: access,
+          refresh_token: refresh,
+          expires_in: 3600,
+        });
+      },
+    });
+    try {
+      const begin = await api(
+        ownerPost("/api/listening/oauth/start"),
+        f.env,
+        ctx,
+      );
+      const { authorizeUrl } = await begin.json();
+      const cookie = begin.headers.get("Set-Cookie").split(";")[0];
+      const state = new URL(authorizeUrl).searchParams.get("state");
+      const old = api(
+        req(
+          "/api/listening/oauth/callback?state=" +
+            state +
+            "&code=old-synthetic-code",
+          { headers: { Cookie: cookie } },
+        ),
+        f.env,
+        ctx,
+      );
+      await started;
+      assert.equal(
+        (await api(ownerPost("/api/listening/admin/disconnect"), f.env, ctx))
+          .status,
+        200,
+      );
+      if (reconnect) await connect(api, f.env);
+      const expected = await savedRefresh(f);
+      release(
+        Response.json({
+          token_type: "Bearer",
+          scope: "user-read-currently-playing",
+          access_token: "old_access_01234",
+          refresh_token: "old_refresh_01234",
+          expires_in: 3600,
+        }),
+      );
+      const result = await old;
+      assert.equal(
+        result.headers.get("Location"),
+        "/owner/listening/?error=expired",
+      );
+      assert.equal(await savedRefresh(f), expected);
+      assert.equal(
+        (
+          await f.db
+            .prepare("SELECT * FROM listening_account WHERE id=1")
+            .first()
+        ).public_enabled,
+        0,
+      );
+    } finally {
+      f.close();
+    }
+  }
+});
+
+test("a new owner authorization invalidates an older unconsumed attempt", async () => {
+  const f = await fixture();
+  let exchanges = 0;
+  const api = createListeningOwnerApi({
+    clock: () => now,
+    fetcher: async () => {
+      exchanges++;
+      throw Error("old exchange must not run");
+    },
+  });
+  try {
+    const first = await api(
+      ownerPost("/api/listening/oauth/start"),
+      f.env,
+      ctx,
+    );
+    const { authorizeUrl } = await first.json();
+    const cookie = first.headers.get("Set-Cookie").split(";")[0];
+    const state = new URL(authorizeUrl).searchParams.get("state");
+    assert.equal(
+      (await api(ownerPost("/api/listening/oauth/start"), f.env, ctx)).status,
+      200,
+    );
+    const old = await api(
+      req(
+        "/api/listening/oauth/callback?state=" +
+          state +
+          "&code=old-synthetic-code",
+        { headers: { Cookie: cookie } },
+      ),
+      f.env,
+      ctx,
+    );
+    assert.equal(
+      old.headers.get("Location"),
+      "/owner/listening/?error=expired",
+    );
+    assert.equal(exchanges, 0);
+    assert.equal(
+      (
+        await f.db
+          .prepare("SELECT COUNT(*) AS count FROM listening_oauth_attempt")
+          .first()
+      ).count,
+      1,
+    );
+  } finally {
+    f.close();
+  }
+});
+
 test("validated playback projections are reused across isolates without extra provider polling", async () => {
   for (const mode of ["playing", "off_air"]) {
     const f = await connectedFixture();

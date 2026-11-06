@@ -141,10 +141,17 @@ and failures from an earlier save. Chromium/WebKit regression scenarios hold an
 ordinary request open, stop broadcasting, and then deliver the older response.
 
 Deterministic SQLite/provider-fixture tests cover these races; the full Node
-suite now contains 103 tests. A failing-before/passing-after cache reproduction
+suite now contains 105 tests. A failing-before/passing-after cache reproduction
 and browser shutdown-message reproduction were observed locally. These are
 source/runtime-fixture checks, not a genuine Spotify account connection. Real
 Access, encrypted D1 and Spotify authorization/renewal acceptance remain open.
+
+OAuth callbacks now retain a consumed, single-use in-flight marker. Disconnect
+invalidates all such attempts before erasing credentials; the callback's SQL
+commit requires its marker still to exist. Starting another authorization also
+invalidates earlier attempts. Regression tests reproduce and prevent an old
+callback reconnecting after disconnect or replacing a newer connection. No
+schema migration or new credential/permission is introduced by these fixes.
 
 Human usability protocol: ask a first-time nontechnical reviewer to identify
 Devon, open a project, find Listening, and explain the source of a status;

@@ -59,11 +59,12 @@ async function updateVisibility(request, env, now) {
   return ownerJson(ownerStatus(await ownerRow(env.LISTENING_DB), env));
 }
 async function removeConnection(env) {
-  // Privacy kill switch first; then discard any unused OAuth attempts.
+  // Invalidate unused AND in-flight authorizations before clearing credentials.
+  // The callback's conditional commit cannot then restore this connection.
+  await env.LISTENING_DB.prepare("DELETE FROM listening_oauth_attempt").run();
   await env.LISTENING_DB.prepare(
     "UPDATE listening_account SET revision=revision+1, refresh_cipher=NULL, access_cipher=NULL, access_expires=0, connected_at=0, reauth_due=0, public_enabled=0, show_details=0, projection_json=NULL, checked_at=0, lease_id=NULL, lease_until=0, blocked_until=0, reauth_required=0 WHERE id=1",
   ).run();
-  await env.LISTENING_DB.prepare("DELETE FROM listening_oauth_attempt").run();
   return ownerJson({ connected: false, publicEnabled: false });
 }
 export function createListeningOwnerApi({
