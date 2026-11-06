@@ -88,6 +88,10 @@ test("renderer escapes all curated text and retains secure links", () => {
 
 test("filtered public activity panel stays distinct from dated GPT profile", () => {
   const html = renderPublicGptProfile(clone());
+  assert.match(html, /id="gpt-observation-panel"[^>]*hidden/);
+  assert.match(html, /id="gpt-observation-value"[^>]*aria-live="off"/);
+  assert.match(html, /id="gpt-observation-state" role="status"/);
+  assert.match(html, /Last source update: unknown/);
   assert.match(html, /id="gpt-event-list"[^>]*role="list"/);
   assert.match(html, /data-gpt-event-filter="all" aria-pressed="true"/);
   assert.match(html, /data-gpt-event-filter="pull request" aria-pressed="false"/);
