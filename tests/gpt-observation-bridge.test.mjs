@@ -188,3 +188,24 @@ test("storage failure returns generic errors without leaking provider internals"
   assert.equal(write.status,503);
   assert.doesNotMatch(await write.text(),/sensitive|kv error/);
 });
+
+
+test("actual Worker router accepts authenticated observation only with runtime gates",async()=>{
+  const site=createHandler({}, {version:"test"}, {now:()=>now});
+  const store=mockStore();
+  const config=env(store);
+  const write=await site.fetch(req(OBSERVATION_WRITE_PATH,"POST",one),config);
+  assert.equal(write.status,202);
+  const read=await site.fetch(req(OBSERVATION_READ_PATH),config);
+  assert.equal(read.status,200);
+  assert.equal((await read.json()).observation.value,120);
+  const unauthorized=await site.fetch(req(OBSERVATION_WRITE_PATH,"POST",
+    {...one,value:119,observedAt:"2026-11-06T12:00:01.000Z"},"incorrect"),config);
+  assert.equal(unauthorized.status,401);
+  assert.equal(store.writes.length,1);
+  const hidden=await site.fetch(req(OBSERVATION_READ_PATH),env(store,false));
+  assert.equal(hidden.status,404);
+  const method=await site.fetch(req(OBSERVATION_READ_PATH,"POST",one),config);
+  assert.equal(method.status,405);
+  assert.match(method.headers.get("content-security-policy"),/default-src 'self'/);
+});
