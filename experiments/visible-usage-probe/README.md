@@ -59,3 +59,7 @@ Verify a genuine source increment, then design and review a private bridge
 that transmits only explicitly authorized and allowlisted metrics to a secure
 first-party storage/reader path. No cloud endpoint or background upload is
 included in this experiment.
+
+## Session revocation (v0.2 source hardening)
+
+Each capture starts only after the trusted extension popup authorizes one browser tab with a random, session-scoped key. The background worker serializes writes, authorizations, and revocations. **Stop and clear** revokes the active session and clears ephemeral local storage before acknowledging completion; delayed messages from previous sessions or other tabs are rejected. This does not improve source access or provide cloud synchronization. Real signed-in Chrome/Edge source compatibility remains unverified.

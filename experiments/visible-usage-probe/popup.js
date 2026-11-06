@@ -2,6 +2,8 @@
 (() => {
   "use strict";
   const KEY = "devon-visible-usage-probe-v1";
+  const newSessionKey = () => Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    byte => byte.toString(16).padStart(2,"0")).join("");
   const byId = id => document.getElementById(id);
   const msg = value => {byId("status").textContent = value;};
   const permitted = raw => {
@@ -52,22 +54,38 @@
       if (previous?.tabId && previous.tabId !== tab.id) {
         try { await send(previous.tabId, {type:"USAGE_PROBE_STOP"}); } catch { /* Old tab closed. */ }
       }
-      await chrome.scripting.executeScript({target:{tabId:tab.id},files:["metric-schema.js", "content.js"]});
-      const selected = await send(tab.id, {
-        type:"USAGE_PROBE_SELECT", metric:byId("metric").value,
+      const sessionKey = newSessionKey();
+      const authorized = await chrome.runtime.sendMessage({
+        type:"USAGE_PROBE_AUTHORIZE",tabId:tab.id,sessionKey,
       });
-      if (!selected?.ok) throw new Error("Unable to select the metric");
+      if (!authorized?.ok) throw new Error("Could not authorize local capture");
+      try {
+        await chrome.scripting.executeScript({target:{tabId:tab.id},files:["metric-schema.js", "content.js"]});
+        const selected = await send(tab.id, {
+          type:"USAGE_PROBE_SELECT", metric:byId("metric").value, sessionKey,
+        });
+        if (!selected?.ok) throw new Error("Unable to select the metric");
+      } catch (error) {
+        await chrome.runtime.sendMessage({type:"USAGE_PROBE_REVOKE"});
+        throw error;
+      }
       msg("Return to the page and click the visible digits. Esc cancels.");
     } catch (error) { msg(error instanceof Error ? error.message : "Selection unavailable"); }
   });
   byId("stop").addEventListener("click", async () => {
-    const previous = (await chrome.storage.session.get(KEY))[KEY];
-    if (previous?.tabId) {
-      try { await send(previous.tabId, {type:"USAGE_PROBE_STOP"}); } catch { /* Tab closed. */ }
+    try {
+      const previous = (await chrome.storage.session.get(KEY))[KEY];
+      const stopped = await chrome.runtime.sendMessage({type:"USAGE_PROBE_REVOKE"});
+      if (!stopped?.ok) throw new Error("Local storage could not be cleared");
+      if (Number.isSafeInteger(previous?.tabId)) {
+        try { await send(previous.tabId, {type:"USAGE_PROBE_STOP"}); }
+        catch { /* Tab closed; service worker already revoked access. */ }
+      }
+      byId("manual").hidden = true;
+      await render();
+    } catch {
+      msg("Stop failed. Retry clearing local capture before closing the popup.");
     }
-    await chrome.storage.session.remove(KEY);
-    byId("manual").hidden = true;
-    await render();
   });
   byId("copy").addEventListener("click", async () => {
     const record = (await chrome.storage.session.get(KEY))[KEY];

@@ -7,6 +7,7 @@
   const POLL_MS = 5_000;
   let target = null;
   let metric = null;
+  let sessionKey = null;
   let reading = null;
   let timer = null;
   let selecting = false;
@@ -14,6 +15,7 @@
   let message = "Selection not started";
 
   function publish() {
+    if (!sessionKey) return Promise.resolve({ok:false});
     const data = {
       version: 1,
       state,
@@ -24,7 +26,7 @@
       statusAt: new Date().toISOString(),
     };
     // Session storage is deliberately written only by the trusted extension worker.
-    return chrome.runtime.sendMessage({type:"USAGE_PROBE_RECORD", data}).catch(() => {});
+    return chrome.runtime.sendMessage({type:"USAGE_PROBE_RECORD", sessionKey, data}).catch(() => ({ok:false}));
   }
 
   function removeSelection() {
@@ -42,7 +44,9 @@
     reading = null;
     state = "stopped";
     message = "Stopped locally; no usage data is being collected";
-    return quiet ? Promise.resolve() : publish();
+    const pending = quiet ? Promise.resolve() : publish();
+    sessionKey = null;
+    return pending;
   }
   function cancelOnEscape(event) {
     if (event.key !== "Escape") return;
@@ -115,10 +119,13 @@
     capture();
     timer = setInterval(capture, POLL_MS);
   }
-  function begin(nextMetric) {
-    if (!schema.allowedMetrics.includes(nextMetric)) return {ok:false};
+  function begin(nextMetric, nextSessionKey) {
+    if (!schema.allowedMetrics.includes(nextMetric) ||
+        typeof nextSessionKey !== "string" || !/^[a-f0-9]{32}$/.test(nextSessionKey))
+      return {ok:false};
     void stop(true);
     metric = nextMetric;
+    sessionKey = nextSessionKey;
     reading = null;
     selecting = true;
     state = "selecting";
@@ -134,7 +141,7 @@
   document.addEventListener("visibilitychange", visibilityChanged);
   chrome.runtime.onMessage.addListener((data, _sender, respond) => {
     if (!data || typeof data !== "object") return;
-    if (data.type === "USAGE_PROBE_SELECT") respond(begin(data.metric));
+    if (data.type === "USAGE_PROBE_SELECT") respond(begin(data.metric,data.sessionKey));
     if (data.type === "USAGE_PROBE_STOP") {
       void stop().then(() => respond({ok:true}), () => respond({ok:false}));
       return true;

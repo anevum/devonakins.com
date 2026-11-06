@@ -8,6 +8,8 @@ const schemaSource = await read("metric-schema.js");
 const contentSource = await read("content.js");
 const backgroundSource = await read("background.js");
 const manifest = JSON.parse(await read("manifest.json"));
+const SESSION = "0123456789abcdef0123456789abcdef";
+const OTHER_SESSION = "fedcba9876543210fedcba9876543210";
 
 const initSchema = () => {
   const ctx=vm.createContext({});
@@ -61,8 +63,13 @@ function setup() {
   const store={};
   let workerHandler;
   const fakeBackgroundChrome={
-    runtime:{onMessage:{addListener(fn){workerHandler=fn;}}},
-    storage:{session:{set: async x=>Object.assign(store,x)}},
+    runtime:{id:"test-extension",getURL:path=>"chrome-extension://test-extension/"+path,
+      onMessage:{addListener(fn){workerHandler=fn;}}},
+    storage:{session:{
+      set: async x=>Object.assign(store,x),
+      get: async key=>({[key]:store[key]}),
+      remove: async keys=>{for(const key of Array.isArray(keys)?keys:[keys]) delete store[key];},
+    }},
   };
   const bg=vm.createContext({chrome:fakeBackgroundChrome,URL,importScripts:()=>vm.runInContext(schemaSource,bg)});
   vm.runInContext(backgroundSource,bg);
@@ -76,7 +83,7 @@ function setup() {
   const fakeContentChrome={
     runtime:{
       onMessage:{addListener(fn){contentHandler=fn;}},
-      sendMessage: async message=>new Promise(resolve=>workerHandler(message,{url:"https://chatgpt.com/",tab:{id:7}},resolve)),
+      sendMessage: async message=>new Promise(resolve=>workerHandler(message,{id:"test-extension",url:"https://chatgpt.com/",tab:{id:7}},resolve)),
     },
   };
   const content=vm.createContext({chrome:fakeContentChrome,document,
@@ -87,8 +94,16 @@ function setup() {
   // Context globalThis must resolve to its own isolated world.
   vm.runInContext(schemaSource,content);
   vm.runInContext(contentSource,content);
-  const command=(type,metric)=>new Promise(resolve=>contentHandler({type,metric},{},resolve));
-  return {store,command,listeners,timers,workerHandler,document};
+  const command=(type,metric,sessionKey=SESSION)=>new Promise(resolve=>
+    contentHandler({type,metric,sessionKey},{},resolve));
+  const popup={id:"test-extension",url:"chrome-extension://test-extension/popup.html"};
+  const authorize=(sessionKey=SESSION,tabId=7)=>new Promise(resolve=>
+    workerHandler({type:"USAGE_PROBE_AUTHORIZE",tabId,sessionKey},popup,resolve));
+  const revoke=()=>new Promise(resolve=>workerHandler({type:"USAGE_PROBE_REVOKE"},popup,resolve));
+  const sendRecord=(data,url="https://chatgpt.com/",sessionKey=SESSION,tabId=7)=>
+    new Promise(resolve=>workerHandler({type:"USAGE_PROBE_RECORD",data,sessionKey},
+      {id:"test-extension",url,tab:{id:tabId}},resolve));
+  return {store,command,listeners,timers,workerHandler,document,authorize,revoke,sendRecord};
 }
 
 const settled = async () => {await Promise.resolve();await Promise.resolve();await new Promise(r=>setImmediate(r));};
@@ -96,6 +111,7 @@ const settled = async () => {await Promise.resolve();await Promise.resolve();awa
 test("opt-in selection takes only one numeric node and samples every five seconds", async () => {
   const x=setup();
   assert.equal(Object.keys(x.store).length,0,"no capture on extension injection");
+  assert.equal((await x.authorize()).ok,true);
   assert.equal((await x.command("USAGE_PROBE_SELECT","work_codex_credits_remaining")).ok,true);
   await settled();
   const element={nodeType:1,textContent:"75 credits",isConnected:true,parentElement:null,getClientRects:()=>[1]};
@@ -125,21 +141,23 @@ test("opt-in selection takes only one numeric node and samples every five second
   x.timers[0]();
   await settled();
   assert.equal(x.store["devon-visible-usage-probe-v1"].state,"stale");
+  assert.equal((await x.revoke()).ok,true);
   await x.command("USAGE_PROBE_STOP");
-  assert.equal(x.store["devon-visible-usage-probe-v1"].reading,null,
-    "stop acknowledgment must follow trusted local storage clearance");
+  assert.equal(x.store["devon-visible-usage-probe-v1"],undefined,
+    "revoke acknowledgment must follow trusted local storage clearance");
+  assert.equal(x.store["devon-visible-usage-active-v1"],undefined);
 });
 
 test("trusted worker rejects wrong host, raw injected text and invalid scope", async () => {
   const x=setup();
+  assert.equal((await x.authorize()).ok,true);
   const allowed={version:1,state:"observing",message:"Visible reading sampled; provider update time unknown",
     metric:"work_codex_credits_used",statusAt:"2026-11-06T12:00:00.000Z",reading:{
       source:"user-selected-visible-usage-text",scope:"work-codex",metric:"work_codex_credits_used",
       unit:"credits",value:15,observedAt:"2026-11-06T12:00:00.000Z",
       lastChangedAt:"2026-11-06T12:00:00.000Z",sourceUpdatedAt:null,
     }};
-  const send=(data,url)=>new Promise(resolve=>x.workerHandler({type:"USAGE_PROBE_RECORD",data},
-    {url,tab:{id:7}},resolve));
+  const send=(data,url)=>x.sendRecord(data,url);
   assert.equal((await send(allowed,"https://evil.example/")).ok,false);
   assert.equal((await send({...allowed,rawCookie:"secret"},"https://chatgpt.com/")).ok,false);
   assert.equal((await send({...allowed,reading:{...allowed.reading,conversation:"private"}},"https://chatgpt.com/")).ok,false);
@@ -149,4 +167,39 @@ test("trusted worker rejects wrong host, raw injected text and invalid scope", a
   assert.equal(x.store["devon-visible-usage-probe-v1"].reading.value,15);
   assert.deepEqual(Object.keys(x.store["devon-visible-usage-probe-v1"].reading).sort(),
     ["source","scope","metric","unit","value","observedAt","lastChangedAt","sourceUpdatedAt"].sort());
+});
+
+test("revoking serialized session blocks queued and delayed samples", async () => {
+  const x=setup();
+  assert.equal((await x.authorize()).ok,true);
+  const valid={version:1,state:"observing",message:"Visible reading sampled; provider update time unknown",
+    metric:"work_codex_credits_used",statusAt:"2026-11-06T12:00:00.000Z",reading:{
+      source:"user-selected-visible-usage-text",scope:"work-codex",metric:"work_codex_credits_used",
+      unit:"credits",value:18,observedAt:"2026-11-06T12:00:00.000Z",
+      lastChangedAt:"2026-11-06T12:00:00.000Z",sourceUpdatedAt:null,
+    }};
+  const pending=x.sendRecord(valid,"https://chatgpt.com/");
+  const revoke=x.revoke();
+  assert.equal((await pending).ok,true);
+  assert.equal((await revoke).ok,true);
+  assert.equal(x.store["devon-visible-usage-probe-v1"],undefined);
+  assert.equal((await x.sendRecord(valid,"https://chatgpt.com/")).ok,false);
+  assert.equal(x.store["devon-visible-usage-probe-v1"],undefined);
+  assert.equal((await x.authorize(OTHER_SESSION,8)).ok,true);
+  assert.equal((await x.sendRecord(valid,"https://chatgpt.com/",SESSION,7)).ok,false);
+  assert.equal((await x.sendRecord(valid,"https://chatgpt.com/",OTHER_SESSION,7)).ok,false);
+  assert.equal((await x.sendRecord(valid,"https://chatgpt.com/",OTHER_SESSION,8)).ok,true);
+  assert.equal(x.store["devon-visible-usage-probe-v1"].reading.value,18);
+});
+
+test("only the extension popup may authorize or revoke capture", async () => {
+  const x=setup();
+  const malicious={url:"https://chatgpt.com/",id:"test-extension",tab:{id:7}};
+  const forged=await new Promise(resolve=>x.workerHandler(
+    {type:"USAGE_PROBE_AUTHORIZE",tabId:7,sessionKey:SESSION},malicious,resolve));
+  assert.equal(forged.ok,false);
+  const denied=await new Promise(resolve=>x.workerHandler(
+    {type:"USAGE_PROBE_REVOKE"},malicious,resolve));
+  assert.equal(denied.ok,false);
+  assert.equal(x.store["devon-visible-usage-active-v1"],undefined);
 });
