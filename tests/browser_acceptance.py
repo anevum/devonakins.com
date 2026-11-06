@@ -446,7 +446,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                                 const style = getComputedStyle(el);
                                 return {
                                     display: style.display,
-                                    columns: style.gridTemplateColumns.trim().split(/\\s+/).length,
+                                    columns: style.gridTemplateColumns.trim().split(/\s+/).length,
                                     boxes: [...el.querySelectorAll('button')].map(b => {
                                         const rect = b.getBoundingClientRect();
                                         return {x: rect.x, y: rect.y, height: rect.height};
