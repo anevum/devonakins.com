@@ -121,6 +121,31 @@ the GPT local collector is not a verified account connection; no editor adapter.
 Spotify refresh-token rotation during simultaneous owner visibility changes
 requires real-provider/concurrency acceptance before a release claim.
 
+### Credential and shutdown race hardening
+
+The next source increment reproduces and fixes refresh-token loss when playback
+fails after a successful token rotation, or when owner visibility changes while
+the refresh is in flight. Encrypted rotated credentials are now saved before
+playback is requested. Owner visibility changes retain the refresh lease but
+invalidate publication. A separate credential fence checks lease ownership and
+the original connection; disconnect/reconnect cannot be undone by a late refresh.
+An obsolete probe releases only its own lease and suppresses its projection.
+
+Cache reads now validate the complete bounded playback envelope, track field and
+URL allowlists, canonical timestamps and the current owner detail preference.
+Extra cached fields cannot enter the public response. Valid playing/paused cache
+entries remain reusable across isolates without extra provider polling.
+
+The private controller's confirmed shutdown message now survives late successes
+and failures from an earlier save. Chromium/WebKit regression scenarios hold an
+ordinary request open, stop broadcasting, and then deliver the older response.
+
+Deterministic SQLite/provider-fixture tests cover these races; the full Node
+suite now contains 103 tests. A failing-before/passing-after cache reproduction
+and browser shutdown-message reproduction were observed locally. These are
+source/runtime-fixture checks, not a genuine Spotify account connection. Real
+Access, encrypted D1 and Spotify authorization/renewal acceptance remain open.
+
 Human usability protocol: ask a first-time nontechnical reviewer to identify
 Devon, open a project, find Listening, and explain the source of a status;
 ask the owner to start a 15-minute iPhone session, switch to private, then stop.

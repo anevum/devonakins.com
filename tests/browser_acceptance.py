@@ -842,6 +842,7 @@ def check_presence_control(browser, engine, origin, output, axe_source):
             "manualState":None,"projects":["merit","mizvo"],
             "preview":{"state":"not-broadcasting","project":None,"source":"none"}}
         writes = []
+        delayed = {}
         def respond(route):
             if route.request.method == "POST":
                 data = route.request.post_data_json
@@ -851,6 +852,11 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                     state.update({"projectSlug":data["projectSlug"],"sessionExpiresAt":"2026-11-06T18:00:00.000Z"})
                 if data["action"] == "off":
                     state.update({"enabled":False,"shareListening":False,"privateWork":False,"sessionExpiresAt":None})
+                if data["action"] == "settings":
+                    state.update({"enabled":data["enabled"],"privateWork":data["privateWork"],"shareListening":data["shareListening"]})
+                if data["action"] == "pause":
+                    delayed.update({"route":route,"body":json.dumps(state)})
+                    return
             route.fulfill(status=200,content_type="application/json",body=json.dumps(state))
         page.route("**/api/presence/owner",respond)
         try:
@@ -866,6 +872,25 @@ def check_presence_control(browser, engine, origin, output, axe_source):
             page.wait_for_function("document.querySelector('#presence-notice').textContent.includes('Broadcasting stopped')")
             assert writes[-1]["action"] == "off" and writes[-1]["revision"] == 1
             assert not page.locator("#presence-enabled").is_checked()
+            # Stop must remain usable while an earlier save is still pending.
+            # Late successful and failed responses must not replace its state
+            # or its confirmed shutdown message.
+            for failed in [False,True]:
+                page.locator("#presence-enabled").check()
+                page.locator("#presence-save").click()
+                page.wait_for_function("document.querySelector('#presence-notice').textContent === 'Saved.'")
+                delayed.clear()
+                page.locator("#session-pause").click()
+                page.wait_for_function("document.querySelector('#presence-notice').textContent.includes('Saving')")
+                assert page.locator("#presence-off").is_enabled()
+                page.locator("#presence-off").click()
+                page.wait_for_function("document.querySelector('#presence-notice').textContent.includes('Broadcasting stopped')")
+                assert delayed.get("route"), "The earlier request was not held"
+                delayed["route"].fulfill(status=409 if failed else 200,content_type="application/json",
+                    body=json.dumps({"error":"Stale ordinary save"}) if failed else delayed["body"])
+                page.wait_for_function("!document.querySelector('#session-pause').disabled")
+                assert not page.locator("#presence-enabled").is_checked()
+                assert "Broadcasting stopped" in page.locator("#presence-notice").inner_text()
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
             assert page.locator("#presence-off").bounding_box()["height"] >= 44
             if axe_source:
@@ -878,7 +903,7 @@ def check_presence_control(browser, engine, origin, output, axe_source):
             output.mkdir(parents=True,exist_ok=True)
             page.screenshot(path=str(output/f"presence-owner-{engine}-{width}.png"),full_page=True)
             results.append({"engine":engine,"viewport":[width,height],"presence_owner":"passed","axe":"passed" if axe_source else "not-run"})
-            print(f"PASS presence-owner-{engine}-{width}: session payload, shutoff, reflow, accessibility")
+            print(f"PASS presence-owner-{engine}-{width}: session, delayed success/error shutoff races, reflow, accessibility")
         finally:
             context.close()
     return results

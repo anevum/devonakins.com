@@ -285,9 +285,9 @@ export function createHandler(assets, release, options = {}) {
       const headers = new Headers({
         ...securityHeaders,
         "Content-Type": selected.type,
-        "Cache-Control": isHtml || (path.startsWith("/v2/") && path.endsWith(".css"))
-          // Mutable styles are revalidated: cached mobile Safari CSS must not
-          // outlive a newer HTML shell that introduces additional class names.
+        "Cache-Control": isHtml || (path.startsWith("/v2/") && /\.(css|js)$/.test(path))
+          // Mutable styles and owner controllers revalidate with the shell.
+          // A cached controller must not outlive its authenticated API contract.
           ? "public, max-age=0, must-revalidate"
           : path.startsWith("/assets/")
             ? "public, max-age=31536000, immutable"
