@@ -51,7 +51,7 @@ export async function probeProduction({ fetchImpl = fetch, expectedCommit = null
   for (const [path, marker] of [
     ['/work/merit/', /Merit/],
     ['/work/rhen-language/', /Rhen/],
-    ['/work/rhen/', /RHEN — Market Research/],
+    ['/work/rhen/', /Vesper Legacy — Market Research/],
   ]) {
     const response = await request(path, 200, /text\/html/i);
     const html = await boundedText(response);

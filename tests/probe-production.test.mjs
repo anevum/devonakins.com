@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { probeProduction, verifySourceAncestry } from '../scripts/probe-production.mjs';
 
 const expectedCommit = '3'.repeat(40);
@@ -9,7 +10,7 @@ const fixtures = {
   '/': { code: 200, type: 'text/html', body: '<a href="/work/merit/">Merit</a><a href="/work/rhen-language/">Rhen</a>' },
   '/work/merit/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/merit/">Merit' },
   '/work/rhen-language/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/rhen-language/">Rhen is not a released compiler' },
-  '/work/rhen/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/rhen/">RHEN — Market Research' },
+  '/work/rhen/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/rhen/">Vesper Legacy — Market Research' },
   '/work/aiei/?from=release-probe': { code: 308, type: '', redirect: 'https://devonakins.com/work/merit/?from=release-probe' },
   '/work/isl/?from=release-probe': { code: 308, type: '', redirect: 'https://devonakins.com/work/rhen-language/?from=release-probe' },
 };
@@ -43,6 +44,14 @@ test('fixed-origin observations validate health, home, canonical pages and query
 test('reject stale deployment source commit', async () => {
   const { fetchImpl } = mock();
   await assert.rejects(probeProduction({ fetchImpl, expectedCommit: '4'.repeat(40) }), /does not match expected source/);
+});
+test('the observation accepts the built legacy page and rejects the retired finance title', async () => {
+  const path = '/work/rhen/';
+  const body = await readFile(new URL('../dist/work/rhen/index.html', import.meta.url), 'utf8');
+  const current = { ...fixtures[path], body };
+  await probeProduction({ fetchImpl: mock({ [path]: current }).fetchImpl, expectedCommit });
+  const retired = { ...fixtures[path], body: '<link rel="canonical" href="https://devonakins.com/work/rhen/">RHEN — Market Research' };
+  await assert.rejects(probeProduction({ fetchImpl: mock({ [path]: retired }).fetchImpl }), /expected identity/);
 });
 test('reject malformed caller commit and deployed health commit', async () => {
   const { fetchImpl } = mock();
