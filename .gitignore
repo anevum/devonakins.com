@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .release/
+.local/
 .artifacts/
 .openai/
 .env*
@@ -17,3 +18,11 @@ __qa/
 /notes/
 /about/
 /contact/
+/listening/
+
+/gpt/
+/studio/
+node_modules
+
+__pycache__/
+*.pyc

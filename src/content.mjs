@@ -211,6 +211,7 @@ export const projects = [
 ];
 
 export const pages = [
+  {key:'studio',path:'/studio/',title:'Live Studio — Devon Alan Akins',description:'Opt-in development presence and independent public activity.'},
   {
     path: "/",
     key: "home",
@@ -238,6 +239,12 @@ export const pages = [
     title: "About — Devon Akins",
     description:
       "Devon Akins is a stay-at-home father, writer, and software builder helping improve real workflows and developing ANEVUM.",
+  },
+  {
+    path: "/listening/",
+    key: "listening",
+    title: "Listening — Devon Alan Akins",
+    description: "The music behind my work, with a private-by-default live listening signal and curated collections.",
   },
   {
     path: "/gpt/",

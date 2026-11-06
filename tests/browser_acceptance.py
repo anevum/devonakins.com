@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -17,7 +18,7 @@ from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
-VIEWPORTS = [(320, 568), (390, 700), (390, 844), (768, 900), (844, 320), (1440, 900)]
+VIEWPORTS = [(320, 568), (390, 700), (390, 844), (768, 900), (844, 320), (1024, 768), (1440, 900)]
 
 
 def compiled_preview(dist: Path):
@@ -324,6 +325,81 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             check_overflow("contact")
             assert "devon@anevum.com" in page.locator("#panel-contact").inner_text()
 
+            # New sixth view and site-wide presence signal: inspect real layout
+            # and keyboard/touch behavior on all supported responsive sizes.
+            assert page.locator("#tab-listening").count() == 1
+            assert page.locator("#presence-ticker").is_visible()
+            presence_box = page.locator("#presence-ticker").bounding_box()
+            assert presence_box and presence_box["width"] >= 70, (label, presence_box)
+            assert presence_box["x"] >= 0 and (
+                presence_box["x"] + presence_box["width"] <= width + 1
+            ), (label, "ticker clipped", presence_box)
+            page.locator("#tab-listening").click()
+            assert page.locator("#panel-listening").is_visible()
+            check_overflow("listening")
+            assert page.locator("#listening-track-title").is_visible()
+            assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+            if origin and (width, height) in [(390, 844), (1440, 900)]:
+                presence_path = "**/api/listening/now"
+                live_body = json.dumps({
+                    "version": 1,
+                    "mode": "playing",
+                    "detailsVisible": True,
+                    "updatedAt": page.evaluate("new Date().toISOString()"),
+                    "track": {
+                        "title": "Synthetic QA track",
+                        "artist": "Synthetic QA artist",
+                        "url": "https://open.spotify.com/track/1234567890123456789012",
+                    },
+                })
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json", body=live_body
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#listening-track-title')?.textContent === 'Synthetic QA track'
+                """)
+                assert page.locator("#listening-track-title").inner_text() == "Synthetic QA track"
+                assert page.locator("#presence-ticker-label").inner_text() != "IN THE ZONE", "music alone must not imply development"
+                assert page.locator("#listening-open-track").get_attribute("href").startswith(
+                    "https://open.spotify.com/track/"
+                )
+                page.unroute(presence_path)
+                page.route(presence_path, lambda route: route.fulfill(
+                    status=200, content_type="application/json",
+                    body='{"version":1,"mode":"hidden","detailsVisible":false}'
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("""() =>
+                    document.querySelector('#listening-visibility')?.textContent === 'PRIVATE BY DEFAULT'
+                """)
+                assert "Synthetic QA track" not in page.locator("#panel-listening").inner_text()
+                assert page.locator("#listening-open-track").is_hidden()
+                page.unroute(presence_path)
+                # Independent, expiring owner-declared presence. Music alone
+                # above did not activate this signal.
+                presence_fixture = {
+                    "version":1,"visibility":"public","state":"developing",
+                    "asOf":page.evaluate("new Date().toISOString()"),
+                    "source":"owner-declared","project":"Merit"
+                }
+                page.route("**/api/presence/public", lambda route: route.fulfill(
+                    status=200,content_type="application/json",body=json.dumps(presence_fixture)
+                ))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("document.querySelector('#presence-ticker-label')?.textContent === 'DEVELOPING'")
+                assert "OWNER-DECLARED" in page.locator("#presence-ticker-detail").inner_text()
+                presence_fixture.update({"state":"working-privately","asOf":None,"source":"none","project":None})
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("document.querySelector('#presence-ticker-label')?.textContent === 'WORKING PRIVATELY'")
+                assert page.locator("#presence-ticker-detail").is_hidden()
+                presence_fixture.update({"visibility":"hidden","state":"not-broadcasting"})
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("document.querySelector('#presence-ticker-label')?.textContent === 'NOT BROADCASTING'")
+                page.unroute("**/api/presence/public")
+            page.locator("#tab-contact").click()
+            assert page.locator("#panel-contact").is_visible()
+
             violations = []
             if axe_source:
                 page.add_script_tag(content=axe_source)
@@ -420,6 +496,24 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             status=200, content_type="application/json",
                             body=json.dumps(public_fixture),
                         ))
+                        observation_fixture = {
+                            "version": 1, "status": "recent",
+                            "observation": {
+                                "version": 1, "status": "recent",
+                                "metric": "work_codex_credits_remaining",
+                                "value": 42.5, "unit": "credits",
+                                "scope": "work-codex",
+                                "source": "user-selected-visible-usage-text",
+                                "observedAt": event_time(1),
+                                "lastChangedAt": event_time(10),
+                                "sourceUpdatedAt": None,
+                                "receivedAt": event_time(0),
+                            },
+                        }
+                        page.route("**/api/gpt-observation/latest", lambda route: route.fulfill(
+                            status=200, content_type="application/json",
+                            body=json.dumps(observation_fixture),
+                        ))
                     response = page.goto(origin + route, wait_until="load")
                     assert response and response.status == 200, route
                     assert page.locator("#interface-shell").get_attribute("data-route-page") == "true", route
@@ -437,6 +531,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator(".gpt-weekly-metric").count() == 4
                         assert page.locator("#gpt-event-list").count() == 1
                         assert page.locator(".gpt-live-panel").is_visible()
+                        page.locator("#gpt-observation-panel").wait_for(state="visible")
+                        assert "42.5 credits remaining" in page.locator("#gpt-observation-value").inner_text()
+                        assert "RECENT OBSERVATION" in page.locator("#gpt-observation-state").inner_text()
+                        assert "OpenAI update time unknown" in page.locator("#gpt-observation-age").inner_text()
                         assert page.locator("[data-gpt-event-filter]").count() == 4
                         if width == 320:
                             # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
@@ -484,6 +582,38 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         page.locator('[data-gpt-event-filter="all"]').click()
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         if (width, height) == (390, 844):
+                            observation_fixture["status"] = "stale"
+                            observation_fixture["observation"]["status"] = "stale"
+                            observation_fixture["observation"]["observedAt"] = event_time(40)
+                            observation_fixture["observation"]["lastChangedAt"] = event_time(50)
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('#gpt-observation-panel')?.dataset.freshness === 'stale'
+                            """)
+                            assert "STALE OBSERVATION" in page.locator("#gpt-observation-state").inner_text()
+                            observation_fixture.update({"status": "no-data", "observation": None})
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('#gpt-observation-panel')?.hidden === true
+                            """)
+                            assert page.locator("#gpt-observation-panel").is_hidden()
+                            observation_fixture["status"] = "recent"
+                            observation_fixture["observation"] = {
+                                "version": 1, "status": "recent",
+                                "metric": "work_codex_credits_remaining",
+                                "value": 42.5, "unit": "credits", "scope": "work-codex",
+                                "source": "user-selected-visible-usage-text",
+                                "observedAt": event_time(1), "lastChangedAt": event_time(10),
+                                "sourceUpdatedAt": None, "receivedAt": event_time(0),
+                            }
+                            page.reload(wait_until="load")
+                            page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            observation_fixture["observation"]["metric"] = "work_codex_used_percent"
+                            observation_fixture["observation"]["unit"] = "percent"
+                            observation_fixture["observation"]["value"] = 42
+                            page.reload(wait_until="load")
+                            page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            assert "42% used" in page.locator("#gpt-observation-value").inner_text()
                             # Falsify freshness: a stale upstream checkedAt must fail closed
                             # and replace every previously displayed card with unavailable.
                             valid_checked_at = public_fixture["development"]["checkedAt"]
@@ -581,6 +711,28 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     page.locator("#tab-home").click()
                     page.wait_for_url(origin + "/#home")
                     assert page.locator("#panel-home").is_visible(), route + " canonical navigation"
+            if origin and (width, height) == (390, 844):
+                listening_page = page.goto(origin + "/listening/", wait_until="load")
+                assert listening_page and listening_page.status == 200
+                assert page.locator("#interface-shell").get_attribute("data-route-page") == "true"
+                assert page.locator("#interface-shell").get_attribute("data-initial-view") == "listening"
+                assert page.locator("#panel-listening").is_visible()
+                assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
+                assert page.locator("#presence-ticker").is_visible()
+                check_overflow("listening deep link")
+                if axe_source:
+                    page.add_script_tag(content=axe_source)
+                    listening_violations = page.evaluate("""async () => {
+                      const r = await axe.run(document, {
+                        runOnly: {type:'tag', values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                      });
+                      return r.violations.map(v => ({id:v.id,nodes:v.nodes.map(n=>n.target).slice(0,5)}));
+                    }""")
+                    assert not listening_violations, f"/listening/ axe WCAG: {listening_violations}"
+                page.locator("#tab-home").click()
+                page.wait_for_url(origin + "/#home")
+                assert page.locator("#panel-home").is_visible()
+
             assert not errors, f"page errors: {errors}"
             results.append({
                 "engine": engine, "viewport": [width, height], "tabs": "passed",
@@ -603,6 +755,135 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
     return results
 
 
+
+def check_owner_control(browser, engine, origin, output, axe_source):
+    """Inspect the real first-party owner markup without any Spotify account."""
+    if not origin:
+        return []
+    markup = subprocess.check_output([
+        "node", "--input-type=module", "-e",
+        "import {renderListeningOwner} from './src/listening-owner-page.mjs';"
+        "process.stdout.write(renderListeningOwner());",
+    ], text=True)
+    results = []
+    for width, height in [(320, 700), (390, 844), (768, 900), (1440, 900)]:
+        context = browser.new_context(viewport={"width": width, "height": height},
+                                      reduced_motion="reduce")
+        page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        label = f"owner-{engine}-{width}x{height}"
+        try:
+            page.route("**/owner/listening/", lambda route: route.fulfill(status=200,content_type="text/html; charset=utf-8",body=markup))
+            page.route("**/api/listening/admin/status", lambda route: route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({
+                    "connected": True, "reauthorizationRequired": False,
+                    "publishingAllowed": False, "publicEnabled": False,
+                    "showDetails": False, "reauthorizeBy": "2027-05-05T00:00:00.000Z"
+                })
+            ))
+            page.goto(origin + "/owner/listening/",wait_until="load")
+            page.wait_for_function("""() =>
+              document.querySelector('#connection-state')?.textContent === 'CONNECTED'
+            """)
+            assert page.locator("#connect").is_enabled()
+            assert page.locator("#disconnect").is_enabled()
+            assert page.locator("#public-status").is_disabled()
+            assert page.locator("#track-details").is_disabled()
+            assert page.locator("#save-settings").is_disabled()
+            assert page.locator("h1").inner_text().startswith("Listen anywhere.")
+            geometry = page.evaluate("""() => ({
+              overflow: document.documentElement.scrollWidth - innerWidth,
+              button: document.querySelector('#connect').getBoundingClientRect(),
+              width: innerWidth,
+            })""")
+            assert geometry["overflow"] <= 1, (label, "horizontal overflow", geometry)
+            assert geometry["button"]["width"] >= 80, (label, "tiny touch control", geometry)
+            if axe_source:
+                page.add_script_tag(content=axe_source)
+                violations = page.evaluate("""async () => {
+                  const result = await axe.run(document, {
+                    runOnly: {type:'tag',
+                      values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                  });
+                  return result.violations.map(v => ({
+                    id:v.id, nodes:v.nodes.map(n=>n.target).slice(0,5)
+                  }));
+                }""")
+                assert not violations, f"{label} accessibility: {violations}"
+            assert not errors, f"{label} script errors: {errors}"
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"{label}.png"), full_page=True)
+            results.append({"engine": engine, "viewport": [width, height],
+                            "owner_page": "passed", "axe": "passed" if axe_source else "not-run"})
+            print(f"PASS {label}: private UI, reflow, safe defaults, accessibility")
+        except Exception:
+            output.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output / f"failed-{label}.png"), full_page=True)
+            raise
+        finally:
+            context.close()
+    return results
+
+
+def check_presence_control(browser, engine, origin, output, axe_source):
+    if not origin:
+        return []
+    markup = subprocess.check_output(["node", "--input-type=module", "-e",
+        "import {renderPresenceOwner} from './src/presence-owner-page.mjs';process.stdout.write(renderPresenceOwner());"], text=True)
+    results = []
+    for width, height in [(320,700),(390,844),(768,900),(1024,768),(1440,900)]:
+        context = browser.new_context(viewport={"width":width,"height":height},reduced_motion="reduce")
+        page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        state = {"revision":0,"publishingAllowed":True,"enabled":False,"privateWork":False,
+            "shareListening":False,"paused":False,"sessionExpiresAt":None,"projectSlug":None,
+            "manualState":None,"projects":["merit","mizvo"],
+            "preview":{"state":"not-broadcasting","project":None,"source":"none"}}
+        writes = []
+        def respond(route):
+            if route.request.method == "POST":
+                data = route.request.post_data_json
+                writes.append(data)
+                state["revision"] += 1
+                if data["action"] == "start":
+                    state.update({"projectSlug":data["projectSlug"],"sessionExpiresAt":"2026-11-06T18:00:00.000Z"})
+                if data["action"] == "off":
+                    state.update({"enabled":False,"shareListening":False,"privateWork":False,"sessionExpiresAt":None})
+            route.fulfill(status=200,content_type="application/json",body=json.dumps(state))
+        page.route("**/api/presence/owner",respond)
+        try:
+            page.route("**/owner/presence/",lambda route:route.fulfill(status=200,content_type="text/html; charset=utf-8",body=markup))
+            page.goto(origin+"/owner/presence/",wait_until="load")
+            page.locator("#session-start").wait_for(state="visible")
+            page.wait_for_function("!document.querySelector('#session-start').disabled")
+            page.select_option("#presence-project","merit")
+            page.locator("#session-start").click()
+            page.wait_for_function("document.querySelector('#presence-notice').textContent === 'Saved.'")
+            assert writes[-1] == {"action":"start","revision":0,"projectSlug":"merit","minutes":15}
+            page.locator("#presence-off").click()
+            page.wait_for_function("document.querySelector('#presence-notice').textContent.includes('Broadcasting stopped')")
+            assert writes[-1]["action"] == "off" and writes[-1]["revision"] == 1
+            assert not page.locator("#presence-enabled").is_checked()
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+            assert page.locator("#presence-off").bounding_box()["height"] >= 44
+            if axe_source:
+                page.add_script_tag(content=axe_source)
+                violations = page.evaluate("""async () => (await axe.run(document, {
+                    runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
+                })).violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))""")
+                assert not violations, (engine,width,violations)
+            assert not errors,errors
+            output.mkdir(parents=True,exist_ok=True)
+            page.screenshot(path=str(output/f"presence-owner-{engine}-{width}.png"),full_page=True)
+            results.append({"engine":engine,"viewport":[width,height],"presence_owner":"passed","axe":"passed" if axe_source else "not-run"})
+            print(f"PASS presence-owner-{engine}-{width}: session payload, shutoff, reflow, accessibility")
+        finally:
+            context.close()
+    return results
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=Path("dist"))
@@ -618,6 +899,7 @@ def main():
     ap.add_argument(
         "--chromium-path", default=os.environ.get("CHROMIUM_EXECUTABLE")
     )
+    ap.add_argument("--webkit-path", default=os.environ.get("WEBKIT_EXECUTABLE"))
     ap.add_argument("--out", type=Path, default=Path("browser-qa"))
     args = ap.parse_args()
     html, css, script = compiled_preview(args.dist)
@@ -640,11 +922,17 @@ def main():
                         "executable_path": args.chromium_path,
                         "args": ["--no-sandbox"]
                     })
+                if name == "webkit" and args.webkit_path:
+                    kwargs["executable_path"] = args.webkit_path
                 browser = getattr(playwright, name).launch(**kwargs)
                 try:
                     all_results.extend(
                         check(browser, name, html, css, script, axe_source, args.out, origin)
                     )
+                    all_results.extend(
+                        check_owner_control(browser, name, origin, args.out, axe_source)
+                    )
+                    all_results.extend(check_presence_control(browser,name,origin,args.out,axe_source))
                 finally:
                     browser.close()
     finally:

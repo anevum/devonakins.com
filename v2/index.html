@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="/v2/terminal.css?v=1.2.3">
   <link rel="stylesheet" href="/v2/work-showcase.css">
   <link rel="stylesheet" href="/v2/project-identities.css?v=1">
+  <link rel="stylesheet" href="/v2/listening.css?v=1">
+  <link rel="stylesheet" href="/v2/presence.css?v=1">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -39,12 +41,13 @@
     </header>
     <div class="body-grid">
       <nav class="rail" role="tablist" aria-label="Interface sections" aria-orientation="vertical">
-        <span class="rail-heading" aria-hidden="true">INDEX / 01–05</span>
+        <span class="rail-heading" aria-hidden="true">INDEX / 01–06</span>
         <button class="rail-tab" id="tab-home" type="button" role="tab" aria-controls="panel-home" aria-selected="true" tabindex="0" data-view-target="home"><span class="rail-number">01</span><span class="rail-label">Home</span><span class="tab-dash"></span></button>
         <button class="rail-tab" id="tab-work" type="button" role="tab" aria-controls="panel-work" aria-selected="false" tabindex="-1" data-view-target="work"><span class="rail-number">02</span><span class="rail-label">Work</span><span class="tab-dash"></span></button>
         <button class="rail-tab" id="tab-writing" type="button" role="tab" aria-controls="panel-writing" aria-selected="false" tabindex="-1" data-view-target="writing"><span class="rail-number">03</span><span class="rail-label">Writing</span><span class="tab-dash"></span></button>
         <button class="rail-tab" id="tab-research" type="button" role="tab" aria-controls="panel-research" aria-selected="false" tabindex="-1" data-view-target="research"><span class="rail-number">04</span><span class="rail-label">Research</span><span class="tab-dash"></span></button>
         <button class="rail-tab" id="tab-contact" type="button" role="tab" aria-controls="panel-contact" aria-selected="false" tabindex="-1" data-view-target="contact"><span class="rail-number">05</span><span class="rail-label">Contact</span><span class="tab-dash"></span></button>
+        <button class="rail-tab" id="tab-listening" type="button" role="tab" aria-controls="panel-listening" aria-selected="false" tabindex="-1" data-view-target="listening"><span class="rail-number">06</span><span class="rail-label">Listening</span><span class="tab-dash"></span></button>
         <div class="rail-end" aria-hidden="true"><span class="rail-line"></span><span>INDEPENDENT / PERSONAL</span></div>
       </nav>
       <main id="main" class="interface-main" tabindex="-1">
@@ -135,6 +138,48 @@
             <div class="contact-lower"><a href="https://github.com/devonalanakins" target="_blank" rel="noopener noreferrer">GitHub / Public code <span aria-hidden="true">↗</span></a><a href="/contact/">Standard contact page <span aria-hidden="true">↗</span></a><a href="/">Current public website <span aria-hidden="true">↗</span></a></div>
           </div>
         </section>
+
+        <section class="panel listening-panel" id="panel-listening" role="tabpanel" aria-labelledby="tab-listening" tabindex="0" data-panel="listening" hidden>
+          <div class="panel-inner listening-inner">
+            <div class="eyebrow"><span class="eyebrow-line"></span>THE MUSIC BEHIND THE WORK <span class="eyebrow-index">/ 006</span></div>
+            <div class="listening-heading">
+              <div>
+                <p class="listening-overline">SOUNDTRACK / PERSONAL SIGNAL</p>
+                <h1>Always building.<br><em>Sometimes listening.</em></h1>
+                <p class="listening-lede">Music is how I find my rhythm. When I opt in to share Spotify playback, this space becomes a window into that creative zone. <a href="/listening/">Open Listening ↗</a></p>
+              </div>
+              <span class="listening-private-mark"><span class="listening-private-dot" aria-hidden="true"></span><span id="listening-visibility">PRIVATE BY DEFAULT</span></span>
+            </div>
+            <div class="listening-grid">
+              <article class="listening-card listening-current" aria-labelledby="listening-card-label">
+                <div class="listening-card-header"><span id="listening-card-label">01 / THE SIGNAL</span><span class="listening-status" id="listening-state">OFF AIR</span></div>
+                <div class="listening-current-body">
+                  <div class="listening-cover" aria-hidden="true"><div class="listening-vinyl"><i></i></div><img id="listening-cover-image" alt="" loading="lazy" decoding="async" hidden></div>
+                  <div class="listening-current-copy">
+                    <p class="listening-now-label" id="listening-now-label">NOT BROADCASTING</p>
+                    <h2 id="listening-track-title">The soundtrack stays personal.</h2>
+                    <p id="listening-track-artist">Connect and opt in to Spotify sharing to show the music behind my work.</p>
+                    <a id="listening-open-track" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer" hidden>Listen on Spotify <span aria-hidden="true">↗</span></a>
+                  </div>
+                </div>
+                <div class="listening-card-bottom"><span>SPOTIFY / READ-ONLY SIGNAL</span><span id="listening-updated-at">PUBLIC SHARING OFF</span></div>
+              </article>
+              <article class="listening-card listening-collections">
+                <div class="listening-card-header"><span>02 / CURATED PLAYLISTS</span><span>COMING WITH CONNECTION</span></div>
+                <div class="listening-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
+                <h2>The playlists.</h2>
+                <p>Public collections will appear here only after I choose which playlists to share. My saved songs and private library remain private.</p>
+                <span class="listening-card-footnote">NOT A PUBLIC LIBRARY MIRROR</span>
+              </article>
+              <article class="listening-card listening-context">
+                <div class="listening-card-header"><span>03 / IN THE ZONE</span><span>INDEPENDENT SIGNALS</span></div>
+                <h2>One small signal.<br><em>One larger story.</em></h2>
+                <p>Music sets a rhythm; it does not prove coding. In the Zone combines an active development session with shared Spotify playback. Owner-declared sessions are labeled separately from editor activity.</p>
+                <span class="listening-card-footnote">NO AUDIO AUTOPLAY · NO SITE ANALYTICS</span>
+              </article>
+            </div>
+          </div>
+        </section>
       </main>
       <aside class="telemetry" aria-label="Interface information">
         <div class="telemetry-top"><span>OBSERVATORY <span class="muted">/ 01</span></span><span class="telemetry-cross" aria-hidden="true">+</span></div>
@@ -154,7 +199,7 @@
         <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" data-light-control aria-label="Cycle portrait lighting. Current: amber">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
       </aside>
     </div>
-    <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>
+    <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><a href="/studio/" class="presence-ticker" id="presence-ticker" aria-label="Presence: not broadcasting. Open Live Studio."><span class="presence-beat" aria-hidden="true"></span><span class="presence-ticker-label" id="presence-ticker-label">NOT BROADCASTING</span><span class="presence-ticker-detail" id="presence-ticker-detail" hidden></span></a><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>
   </div>
   <div id="announcement" class="announcement" role="status" aria-live="polite"></div>
   <noscript><div class="nojs">JavaScript is required to switch preview panels. The <a href="/">current homepage</a> and <a href="/work/">work archive</a> remain usable.</div></noscript>
