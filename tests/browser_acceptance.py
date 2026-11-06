@@ -420,6 +420,24 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             status=200, content_type="application/json",
                             body=json.dumps(public_fixture),
                         ))
+                        observation_fixture = {
+                            "version": 1, "status": "recent",
+                            "observation": {
+                                "version": 1, "status": "recent",
+                                "metric": "work_codex_credits_remaining",
+                                "value": 42.5, "unit": "credits",
+                                "scope": "work-codex",
+                                "source": "user-selected-visible-usage-text",
+                                "observedAt": event_time(1),
+                                "lastChangedAt": event_time(10),
+                                "sourceUpdatedAt": None,
+                                "receivedAt": event_time(0),
+                            },
+                        }
+                        page.route("**/api/gpt-observation/latest", lambda route: route.fulfill(
+                            status=200, content_type="application/json",
+                            body=json.dumps(observation_fixture),
+                        ))
                     response = page.goto(origin + route, wait_until="load")
                     assert response and response.status == 200, route
                     assert page.locator("#interface-shell").get_attribute("data-route-page") == "true", route
@@ -437,6 +455,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator(".gpt-weekly-metric").count() == 4
                         assert page.locator("#gpt-event-list").count() == 1
                         assert page.locator(".gpt-live-panel").is_visible()
+                        page.locator("#gpt-observation-panel").wait_for(state="visible")
+                        assert "42.5 credits remaining" in page.locator("#gpt-observation-value").inner_text()
+                        assert "RECENT OBSERVATION" in page.locator("#gpt-observation-state").inner_text()
+                        assert "OpenAI update time unknown" in page.locator("#gpt-observation-age").inner_text()
                         assert page.locator("[data-gpt-event-filter]").count() == 4
                         if width == 320:
                             # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
@@ -484,6 +506,38 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         page.locator('[data-gpt-event-filter="all"]').click()
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         if (width, height) == (390, 844):
+                            observation_fixture["status"] = "stale"
+                            observation_fixture["observation"]["status"] = "stale"
+                            observation_fixture["observation"]["observedAt"] = event_time(40)
+                            observation_fixture["observation"]["lastChangedAt"] = event_time(50)
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('#gpt-observation-panel')?.dataset.freshness === 'stale'
+                            """)
+                            assert "STALE OBSERVATION" in page.locator("#gpt-observation-state").inner_text()
+                            observation_fixture.update({"status": "no-data", "observation": None})
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('#gpt-observation-panel')?.hidden === true
+                            """)
+                            assert page.locator("#gpt-observation-panel").is_hidden()
+                            observation_fixture["status"] = "recent"
+                            observation_fixture["observation"] = {
+                                "version": 1, "status": "recent",
+                                "metric": "work_codex_credits_remaining",
+                                "value": 42.5, "unit": "credits", "scope": "work-codex",
+                                "source": "user-selected-visible-usage-text",
+                                "observedAt": event_time(1), "lastChangedAt": event_time(10),
+                                "sourceUpdatedAt": None, "receivedAt": event_time(0),
+                            }
+                            page.reload(wait_until="load")
+                            page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            observation_fixture["observation"]["metric"] = "work_codex_used_percent"
+                            observation_fixture["observation"]["unit"] = "percent"
+                            observation_fixture["observation"]["value"] = 42
+                            page.reload(wait_until="load")
+                            page.locator("#gpt-observation-panel").wait_for(state="visible")
+                            assert "42% used" in page.locator("#gpt-observation-value").inner_text()
                             # Falsify freshness: a stale upstream checkedAt must fail closed
                             # and replace every previously displayed card with unavailable.
                             valid_checked_at = public_fixture["development"]["checkedAt"]

@@ -137,6 +137,25 @@ export function renderPublicGptProfile(input) {
         '<h3>' + esc(plugin.name) + '</h3><p>' + esc(plugin.description) +
         '</p></article>').join("") + '</div>'
     : '<p class="gpt-empty">No integrations listed in the current snapshot.</p>';
+  const observationMarkup = `
+    <section class="gpt-section gpt-observation-panel" id="gpt-observation-panel"
+      aria-labelledby="gpt-observation-heading" hidden>
+      <div class="gpt-live-kicker">OWNER-APPROVED / VISIBLE-METRIC OBSERVATION</div>
+      <header class="gpt-live-heading">
+        <div>
+          <span class="gpt-section-index">00 / CAPTURE</span>
+          <h2 id="gpt-observation-heading">Latest recorded measurement.</h2>
+          <p>One opted-in Work/Codex credits reading. This is not the historical token total,
+            regular Chat usage, or proof that OpenAI has refreshed its source.</p>
+        </div>
+      </header>
+      <strong id="gpt-observation-value" class="gpt-observation-value" aria-live="off">—</strong>
+      <p id="gpt-observation-state" role="status" aria-live="polite"></p>
+      <p id="gpt-observation-age" class="gpt-observation-age" aria-live="off"></p>
+      <p class="gpt-observation-disclosure">The site keeps the last approved observation while
+        the collector is offline. Collection requires a separate authorized source and does
+        not continue when that source stops. Last source update: unknown.</p>
+    </section>`;
   const publicActivityMarkup = `
     <section class="gpt-section gpt-live-panel" aria-labelledby="gpt-public-development-heading">
       <div class="gpt-live-kicker"><span class="gpt-live-lamp" aria-hidden="true"></span> PUBLIC SIGNAL / AUTOMATIC SOURCE</div>
@@ -173,7 +192,7 @@ export function renderPublicGptProfile(input) {
     '<strong>≈' + esc(compact(s.count)) + '</strong><span class="gpt-primary-date">SNAPSHOT / ' +
     '<time datetime="' + esc(s.asOf) + '">' + esc(longDate) + '</time></span>' +
     '<p>' + esc(p.scope) + ' Manually captured; historical figures are not updated in real time.</p></div>' +
-    weekly + publicActivityMarkup +
+    weekly + observationMarkup + publicActivityMarkup +
     '<section class="gpt-section" aria-labelledby="gpt-activity-heading">' +
     heading("gpt-activity-heading", "01 / PROFILE", "By the numbers",
       "Profile-level figures captured " + longDate +

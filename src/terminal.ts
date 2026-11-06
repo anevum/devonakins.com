@@ -327,6 +327,135 @@ document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("c
 // Load a public, static first-party snapshot once at startup; no private API or polling.
 void checkUsage();
 
+// The optional owner-approved observation is separate from historical profile
+// totals and public GitHub events. No API tokens or account credentials live here.
+type GptObservation = {
+  version: number; status: "recent" | "stale"; metric: string;
+  value: number; unit: "credits" | "percent"; scope: "work-codex";
+  source: "user-selected-visible-usage-text";
+  observedAt: string; lastChangedAt: string;
+  sourceUpdatedAt: null; receivedAt: string;
+};
+const observedMetricUnits: Record<string,"credits"|"percent"> = {
+  work_codex_credits_used:"credits",
+  work_codex_credits_remaining:"credits",
+  work_codex_used_percent:"percent",
+  work_codex_remaining_percent:"percent",
+};
+const observedMetricNames: Record<string,string> = {
+  work_codex_credits_used:"credits used",
+  work_codex_credits_remaining:"credits remaining",
+  work_codex_used_percent:"used",
+  work_codex_remaining_percent:"remaining",
+};
+const observationPanel = document.querySelector<HTMLElement>("#gpt-observation-panel");
+let lastObservation: GptObservation | null = null;
+let observationFetchFailed = false;
+let observationBusy = false;
+let lastObservationFetch = 0;
+
+function validObservationApi(input: unknown): GptObservation | null {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid usage response");
+  const data = input as Record<string,unknown>;
+  if (Object.keys(data).sort().join("|") !== "observation|status|version" ||
+      data.version !== 1 ||
+      !["recent","stale","no-data"].includes(String(data.status)))
+    throw new Error("Unexpected usage response schema");
+  if (data.status === "no-data") {
+    if (data.observation !== null) throw new Error("Invalid empty usage response");
+    return null;
+  }
+  const observation = data.observation;
+  if (!observation || typeof observation !== "object" ||
+      Array.isArray(observation))
+    throw new Error("Invalid observation");
+  const r = observation as Record<string,unknown>;
+  const expected = ["version","status","metric","value","unit","scope","source",
+    "observedAt","lastChangedAt","sourceUpdatedAt","receivedAt"];
+  if (Object.keys(r).sort().join("|") !== expected.sort().join("|") ||
+      r.version !== 1 || r.status !== data.status ||
+      !Object.hasOwn(observedMetricUnits,String(r.metric)) ||
+      r.unit !== observedMetricUnits[String(r.metric)] ||
+      typeof r.value !== "number" || !Number.isFinite(r.value) || r.value < 0 ||
+      r.value > (r.unit === "percent" ? 100 : 1_000_000) ||
+      r.scope !== "work-codex" || r.source !== "user-selected-visible-usage-text" ||
+      r.sourceUpdatedAt !== null) throw new Error("Invalid observation fields");
+  const fields = [r.observedAt,r.lastChangedAt,r.receivedAt];
+  if (!fields.every(value => typeof value === "string" &&
+       Number.isFinite(Date.parse(value)) &&
+       new Date(value).toISOString() === value))
+    throw new Error("Invalid observation timestamps");
+  if (Date.parse(r.lastChangedAt as string) > Date.parse(r.observedAt as string) ||
+      Date.parse(r.observedAt as string) > Date.now()+60_000 ||
+      Date.parse(r.receivedAt as string) > Date.now()+60_000 ||
+      Date.parse(r.receivedAt as string) < Date.parse(r.observedAt as string)-60_000)
+    throw new Error("Contradictory observation time");
+  return r as GptObservation;
+}
+function renderObservation() {
+  if (!observationPanel) return;
+  if (!lastObservation) {
+    observationPanel.hidden = true;
+    return;
+  }
+  observationPanel.hidden = false;
+  const r=lastObservation;
+  const ageSeconds=Math.max(0,Math.floor(
+    (Date.now()-Date.parse(r.observedAt))/1000));
+  const freshness=observationFetchFailed ? "unreachable" :
+    ageSeconds > 15*60 ? "stale" : "recent";
+  observationPanel.dataset.freshness=freshness;
+  const units=(r.unit === "percent" ? "% " : " ") + observedMetricNames[r.metric];
+  const valueLabel=new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(r.value)+units;
+  const value=document.querySelector<HTMLElement>("#gpt-observation-value");
+  if (value && value.textContent !== valueLabel) value.textContent=valueLabel;
+  const state=document.querySelector<HTMLElement>("#gpt-observation-state");
+  const stateText = freshness === "unreachable" ? "Source temporarily unavailable. Last recorded value retained." :
+    freshness === "stale" ? "STALE OBSERVATION / collector has not supplied a recent reading." :
+      "RECENT OBSERVATION / not a verified OpenAI source update.";
+  if (state && state.textContent !== stateText) state.textContent=stateText;
+  const age=document.querySelector<HTMLElement>("#gpt-observation-age");
+  if (age) age.textContent="Observed " +
+    (ageSeconds < 60 ? ageSeconds+" seconds" :
+      Math.floor(ageSeconds/60)+" minutes") + " ago · OpenAI update time unknown.";
+}
+async function checkObservation() {
+  if (!observationPanel || observationBusy || document.hidden) return;
+  observationBusy=true;
+  lastObservationFetch=Date.now();
+  try {
+    const response=await fetch("/api/gpt-observation/latest",{
+      cache:"no-store",credentials:"omit",headers:{Accept:"application/json"},
+    });
+    // Fail-closed disabled bridge: do not create an empty/misleading panel.
+    if (response.status===404) {
+      lastObservation=null;
+      observationFetchFailed=false;
+      return;
+    }
+    if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
+      throw new Error("Usage observation unavailable");
+    lastObservation=validObservationApi(await response.json());
+    observationFetchFailed=false;
+  } catch {
+    // Keep last genuine value, but never silently imply source freshness.
+    observationFetchFailed=true;
+  } finally {
+    observationBusy=false;
+    renderObservation();
+  }
+}
+if (observationPanel) {
+  void checkObservation();
+  window.setInterval(() => {if (!document.hidden) renderObservation();},5_000);
+  window.setInterval(() => {if (!document.hidden) void checkObservation();},60_000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now()-lastObservationFetch>=60_000)
+      void checkObservation();
+  });
+}
+
 // Public GitHub events remain strictly separate from historical GPT usage.
 type PublicActivity = {at: string; kind: "push" | "pull request" | "release"};
 type PublicActivityState = "ready" | "empty" | "unavailable";
