@@ -57,6 +57,10 @@ export const boundDatabase = env => !!env.LISTENING_DB && typeof env.LISTENING_D
 export const ownerRow = db => db.prepare("SELECT * FROM listening_account WHERE id=1").first();
 export const publicReleaseApproved = env => env.LISTENING_PUBLIC_RELEASE_APPROVED === "true";
 export const ownerStatus = (row, env) => ({
+  // Authenticated owner-only readiness flag; never return the Client ID or tokens.
+  spotifyAppConfigured:
+    typeof env.SPOTIFY_CLIENT_ID === "string" &&
+    /^[A-Za-z0-9]{16,64}$/.test(env.SPOTIFY_CLIENT_ID),
   connected: !!row?.refresh_cipher,
   reauthorizationRequired: !!row?.reauth_required || (!!row?.reauth_due && row.reauth_due <= Date.now()),
   publicEnabled: !!row?.public_enabled && publicReleaseApproved(env),
