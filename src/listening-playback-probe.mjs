@@ -10,7 +10,7 @@ export class SpotifyPause extends Error {
   }
 }
 export class SpotifyProbeSuperseded extends Error {}
-export async function probeSpotify(
+export async function spotifyCredentials(
   account,
   env,
   now,
@@ -73,6 +73,17 @@ export async function probeSpotify(
     if (!(await acceptCredentials({ accessCipher, refreshCipher, expiresAt })))
       throw new SpotifyProbeSuperseded();
   }
+  return { access, accessCipher, refreshCipher, expiresAt };
+}
+export async function probeSpotify(
+  account,
+  env,
+  now,
+  fetcher = fetch,
+  acceptCredentials = async () => true,
+) {
+  const { access, accessCipher, refreshCipher, expiresAt } =
+    await spotifyCredentials(account, env, now, fetcher, acceptCredentials);
   const result = await fetcher(
     "https://api.spotify.com/v1/me/player/currently-playing",
     {

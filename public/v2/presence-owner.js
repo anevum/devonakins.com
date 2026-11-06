@@ -22,14 +22,36 @@ function render(data) {
   state = data;
   const project = el("presence-project");
   project.replaceChildren(new Option("No public project", ""));
-  for (const slug of data.projects) project.add(new Option(slug, slug));
+  const catalog =
+    data.projectCatalog ||
+    Object.fromEntries(data.projects.map((slug) => [slug, slug]));
+  for (const slug of data.projects)
+    project.add(new Option(catalog[slug] || slug, slug));
+  const choices = el("presence-project-choices");
+  choices.replaceChildren();
+  for (const [slug, label] of Object.entries(catalog)) {
+    const item = document.createElement("label");
+    item.className = "setting";
+    const text = document.createElement("span");
+    text.textContent = label;
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.value = slug;
+    check.checked = data.projects.includes(slug);
+    check.dataset.publicProject = "true";
+    item.append(text, check);
+    choices.append(item);
+  }
   project.value = data.projectSlug || "";
   el("presence-enabled").checked = data.enabled;
   el("presence-private").checked = data.privateWork;
   el("presence-music").checked = data.shareListening;
+  el("presence-editor-enabled").checked = data.editorEnabled === true;
   const preview = data.preview;
   el("presence-preview").textContent =
-    preview.state.replaceAll("-", " ") +
+    (preview.state === "custom"
+      ? preview.label
+      : preview.state.replaceAll("-", " ")) +
     (preview.project ? " · " + preview.project : "") +
     " · " +
     preview.source;
@@ -113,6 +135,21 @@ el("manual-set").onclick = () =>
   mutate("manual", {
     status: el("presence-manual").value,
     minutes: Number(el("presence-duration").value),
+    ...(el("presence-manual").value === "custom"
+      ? {
+          label: el("presence-custom-label").value,
+          labelApproved: el("presence-label-approved").checked,
+        }
+      : {}),
+  });
+el("presence-manual").onchange = () => {
+  el("custom-status-fields").hidden = el("presence-manual").value !== "custom";
+};
+el("projects-save").onclick = () =>
+  mutate("projects", {
+    projects: [
+      ...document.querySelectorAll("[data-public-project]:checked"),
+    ].map((input) => input.value),
   });
 el("manual-clear").onclick = () => mutate("clear-manual");
 el("presence-save").onclick = () =>
@@ -120,6 +157,7 @@ el("presence-save").onclick = () =>
     enabled: el("presence-enabled").checked,
     privateWork: el("presence-private").checked,
     shareListening: el("presence-music").checked,
+    editorEnabled: el("presence-editor-enabled").checked,
   });
 el("presence-off").onclick = () => mutate("off");
 lock(true);
@@ -133,3 +171,46 @@ load()
     );
   })
   .catch((error) => notice(error.message));
+
+async function editorPairing(method) {
+  if (busy) return;
+  busy = true;
+  lock(true);
+  el("editor-code-wrap").hidden = true;
+  el("editor-pair-code").value = "";
+  try {
+    const response = await fetch("/api/presence/editor/pairing", {
+      method,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (
+      !response.ok ||
+      !response.headers.get("Content-Type")?.includes("application/json")
+    )
+      throw Error(
+        "Editor pairing is unavailable until private setup is complete.",
+      );
+    const data = await response.json();
+    if (method === "POST" && typeof data.pairCode === "string") {
+      el("editor-pair-code").value = data.pairCode;
+      el("editor-code-wrap").hidden = false;
+      el("editor-pair-code").focus();
+      el("editor-pair-code").select();
+      el("editor-pair-status").textContent =
+        "Paste this code only into the VS Code pairing command. It expires in five minutes.";
+      window.setTimeout(() => {
+        el("editor-code-wrap").hidden = true;
+        el("editor-pair-code").value = "";
+      }, 300000);
+    } else el("editor-pair-status").textContent = "Editor disconnected.";
+  } catch (error) {
+    el("editor-pair-status").textContent = error.message;
+  } finally {
+    busy = false;
+    lock(!state);
+  }
+}
+el("editor-pair").onclick = () => editorPairing("POST");
+el("editor-unpair").onclick = () => editorPairing("DELETE");

@@ -27,3 +27,14 @@ SOFTWARE.
 The authoritative dependency notices are also included in `node_modules/three/LICENSE`
 after installation. Build and testing dependencies are not shipped as browser
 application code; their own package license files remain authoritative.
+
+
+## Spotify attribution artwork
+
+`public/v2/spotify-full-logo-white.png` is the unmodified Spotify full white logo
+from Spotify's official media kit:
+https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Full_Logo_RGB_White.png
+
+Spotify and its logo are Spotify trademarks; the artwork is not covered by this
+repository's MIT code license. It is used for Spotify content attribution under
+the published branding guidelines: https://developer.spotify.com/documentation/design

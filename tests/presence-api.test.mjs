@@ -10,6 +10,8 @@ const owner={access:{aud:'synthetic-audience',getIdentity:async()=>({email:'owne
 function fixture() {
   const sql=new DatabaseSync(':memory:');
   sql.exec(readFileSync(new URL('../migrations/0002_presence.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../migrations/0003_presence_preferences.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../migrations/0004_editor_pairing.sql',import.meta.url),'utf8'));
   const db={prepare(query){
     const statement=sql.prepare(query);let values=[];
     return {bind(...v){values=v;return this;},async first(){return statement.get(...values)||null;},async run(){return {meta:{changes:Number(statement.run(...values).changes)}};}};
@@ -27,6 +29,26 @@ function fixture() {
   return {env,api,request,write,sql,clock,advance(ms=1100){time+=ms;}};
 }
 const hidden=async()=>Response.json({version:1,mode:'hidden'});
+test('custom public statuses require explicit review, expire and obey privacy shutoff',async()=>{
+  const f=fixture();
+  await f.write('settings',{enabled:true,privateWork:false,shareListening:false});f.advance();
+  for(const extra of [{label:'Editing a chapter',labelApproved:false},{label:'Hidden\nline',labelApproved:true},{label:'a'.repeat(61),labelApproved:true}])
+    assert.equal((await f.write('manual',{status:'custom',minutes:15,...extra})).status,400);
+  assert.equal((await f.write('manual',{status:'custom',minutes:15,label:'Editing a new chapter',labelApproved:true})).status,200);
+  const view=await publicPresence(f.env,hidden,f.clock);assert.equal(view.state,'custom');assert.equal(view.label,'Editing a new chapter');
+  f.advance(16*60_000);assert.equal((await publicPresence(f.env,hidden,f.clock)).state,'offline');
+  await f.write('off');assert.equal((await publicPresence(f.env,hidden,f.clock)).visibility,'hidden');
+});
+test('owner project choices constrain sessions and remove an active disallowed label',async()=>{
+  const f=fixture();await activate(f);f.advance();
+  assert.equal((await f.write('projects',{projects:['mizvo']})).status,200);
+  assert.equal((await publicPresence(f.env,hidden,f.clock)).project,null);f.advance();
+  assert.equal((await f.write('start',{projectSlug:'merit',minutes:15})).status,400);
+  assert.equal((await f.write('start',{projectSlug:'mizvo',minutes:15})).status,200);f.advance();
+  for(const projects of [['../clinical'],['mizvo','mizvo']]) assert.equal((await f.write('projects',{projects})).status,400);
+  assert.equal((await f.write('projects',{projects:[]})).status,200);
+  assert.equal((await publicPresence(f.env,hidden,f.clock)).project,null);
+});
 async function activate(f) {
   assert.equal((await f.write('settings',{enabled:true,privateWork:false,shareListening:true})).status,200);
   f.advance();

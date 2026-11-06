@@ -8,7 +8,7 @@ export function renderListeningOwner() {
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="theme-color" content="#080b13">
 <title>Listening Control — Devon Alan Akins</title>
-<link rel="stylesheet" href="/v2/listening-owner.css">
+<link rel="stylesheet" href="/v2/listening-owner.css"><link rel="stylesheet" href="/v2/presence.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to controls</a>
@@ -43,6 +43,14 @@ export function renderListeningOwner() {
       <p class="fine" id="release-message">Public broadcasting remains locked until the release review is approved.</p>
     </section>
   </div>
+  <section class="card presence-project-card" aria-labelledby="collections-title">
+    <h2 id="collections-title">Curated public playlists</h2>
+    <p class="fine">Choose up to twelve playlists you created and made public. Only these selections can appear on the website; private playlists and saved songs are never mirrored.</p>
+    <label class="presence-field">Spotify playlist links or IDs, one per line<textarea id="collections-ids" rows="4" autocomplete="off" spellcheck="false" disabled></textarea></label>
+    <label class="setting"><span><strong>Share these playlists</strong><small>Public ownership is verified with Spotify before publication.</small></span><input type="checkbox" id="collections-enabled" disabled></label>
+    <button type="button" id="collections-save" disabled>Save playlist choices</button>
+    <p class="fine" id="collections-status" role="status">Checking playlist controls…</p>
+  </section>
   <section class="lower" aria-labelledby="connection-details">
     <h2 id="connection-details">Connection details</h2>
     <div><span>Account status</span><strong id="detail-status">Not connected</strong></div>

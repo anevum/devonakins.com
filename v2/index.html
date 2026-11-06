@@ -152,7 +152,7 @@
             </div>
             <div class="listening-grid">
               <article class="listening-card listening-current" aria-labelledby="listening-card-label">
-                <div class="listening-card-header"><span id="listening-card-label">01 / THE SIGNAL</span><span class="listening-status" id="listening-state">OFF AIR</span></div>
+                <div class="listening-card-header"><span id="listening-card-label">01 / THE SIGNAL</span><a class="spotify-attribution" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer"><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="90" height="27" decoding="async"></a><span class="listening-status" id="listening-state">OFF AIR</span></div>
                 <div class="listening-current-body">
                   <div class="listening-cover" aria-hidden="true"><div class="listening-vinyl"><i></i></div><img id="listening-cover-image" alt="" loading="lazy" decoding="async" hidden></div>
                   <div class="listening-current-copy">
@@ -165,10 +165,11 @@
                 <div class="listening-card-bottom"><span>SPOTIFY / READ-ONLY SIGNAL</span><span id="listening-updated-at">PUBLIC SHARING OFF</span></div>
               </article>
               <article class="listening-card listening-collections">
-                <div class="listening-card-header"><span>02 / CURATED PLAYLISTS</span><span>COMING WITH CONNECTION</span></div>
+                <div class="listening-card-header"><span>02 / CURATED PLAYLISTS</span><a class="spotify-attribution" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer"><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="90" height="27" decoding="async"></a><span id="listening-playlist-state">PRIVATE BY DEFAULT</span></div>
                 <div class="listening-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
                 <h2>The playlists.</h2>
-                <p>Public collections will appear here only after I choose which playlists to share. My saved songs and private library remain private.</p>
+                <p id="listening-playlist-note" role="status">Public collections appear here only after I choose which playlists to share. My saved songs and private library remain private.</p>
+                <div id="listening-playlists" class="listening-playlist-list" hidden></div>
                 <span class="listening-card-footnote">NOT A PUBLIC LIBRARY MIRROR</span>
               </article>
               <article class="listening-card listening-context">

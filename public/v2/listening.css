@@ -141,3 +141,5 @@
   .interface-shell .presence-beat { animation:none !important; }
 }
 .interface-shell[data-motion="off"] .presence-beat { animation:none !important; }
+
+.spotify-attribution{display:inline-flex;align-items:center;padding:12px 0;min-width:70px;flex:none}.spotify-attribution img{width:90px;height:auto;display:block}.listening-card-header{flex-wrap:wrap;gap:10px}.listening-playlists{list-style:none;padding:0;margin:8px 0;display:grid;gap:12px;position:relative}.listening-playlists[hidden]{display:none}.listening-playlists a{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px;color:#e8e3de;text-decoration:none;border:1px solid #4e596b;overflow-wrap:anywhere}.listening-playlists a:focus-visible{outline:2px solid #8ec5d3;outline-offset:3px}.listening-playlists img{width:48px;height:48px;object-fit:contain;flex:none}

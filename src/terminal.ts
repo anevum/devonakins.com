@@ -1,4 +1,5 @@
 import {renderLivePresence, startLivePresence} from './presence-client';
+import {startCollections} from './listening-collections-client';
 /**
  * DevonAkins.com V2 preview controls.
  * Public display only: no account credentials, private telemetry, analytics,
@@ -860,6 +861,7 @@ async function refreshPresence() {
   }
 }
 startLivePresence();
+startCollections();
 void refreshPresence();
 const presenceTimer = window.setInterval(() => { void refreshPresence(); }, 60_000);
 const playbackAgeTimer = window.setInterval(() => { if (!document.hidden) applyPresence(lastPlayback); }, 5000);

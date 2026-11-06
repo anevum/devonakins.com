@@ -28,6 +28,20 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: Package optional editor companion (PR only)
+        if: github.event_name == 'pull_request'
+        working-directory: extensions/presence-vscode
+        run: |
+          mkdir -p ../../.artifacts
+          npx --yes @vscode/vsce@4.1.0 package --no-dependencies --out ../../.artifacts/devonakins-presence.vsix
+      - name: Attach optional editor companion (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: presence-vscode
+          path: .artifacts/devonakins-presence.vsix
+          if-no-files-found: error
+          retention-days: 7
       - run: node --check scripts/verify-live.mjs
 
       - name: Probe actual Worker HTTP behavior in isolated local workerd (PR only)

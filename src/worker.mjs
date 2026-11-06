@@ -3,6 +3,8 @@ import { createD1PresenceReader } from "./listening-d1-presence.mjs";
 import { createListeningOwnerApi } from "./listening-owner-api.mjs";
 import {handleObservationRequest, OBSERVATION_READ_PATH, OBSERVATION_WRITE_PATH} from './gpt-observation-bridge.mjs';
 import {createPresenceOwnerApi, publicPresence, listeningDisclosure} from './presence-api.mjs';
+import {createPresenceEditorApi} from './presence-editor-api.mjs';
+import {createListeningCollections} from './listening-collections.mjs';
 import {presenceResponse} from './spotify-presence.mjs';
 
 export const securityHeaders = {
@@ -24,6 +26,8 @@ export function createHandler(assets, release, options = {}) {
   const readDbPresence = createD1PresenceReader();
   const ownerApi = createListeningOwnerApi();
   const presenceOwnerApi = createPresenceOwnerApi({readListening:readDbPresence,clock: () => (options.now || (()=>new Date()))().getTime()});
+  const editorApi = createPresenceEditorApi({clock:()=> (options.now || (()=>new Date()))().getTime()});
+  const collectionsApi = createListeningCollections({clock:()=> (options.now || (()=>new Date()))().getTime()});
   const now = options.now || (() => new Date());
   const githubFetch = options.githubFetch || fetch;
   const successfulTtlMs = 5 * 60_000;
@@ -167,6 +171,8 @@ export function createHandler(assets, release, options = {}) {
       // merely with a hidden UI route. No Access identity = no account action.
       if (url.pathname === OBSERVATION_READ_PATH || url.pathname === OBSERVATION_WRITE_PATH)
         return handleObservationRequest(request, env, now(), securityHeaders);
+      if(url.pathname.startsWith('/api/presence/editor/'))return secured(await editorApi(request,env,ctx));
+      if(url.pathname==='/api/listening/admin/collections')return secured(await collectionsApi.owner(request,env,ctx));
       if (url.pathname === '/owner/presence' || url.pathname === '/owner/presence/' || url.pathname === '/api/presence/owner') {
         const result = await presenceOwnerApi(request, env, ctx);
         return secured(result);
@@ -189,6 +195,10 @@ export function createHandler(assets, release, options = {}) {
         });
       // Same-origin public projection; privacy OFF until the owner explicitly
       // opts in through server-side environment settings. Never cache in CDN.
+      if(url.pathname==='/api/listening/collections') {
+        if(request.method==='HEAD')return secured(new Response(null,{headers:{'Cache-Control':'no-store'}}),true);
+        return secured(await collectionsApi.public(env));
+      }
       if (url.pathname === "/api/listening/now") {
         const before = await listeningDisclosure(env);
         let result = request.method === "HEAD"

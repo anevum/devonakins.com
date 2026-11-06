@@ -45,6 +45,7 @@ async function fixture() {
       "utf8",
     ),
   );
+  raw.exec(await readFile(new URL("../migrations/0005_listening_collections.sql", import.meta.url), "utf8"));
   const db = {
     prepare(query) {
       const stmt = raw.prepare(query);

@@ -397,6 +397,17 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
                 page.wait_for_function("document.querySelector('#presence-ticker-label')?.textContent === 'NOT BROADCASTING'")
                 page.unroute("**/api/presence/public")
+                playlist_fixture = {"version":1,"status":"available","checkedAt":page.evaluate("new Date().toISOString()"),
+                    "playlists":[{"id":"1234567890123456789012","title":"Synthetic playlist","url":"https://open.spotify.com/playlist/1234567890123456789012","image":None}]}
+                page.route("**/api/listening/collections",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(playlist_fixture)))
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("document.querySelectorAll('.listening-playlist-link').length === 1")
+                assert "Synthetic playlist" in page.locator("#listening-playlists").inner_text()
+                playlist_fixture.update({"status":"hidden","checkedAt":None,"playlists":[]})
+                page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                page.wait_for_function("document.querySelector('#listening-playlists').hidden")
+                assert page.locator(".listening-playlist-link").count() == 0
+                page.unroute("**/api/listening/collections")
             page.locator("#tab-contact").click()
             assert page.locator("#panel-contact").is_visible()
 
@@ -839,7 +850,7 @@ def check_presence_control(browser, engine, origin, output, axe_source):
         page.on("pageerror", lambda e: errors.append(str(e)))
         state = {"revision":0,"publishingAllowed":True,"enabled":False,"privateWork":False,
             "shareListening":False,"paused":False,"sessionExpiresAt":None,"projectSlug":None,
-            "manualState":None,"projects":["merit","mizvo"],
+            "manualState":None,"projects":["merit","mizvo"],"projectCatalog":{"merit":"Merit","mizvo":"Mizvo"},
             "preview":{"state":"not-broadcasting","project":None,"source":"none"}}
         writes = []
         delayed = {}
@@ -854,6 +865,10 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                     state.update({"enabled":False,"shareListening":False,"privateWork":False,"sessionExpiresAt":None})
                 if data["action"] == "settings":
                     state.update({"enabled":data["enabled"],"privateWork":data["privateWork"],"shareListening":data["shareListening"]})
+                if data["action"] == "projects":
+                    state["projects"] = data["projects"]
+                if data["action"] == "manual":
+                    state["preview"] = {"state":data["status"],"label":data.get("label"),"project":None,"source":"owner-manual"}
                 if data["action"] == "pause":
                     delayed.update({"route":route,"body":json.dumps(state)})
                     return
@@ -891,6 +906,18 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                 page.wait_for_function("!document.querySelector('#session-pause').disabled")
                 assert not page.locator("#presence-enabled").is_checked()
                 assert "Broadcasting stopped" in page.locator("#presence-notice").inner_text()
+            page.select_option("#presence-manual","custom")
+            page.fill("#presence-custom-label","Editing a new chapter")
+            page.locator("#presence-label-approved").check()
+            page.locator("#manual-set").click()
+            page.wait_for_function("document.querySelector('#presence-notice').textContent === 'Saved.'")
+            assert writes[-1]["status"] == "custom" and writes[-1]["labelApproved"] is True
+            assert writes[-1]["label"] == "Editing a new chapter"
+            page.wait_for_function("document.querySelector('#presence-preview').textContent.includes('Editing a new chapter')")
+            page.locator('[data-public-project][value="merit"]').uncheck()
+            page.locator("#projects-save").click()
+            page.wait_for_function("document.querySelector('#presence-notice').textContent === 'Saved.'")
+            assert writes[-1]["action"] == "projects" and writes[-1]["projects"] == ["mizvo"]
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
             assert page.locator("#presence-off").bounding_box()["height"] >= 44
             if axe_source:

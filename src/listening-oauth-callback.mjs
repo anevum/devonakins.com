@@ -4,6 +4,7 @@ import {
   importEncryptionKey,
   seal,
   unseal,
+  secureRandom,
 } from "./listening-crypto.mjs";
 import {
   SPOTIFY_CALLBACK,
@@ -108,7 +109,7 @@ export async function completeSpotifyAuth(request, env, now, fetcher = fetch) {
     const refreshedUntil =
       now + Math.max(0, Number(data.expires_in) - 60) * 1000;
     const saved = await env.LISTENING_DB.prepare(
-      "UPDATE listening_account SET revision=revision+1, refresh_cipher=?, access_cipher=?, access_expires=?, connected_at=?, reauth_due=?, public_enabled=0, show_details=0, projection_json=NULL, checked_at=0, lease_id=NULL, lease_until=0, blocked_until=0, reauth_required=0 WHERE id=1 AND EXISTS (SELECT 1 FROM listening_oauth_attempt WHERE state_hash=? AND nonce_hash=? AND expires_at=0)",
+      "UPDATE listening_account SET revision=revision+1, refresh_cipher=?, access_cipher=?, access_expires=?, connected_at=?, reauth_due=?, connection_key=?, public_enabled=0, show_details=0, projection_json=NULL, checked_at=0, lease_id=NULL, lease_until=0, blocked_until=0, reauth_required=0 WHERE id=1 AND EXISTS (SELECT 1 FROM listening_oauth_attempt WHERE state_hash=? AND nonce_hash=? AND expires_at=0)",
     )
       .bind(
         refreshCipher,
@@ -116,6 +117,7 @@ export async function completeSpotifyAuth(request, env, now, fetcher = fetch) {
         refreshedUntil,
         now,
         sixMonthsFrom(now),
+        secureRandom(32),
         stateHash,
         attempt.nonce_hash,
       )
