@@ -271,6 +271,33 @@ test("provider failures publish only bounded classification and retry time", asy
   }
 });
 
+test("timeout, abort and network failures retain bounded public retry metadata", async () => {
+  for (const [errorName, expectedReason] of [
+    ["TimeoutError", "timeout"],
+    ["AbortError", "timeout"],
+    ["TypeError", "network-error"],
+  ]) {
+    const site = createHandler(publicAssets, {version:"test"}, {
+      now, cache: null,
+      githubFetch: async () => {
+        const failure = new Error("secret upstream transport details");
+        failure.name = errorName;
+        throw failure;
+      },
+    });
+    const payload = await (await request(site)).json();
+    assert.equal(payload.version, 1);
+    assert.equal(payload.development.freshness, "unavailable");
+    assert.equal(payload.development.failureReason, expectedReason);
+    assert.equal(payload.development.retryAt,
+      new Date(date.getTime() + 10 * 60_000).toISOString());
+    assert.equal(validPublicGithubSignal(payload.development, date), true);
+    assert.equal(payload.gpt.freshness, "historical");
+    assert.equal(payload.gpt.asOf, "2026-11-04");
+    assert.doesNotMatch(JSON.stringify(payload), /secret upstream transport details/);
+  }
+});
+
 test("concurrent first requests deduplicate upstream provider calls", async () => {
   let calls = 0;
   const site = createHandler(publicAssets, {version: "test"}, {
