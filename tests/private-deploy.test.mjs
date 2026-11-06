@@ -170,6 +170,28 @@ test("active version missing private DB is not replaced by the staged upload or 
   assert.equal(writes, 0);
 });
 
+test("public GitHub workflow masks inherited owner values before generating the temporary deployment configuration", async () => {
+  const events = [];
+  await preparePrivateDeployment({
+    env: {
+      CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
+      CLOUDFLARE_API_TOKEN: "synthetic-ci-credential",
+      GITHUB_ACTIONS: "true",
+    },
+    read: async () => base,
+    write: async () => { events.push({ event: "written" }); },
+    mask: value => { events.push({ event: "mask", value }); },
+    fetcher: async url => Response.json({ success: true, result: provider(url) }),
+  });
+  const marked = events.filter(x => x.event === "mask").map(x => x.value);
+  assert.ok(marked.includes("owner@example.test"));
+  assert.ok(marked.includes("synthetic-audience"));
+  assert.ok(marked.includes("syntheticspotifyclientid0123456789"));
+  assert.equal(events.at(-1).event, "written");
+  assert.ok(events.slice(0, -1).every(x => x.event === "mask"));
+  assert.ok(!marked.includes("false"));
+});
+
 test("provider failures create no deployment file and expose no provider response or credential", async () => {
   let writes = 0;
   await assert.rejects(
