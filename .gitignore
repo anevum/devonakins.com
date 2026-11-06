@@ -26,3 +26,5 @@ node_modules
 
 __pycache__/
 *.pyc
+
+/wrangler.deploy.jsonc
