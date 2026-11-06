@@ -1,3 +1,5 @@
+import {renderLivePresence, startLivePresence} from './presence-client';
+import {startCollections} from './listening-collections-client';
 /**
  * DevonAkins.com V2 preview controls.
  * Public display only: no account credentials, private telemetry, analytics,
@@ -327,6 +329,135 @@ document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("c
 // Load a public, static first-party snapshot once at startup; no private API or polling.
 void checkUsage();
 
+// The optional owner-approved observation is separate from historical profile
+// totals and public GitHub events. No API tokens or account credentials live here.
+type GptObservation = {
+  version: number; status: "recent" | "stale"; metric: string;
+  value: number; unit: "credits" | "percent"; scope: "work-codex";
+  source: "user-selected-visible-usage-text";
+  observedAt: string; lastChangedAt: string;
+  sourceUpdatedAt: null; receivedAt: string;
+};
+const observedMetricUnits: Record<string,"credits"|"percent"> = {
+  work_codex_credits_used:"credits",
+  work_codex_credits_remaining:"credits",
+  work_codex_used_percent:"percent",
+  work_codex_remaining_percent:"percent",
+};
+const observedMetricNames: Record<string,string> = {
+  work_codex_credits_used:"credits used",
+  work_codex_credits_remaining:"credits remaining",
+  work_codex_used_percent:"used",
+  work_codex_remaining_percent:"remaining",
+};
+const observationPanel = document.querySelector<HTMLElement>("#gpt-observation-panel");
+let lastObservation: GptObservation | null = null;
+let observationFetchFailed = false;
+let observationBusy = false;
+let lastObservationFetch = 0;
+
+function validObservationApi(input: unknown): GptObservation | null {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid usage response");
+  const data = input as Record<string,unknown>;
+  if (Object.keys(data).sort().join("|") !== "observation|status|version" ||
+      data.version !== 1 ||
+      !["recent","stale","no-data"].includes(String(data.status)))
+    throw new Error("Unexpected usage response schema");
+  if (data.status === "no-data") {
+    if (data.observation !== null) throw new Error("Invalid empty usage response");
+    return null;
+  }
+  const observation = data.observation;
+  if (!observation || typeof observation !== "object" ||
+      Array.isArray(observation))
+    throw new Error("Invalid observation");
+  const r = observation as Record<string,unknown>;
+  const expected = ["version","status","metric","value","unit","scope","source",
+    "observedAt","lastChangedAt","sourceUpdatedAt","receivedAt"];
+  if (Object.keys(r).sort().join("|") !== expected.sort().join("|") ||
+      r.version !== 1 || r.status !== data.status ||
+      !Object.hasOwn(observedMetricUnits,String(r.metric)) ||
+      r.unit !== observedMetricUnits[String(r.metric)] ||
+      typeof r.value !== "number" || !Number.isFinite(r.value) || r.value < 0 ||
+      r.value > (r.unit === "percent" ? 100 : 1_000_000) ||
+      r.scope !== "work-codex" || r.source !== "user-selected-visible-usage-text" ||
+      r.sourceUpdatedAt !== null) throw new Error("Invalid observation fields");
+  const fields = [r.observedAt,r.lastChangedAt,r.receivedAt];
+  if (!fields.every(value => typeof value === "string" &&
+       Number.isFinite(Date.parse(value)) &&
+       new Date(value).toISOString() === value))
+    throw new Error("Invalid observation timestamps");
+  if (Date.parse(r.lastChangedAt as string) > Date.parse(r.observedAt as string) ||
+      Date.parse(r.observedAt as string) > Date.now()+60_000 ||
+      Date.parse(r.receivedAt as string) > Date.now()+60_000 ||
+      Date.parse(r.receivedAt as string) < Date.parse(r.observedAt as string)-60_000)
+    throw new Error("Contradictory observation time");
+  return r as GptObservation;
+}
+function renderObservation() {
+  if (!observationPanel) return;
+  if (!lastObservation) {
+    observationPanel.hidden = true;
+    return;
+  }
+  observationPanel.hidden = false;
+  const r=lastObservation;
+  const ageSeconds=Math.max(0,Math.floor(
+    (Date.now()-Date.parse(r.observedAt))/1000));
+  const freshness=observationFetchFailed ? "unreachable" :
+    ageSeconds > 15*60 ? "stale" : "recent";
+  observationPanel.dataset.freshness=freshness;
+  const units=(r.unit === "percent" ? "% " : " ") + observedMetricNames[r.metric];
+  const valueLabel=new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(r.value)+units;
+  const value=document.querySelector<HTMLElement>("#gpt-observation-value");
+  if (value && value.textContent !== valueLabel) value.textContent=valueLabel;
+  const state=document.querySelector<HTMLElement>("#gpt-observation-state");
+  const stateText = freshness === "unreachable" ? "Source temporarily unavailable. Last recorded value retained." :
+    freshness === "stale" ? "STALE OBSERVATION / collector has not supplied a recent reading." :
+      "RECENT OBSERVATION / not a verified OpenAI source update.";
+  if (state && state.textContent !== stateText) state.textContent=stateText;
+  const age=document.querySelector<HTMLElement>("#gpt-observation-age");
+  if (age) age.textContent="Observed " +
+    (ageSeconds < 60 ? ageSeconds+" seconds" :
+      Math.floor(ageSeconds/60)+" minutes") + " ago · OpenAI update time unknown.";
+}
+async function checkObservation() {
+  if (!observationPanel || observationBusy || document.hidden) return;
+  observationBusy=true;
+  lastObservationFetch=Date.now();
+  try {
+    const response=await fetch("/api/gpt-observation/latest",{
+      cache:"no-store",credentials:"omit",headers:{Accept:"application/json"},
+    });
+    // Fail-closed disabled bridge: do not create an empty/misleading panel.
+    if (response.status===404) {
+      lastObservation=null;
+      observationFetchFailed=false;
+      return;
+    }
+    if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
+      throw new Error("Usage observation unavailable");
+    lastObservation=validObservationApi(await response.json());
+    observationFetchFailed=false;
+  } catch {
+    // Keep last genuine value, but never silently imply source freshness.
+    observationFetchFailed=true;
+  } finally {
+    observationBusy=false;
+    renderObservation();
+  }
+}
+if (observationPanel) {
+  void checkObservation();
+  window.setInterval(() => {if (!document.hidden) renderObservation();},5_000);
+  window.setInterval(() => {if (!document.hidden) void checkObservation();},60_000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now()-lastObservationFetch>=60_000)
+      void checkObservation();
+  });
+}
+
 // Public GitHub events remain strictly separate from historical GPT usage.
 type PublicActivity = {at: string; kind: "push" | "pull request" | "release"};
 type PublicActivityState = "ready" | "empty" | "unavailable";
@@ -609,10 +740,142 @@ for (const button of lightButtons) {
   });
 }
 
+
+// Public listening signal. Playback is a personal "coding mode" convention,
+// NOT independently verified IDE activity. Only a same-origin public Worker
+// projection is read; no Spotify credentials or OAuth flows run in the browser.
+type PublicPresence = {
+  version: 1;
+  mode: "hidden" | "off_air" | "playing" | "unavailable";
+  detailsVisible: boolean;
+  updatedAt?: string;
+  track?: {
+    title: string;
+    artist: string;
+    album?: string;
+    url: string;
+    image?: string | null;
+  };
+};
+
+let presenceRequestActive = false;
+let lastPlayback: unknown = null;
+const presenceTicker = document.querySelector<HTMLAnchorElement>("#presence-ticker");
+const presenceLabel = document.querySelector<HTMLElement>("#presence-ticker-label");
+const presenceDetail = document.querySelector<HTMLElement>("#presence-ticker-detail");
+const listeningState = document.querySelector<HTMLElement>("#listening-state");
+const listeningVisibility = document.querySelector<HTMLElement>("#listening-visibility");
+const listeningKicker = document.querySelector<HTMLElement>("#listening-now-label");
+const listeningTitle = document.querySelector<HTMLElement>("#listening-track-title");
+const listeningArtist = document.querySelector<HTMLElement>("#listening-track-artist");
+const listeningUpdated = document.querySelector<HTMLElement>("#listening-updated-at");
+const listeningTrackLink = document.querySelector<HTMLAnchorElement>("#listening-open-track");
+const listeningArtwork = document.querySelector<HTMLImageElement>("#listening-cover-image");
+
+const presenceText = (element: HTMLElement | null, value: string) => {
+  if (element) element.textContent = value;
+};
+
+function applyPresence(candidate: unknown) {
+  lastPlayback = candidate;
+  let data: PublicPresence = {
+    version: 1, mode: "unavailable", detailsVisible: false,
+  };
+  if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+    const value = candidate as Partial<PublicPresence>;
+    if (value.version === 1 &&
+        ["hidden", "off_air", "playing", "unavailable"].includes(value.mode ?? "")) {
+      data = value as PublicPresence;
+    }
+  }
+  let mode = data.mode;
+  if (mode === "playing") {
+    const updatedMs = Date.parse(data.updatedAt || "");
+    // A frozen tab or stale cache must never falsely claim current playback.
+    if (!Number.isFinite(updatedMs) || Date.now() - updatedMs >= 120_000 || updatedMs > Date.now() + 10_000) mode = "unavailable";
+  }
+
+  const details = mode === "playing" && data.detailsVisible === true &&
+    data.track && typeof data.track.title === "string" &&
+    typeof data.track.artist === "string" &&
+    /^https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}$/.test(data.track.url)
+    ? data.track : null;
+
+  renderLivePresence();
+  presenceText(listeningState, mode === "playing" ? "ON AIR"
+    : mode === "unavailable" ? "UNAVAILABLE" : "OFF AIR");
+  presenceText(listeningVisibility, mode === "hidden" ? "PRIVATE BY DEFAULT"
+    : mode === "unavailable" ? "SIGNAL UNAVAILABLE" : "PUBLIC SIGNAL ENABLED");
+  presenceText(listeningKicker, mode === "playing" ? "SPOTIFY / CURRENT PLAYBACK"
+    : mode === "hidden" ? "NOT BROADCASTING"
+    : mode === "off_air" ? "NO ACTIVE PLAYBACK" : "NO CURRENT SIGNAL");
+  presenceText(listeningTitle, details ? details.title :
+    mode === "playing" ? "Listening now." :
+    mode === "off_air" ? "Between tracks." :
+    mode === "hidden" ? "The soundtrack stays personal." : "Signal temporarily unavailable.");
+  presenceText(listeningArtist, details ? details.artist :
+    mode === "playing" ? "Shared Spotify playback. Development presence is a separate signal." :
+    mode === "off_air" ? "Spotify isn't currently playing. That doesn't mean I've stopped creating." :
+    mode === "hidden" ? "Connect and opt in to Spotify sharing to show the music behind my work." :
+    "Listening data could not be refreshed. No old track is presented as live.");
+  presenceText(listeningUpdated, mode === "playing" ? "ACTIVE SPOTIFY PLAYBACK"
+    : mode === "hidden" ? "PUBLIC SHARING OFF"
+    : mode === "off_air" ? "NO CURRENT TRACK" : "NOT VERIFIED LIVE");
+
+  if (listeningTrackLink) {
+    listeningTrackLink.hidden = !details;
+    if (details) listeningTrackLink.href = details.url;
+    else listeningTrackLink.removeAttribute("href");
+  }
+  if (listeningArtwork) {
+    const image = details?.image;
+    const allowed = typeof image === "string" &&
+      /^https:\/\/i\.scdn\.co\/image\/[A-Za-z0-9]+$/.test(image);
+    if (allowed && image) {
+      listeningArtwork.referrerPolicy = "no-referrer";
+      listeningArtwork.src = image;
+      listeningArtwork.hidden = false;
+    } else {
+      listeningArtwork.hidden = true;
+      listeningArtwork.removeAttribute("src");
+    }
+  }
+}
+async function refreshPresence() {
+  if (presenceRequestActive || document.hidden) return;
+  presenceRequestActive = true;
+  try {
+    const result = await fetch("/api/listening/now", {
+      credentials: "omit",
+      cache: "no-store",
+      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
+    });
+    if (!result.ok || !result.headers.get("Content-Type")?.includes("application/json"))
+      throw new Error("No public listening projection");
+    const candidate: unknown = await result.json();
+    applyPresence(document.hidden ? null : candidate);
+  } catch {
+    applyPresence(null);
+  } finally {
+    presenceRequestActive = false;
+  }
+}
+startLivePresence();
+startCollections();
+void refreshPresence();
+const presenceTimer = window.setInterval(() => { void refreshPresence(); }, 60_000);
+const playbackAgeTimer = window.setInterval(() => { if (!document.hidden) applyPresence(lastPlayback); }, 5000);
+document.addEventListener("visibilitychange", () => {
+  applyPresence(null);
+  if (!document.hidden) void refreshPresence();
+});
+
 window.addEventListener("pagehide", (event) => {
   resetPointerDepth();
   if (event.persisted) return;
   window.clearInterval(clockTimer);
   window.clearInterval(publicTelemetryTimer);
+  window.clearInterval(presenceTimer);
+  window.clearInterval(playbackAgeTimer);
   window.clearTimeout(announcementTimer);
 });

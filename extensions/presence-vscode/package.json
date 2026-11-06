@@ -1,0 +1,52 @@
+{
+  "name": "devonakins-presence",
+  "displayName": "DevonAkins Presence",
+  "version": "0.1.0",
+  "publisher": "devonalanakins",
+  "description": "Opt-in minimal editor activity for your personal website.",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "main": "./extension.cjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "devonPresence.pair",
+        "title": "Devon Presence: Pair Editor"
+      },
+      {
+        "command": "devonPresence.project",
+        "title": "Devon Presence: Select Public Project"
+      },
+      {
+        "command": "devonPresence.resume",
+        "title": "Devon Presence: Resume Sharing"
+      },
+      {
+        "command": "devonPresence.pause",
+        "title": "Devon Presence: Pause Sharing"
+      },
+      {
+        "command": "devonPresence.disconnect",
+        "title": "Devon Presence: Forget Pairing"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devonalanakins/devonakins.com.git",
+    "directory": "extensions/presence-vscode"
+  }
+}

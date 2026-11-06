@@ -130,3 +130,13 @@
 .gpt-diagnostic-manual {flex-basis:100%;width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height:110px;padding:12px;border:1px solid rgba(174,200,214,.45);border-radius:6px;color:#ebedf1;background:rgba(11,17,28,.94);font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;}
 .gpt-diagnostic-manual:focus-visible {outline:2px solid #eed3bd;outline-offset:3px;}
 .gpt-diagnostic-manual[hidden] {display:none;}
+
+/* Source-aware Work/Codex observation: hidden until authorized data exists. */
+.gpt-observation-panel {padding:20px 22px;border:1px solid rgba(143,194,187,.28);background:linear-gradient(145deg,rgba(21,35,49,.96),rgba(12,19,30,.98));}
+.gpt-observation-panel[hidden] {display:none;}
+.gpt-observation-value {display:block;margin:12px 0 4px;color:#eff3f6;font-weight:620;font-size:clamp(26px,5vw,40px);line-height:1.2;letter-spacing:-.04em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+#gpt-observation-state {margin:8px 0;color:#d3dfe6;font-size:12px;line-height:1.6;}
+.gpt-observation-panel[data-freshness="stale"] #gpt-observation-state,.gpt-observation-panel[data-freshness="unreachable"] #gpt-observation-state{color:#e0baac;}
+.gpt-observation-disclosure {margin:6px 0 0;color:#9fb4c4;font-size:11px;line-height:1.7;}
+@media(max-width:390px){.gpt-observation-panel{padding:16px 13px;}}
+.gpt-observation-age{font-size:11px;color:#afc3d0;margin:0 0 8px;font-variant-numeric:tabular-nums;line-height:1.55;}

@@ -1,7 +1,15 @@
 import { projectPublicGithubEvents, unavailablePublicGithub, projectPublicTelemetry, validPublicGithubSignal, githubCooldownMs } from "./public-telemetry.mjs";
+import { createD1PresenceReader } from "./listening-d1-presence.mjs";
+import { createListeningOwnerApi } from "./listening-owner-api.mjs";
+import {handleObservationRequest, OBSERVATION_READ_PATH, OBSERVATION_WRITE_PATH} from './gpt-observation-bridge.mjs';
+import {createPresenceOwnerApi, publicPresence, listeningDisclosure} from './presence-api.mjs';
+import {createPresenceEditorApi} from './presence-editor-api.mjs';
+import {createListeningCollections} from './listening-collections.mjs';
+import {presenceResponse} from './spotify-presence.mjs';
+
 export const securityHeaders = {
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.scdn.co; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
@@ -9,7 +17,17 @@ export const securityHeaders = {
   "Strict-Transport-Security": "max-age=31536000",
 };
 export function createHandler(assets, release, options = {}) {
+  const secured = (response, head = false) => {
+    const headers = new Headers(securityHeaders);
+    for (const [name,value] of response.headers) headers.set(name,value);
+    return new Response(head ? null : response.body,{status:response.status,headers});
+  };
   const decoded = new Map();
+  const readDbPresence = createD1PresenceReader();
+  const ownerApi = createListeningOwnerApi();
+  const presenceOwnerApi = createPresenceOwnerApi({readListening:readDbPresence,clock: () => (options.now || (()=>new Date()))().getTime()});
+  const editorApi = createPresenceEditorApi({clock:()=> (options.now || (()=>new Date()))().getTime()});
+  const collectionsApi = createListeningCollections({clock:()=> (options.now || (()=>new Date()))().getTime()});
   const now = options.now || (() => new Date());
   const githubFetch = options.githubFetch || fetch;
   const successfulTtlMs = 5 * 60_000;
@@ -126,7 +144,7 @@ export function createHandler(assets, release, options = {}) {
     return historicalSnapshot;
   };
   return {
-    async fetch(request) {
+    async fetch(request, env = {}, ctx = {}) {
       const url = new URL(request.url);
       const redirect = (target, status = 308) =>
         new Response(null, {
@@ -149,6 +167,23 @@ export function createHandler(assets, release, options = {}) {
         url.protocol = "https:";
         return redirect(url.href);
       }
+      // Protect all admin and OAuth endpoints at the Worker boundary, not
+      // merely with a hidden UI route. No Access identity = no account action.
+      if (url.pathname === OBSERVATION_READ_PATH || url.pathname === OBSERVATION_WRITE_PATH)
+        return handleObservationRequest(request, env, now(), securityHeaders);
+      if(url.pathname.startsWith('/api/presence/editor/'))return secured(await editorApi(request,env,ctx));
+      if(url.pathname==='/api/listening/admin/collections')return secured(await collectionsApi.owner(request,env,ctx));
+      if (url.pathname === '/owner/presence' || url.pathname === '/owner/presence/' || url.pathname === '/api/presence/owner') {
+        const result = await presenceOwnerApi(request, env, ctx);
+        return secured(result);
+      }
+      if (url.pathname === "/owner/listening" ||
+          url.pathname === "/owner/listening/" ||
+          url.pathname.startsWith("/api/listening/admin/") ||
+          url.pathname.startsWith("/api/listening/oauth/")) {
+        const result = await ownerApi(request, env, ctx);
+        return secured(result);
+      }
       if (!["GET", "HEAD"].includes(request.method))
         return new Response("Method not allowed", {
           status: 405,
@@ -158,6 +193,28 @@ export function createHandler(assets, release, options = {}) {
             "Cache-Control": "no-store",
           },
         });
+      // Same-origin public projection; privacy OFF until the owner explicitly
+      // opts in through server-side environment settings. Never cache in CDN.
+      if(url.pathname==='/api/listening/collections') {
+        if(request.method==='HEAD')return secured(new Response(null,{headers:{'Cache-Control':'no-store'}}),true);
+        return secured(await collectionsApi.public(env));
+      }
+      if (url.pathname === "/api/listening/now") {
+        const before = await listeningDisclosure(env);
+        let result = request.method === "HEAD"
+          ? new Response(null, { headers: { "Cache-Control": "no-store" } })
+          : before.allowed ? await readDbPresence(env) : presenceResponse({version:1,mode:'hidden',detailsVisible:false});
+        const after = await listeningDisclosure(env);
+        if (!after.allowed || before.revision !== after.revision)
+          result = presenceResponse({version:1,mode:'hidden',detailsVisible:false});
+        return secured(result,request.method === 'HEAD');
+      }
+      if (url.pathname === '/api/presence/public') {
+        const headers={...securityHeaders,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','CDN-Cache-Control':'no-store'};
+        if (request.method === 'HEAD') return new Response(null,{headers});
+        const data=await publicPresence(env,readDbPresence,()=>now().getTime());
+        return new Response(JSON.stringify(data),{headers});
+      }
       if (url.pathname === "/_health")
         return new Response(
           request.method === "HEAD"
@@ -238,9 +295,9 @@ export function createHandler(assets, release, options = {}) {
       const headers = new Headers({
         ...securityHeaders,
         "Content-Type": selected.type,
-        "Cache-Control": isHtml || (path.startsWith("/v2/") && path.endsWith(".css"))
-          // Mutable styles are revalidated: cached mobile Safari CSS must not
-          // outlive a newer HTML shell that introduces additional class names.
+        "Cache-Control": isHtml || (path.startsWith("/v2/") && /\.(css|js)$/.test(path))
+          // Mutable styles and owner controllers revalidate with the shell.
+          // A cached controller must not outlive its authenticated API contract.
           ? "public, max-age=0, must-revalidate"
           : path.startsWith("/assets/")
             ? "public, max-age=31536000, immutable"
