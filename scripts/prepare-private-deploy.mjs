@@ -1,4 +1,4 @@
-/** Read the approved private binding at release time; never commit its ID or credentials. */
+/** Derive an ephemeral release config from the live, approved Worker deployment. */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,8 +21,17 @@ const plainNames = new Set([
 ]);
 export function privateDeploymentConfig(base, settings, database) {
   const bindings = settings?.bindings;
-  if (!Array.isArray(bindings))
-    throw Error("Private runtime settings unavailable");
+  if (!Array.isArray(bindings) || !bindings.length)
+    throw Error("Deployed private runtime settings unavailable");
+  const names = bindings.map((b) => b.name);
+  if (new Set(names).size !== names.length)
+    throw Error("Duplicate deployed binding requires review");
+  for (const b of bindings) {
+    if (b.type === "plain_text" &&
+        (typeof b.text !== "string" || b.text.length > 1024 ||
+         /[\u0000-\u001f\u007f]/.test(b.text)))
+      throw Error("Invalid deployed plain-text binding");
+  }
   const dbs = bindings.filter((b) => b.type === "d1");
   if (
     dbs.length !== 1 ||
@@ -78,6 +87,14 @@ export function privateDeploymentConfig(base, settings, database) {
     throw Error("Base deployment configuration changed; review required");
   let prefix = base.replace(/}\s*$/, "").trimEnd();
   if (!prefix.endsWith(",")) prefix += ",";
+  // An upload-only Cloudflare build may be newer than production yet omit D1
+  // and nonsecret variables. Explicitly carry the approved *deployed* vars;
+  // keep_vars retains the server-side encryption key without reading it.
+  const vars = Object.fromEntries(
+    bindings.filter((b) => b.type === "plain_text")
+      .map((b) => [b.name, b.text]),
+  );
+  for (const name of privateGates) vars[name] = "false";
   const extra = {
     d1_databases: [
       {
@@ -88,7 +105,7 @@ export function privateDeploymentConfig(base, settings, database) {
       },
     ],
     keep_vars: true,
-    vars: Object.fromEntries(privateGates.map((name) => [name, "false"])),
+    vars,
   };
   return prefix + "\n" + JSON.stringify(extra, null, 2).slice(1, -1) + "\n}\n";
 }
@@ -121,7 +138,19 @@ export async function preparePrivateDeployment({
       throw Error("Private deployment preflight unavailable");
     return data.result;
   }
-  const settings = await get("/workers/scripts/devonakins-personal/settings");
+  // /settings follows the most recently *uploaded* version, which is not
+  // necessarily deployed. A CI upload can lack private bindings entirely.
+  const script = "/workers/scripts/devonakins-personal";
+  const deployments = await get(script + "/deployments");
+  const active = deployments?.deployments?.[0];
+  if (active?.versions?.length !== 1 ||
+      active.versions[0].percentage !== 100 ||
+      !/^[a-f0-9-]{36}$/.test(active.versions[0].version_id || ""))
+    throw Error("A single fully deployed Worker version is required");
+  const version = await get(
+    script + "/versions/" + active.versions[0].version_id,
+  );
+  const settings = { bindings: version?.resources?.bindings };
   const binding = settings?.bindings?.find(
     (b) => b.type === "d1" && b.name === "LISTENING_DB",
   );
