@@ -32,6 +32,7 @@ export function renderListeningOwner() {
         <button type="button" id="connect" disabled>Connect Spotify</button>
         <button type="button" id="disconnect" class="secondary" disabled>Disconnect</button>
       </div>
+      <p class="fine" id="spotify-setup" hidden><strong>Spotify app setup required.</strong> Open the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">Spotify Developer Dashboard</a> to create an app. Register this exact redirect URI: <code>https://devonakins.com/api/listening/oauth/callback</code>. Then add the app's Client ID as the <code>SPOTIFY_CLIENT_ID</code> variable on the <code>devonakins-personal</code> Cloudflare Worker. Reload this private page to connect. No Client Secret is needed for PKCE.</p>
       <p class="fine">Spotify authorization is read-only. You retain control over what the public website can show.</p>
     </section>
     <section class="card privacy" aria-labelledby="privacy-heading">
