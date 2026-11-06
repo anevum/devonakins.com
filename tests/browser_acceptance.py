@@ -487,6 +487,33 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             """)
                             assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                             assert "Source checked" in page.locator("#gpt-event-state").inner_text()
+                            # A valid rate-limit response must explain the failure without
+                            # exposing raw upstream headers or pretending to have live data.
+                            original_development = dict(public_fixture["development"])
+                            public_fixture["development"].update({
+                                "freshness": "unavailable",
+                                "status": "unavailable",
+                                "failureReason": "rate-limited",
+                                "retryAt": event_time(-30),
+                                "latestActivityAt": None,
+                                "latestActivityKind": None,
+                                "recentActivity": [],
+                            })
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'unavailable'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 0
+                            assert "limiting unauthenticated public requests" in page.locator("#gpt-event-state").inner_text()
+                            assert "Retry is permitted after" in page.locator("#gpt-event-state").inner_text()
+                            assert "do not leak" not in page.locator("#gpt-profile").inner_text()
+                            public_fixture["development"].clear()
+                            public_fixture["development"].update(original_development)
+                            page.reload(wait_until="load")
+                            page.wait_for_function("""() =>
+                                document.querySelector('.gpt-live-panel')?.dataset.sourceState === 'ready'
+                            """)
+                            assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()
