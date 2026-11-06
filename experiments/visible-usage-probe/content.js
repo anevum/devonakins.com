@@ -24,7 +24,7 @@
       statusAt: new Date().toISOString(),
     };
     // Session storage is deliberately written only by the trusted extension worker.
-    void chrome.runtime.sendMessage({type:"USAGE_PROBE_RECORD", data}).catch(() => {});
+    return chrome.runtime.sendMessage({type:"USAGE_PROBE_RECORD", data}).catch(() => {});
   }
 
   function removeSelection() {
@@ -33,7 +33,7 @@
     document.removeEventListener("click", choose, true);
     document.removeEventListener("keydown", cancelOnEscape, true);
   }
-  function stop() {
+  function stop(quiet = false) {
     removeSelection();
     if (timer !== null) clearInterval(timer);
     timer = null;
@@ -42,7 +42,7 @@
     reading = null;
     state = "stopped";
     message = "Stopped locally; no usage data is being collected";
-    publish();
+    return quiet ? Promise.resolve() : publish();
   }
   function cancelOnEscape(event) {
     if (event.key !== "Escape") return;
@@ -117,7 +117,7 @@
   }
   function begin(nextMetric) {
     if (!schema.allowedMetrics.includes(nextMetric)) return {ok:false};
-    stop();
+    void stop(true);
     metric = nextMetric;
     reading = null;
     selecting = true;
@@ -135,7 +135,10 @@
   chrome.runtime.onMessage.addListener((data, _sender, respond) => {
     if (!data || typeof data !== "object") return;
     if (data.type === "USAGE_PROBE_SELECT") respond(begin(data.metric));
-    if (data.type === "USAGE_PROBE_STOP") { stop(); respond({ok:true}); }
+    if (data.type === "USAGE_PROBE_STOP") {
+      void stop().then(() => respond({ok:true}), () => respond({ok:false}));
+      return true;
+    }
     if (data.type === "USAGE_PROBE_STATUS") respond({ok:true,state,message});
   });
   globalThis.__devonVisibleUsageProbe = Object.freeze({version:1});
