@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { probeProduction, verifySourceAncestry } from '../scripts/probe-production.mjs';
+import { promotePortraitHome } from '../src/portrait-home.mjs';
+import { renderImmersiveRoute } from '../src/immersive-routes.mjs';
+import { projects } from '../src/content.mjs';
 
 const expectedCommit = '3'.repeat(40);
 const origin = 'https://devonakins.com';
@@ -45,9 +48,12 @@ test('reject stale deployment source commit', async () => {
   const { fetchImpl } = mock();
   await assert.rejects(probeProduction({ fetchImpl, expectedCommit: '4'.repeat(40) }), /does not match expected source/);
 });
-test('the observation accepts the built legacy page and rejects the retired finance title', async () => {
+test('the observation accepts the generated legacy page and rejects the retired finance title', async () => {
   const path = '/work/rhen/';
-  const body = await readFile(new URL('../dist/work/rhen/index.html', import.meta.url), 'utf8');
+  // The read-only observer runs without npm or a dist build. Exercise the same
+  // source renderer used by pages.mjs without adding build prerequisites.
+  const home = promotePortraitHome(await readFile(new URL('../v2/index.html', import.meta.url), 'utf8'));
+  const body = renderImmersiveRoute(home, path, projects);
   const current = { ...fixtures[path], body };
   await probeProduction({ fetchImpl: mock({ [path]: current }).fetchImpl, expectedCommit });
   const retired = { ...fixtures[path], body: '<link rel="canonical" href="https://devonakins.com/work/rhen/">RHEN — Market Research' };
