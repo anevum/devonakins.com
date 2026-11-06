@@ -440,13 +440,27 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                         assert page.locator("[data-gpt-event-filter]").count() == 4
                         if width == 320:
                             # Confirm a symmetric 2x2 set of real touch targets on narrow phones.
-                            buttons = page.locator("[data-gpt-event-filter]")
-                            boxes = [buttons.nth(i).bounding_box() for i in range(4)]
-                            assert all(box and box["height"] >= 44 for box in boxes)
-                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2
-                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2
-                            assert boxes[2]["y"] > boxes[0]["y"] + 40
-                            assert boxes[0]["x"] < boxes[1]["x"]
+                            # Read all geometry in one animation frame; sequential
+                            # locator queries can span a route-transition frame.
+                            layout = page.locator(".gpt-live-filters").evaluate("""el => {
+                                const style = getComputedStyle(el);
+                                return {
+                                    display: style.display,
+                                    columns: style.gridTemplateColumns.trim().split(/\\s+/).length,
+                                    boxes: [...el.querySelectorAll('button')].map(b => {
+                                        const rect = b.getBoundingClientRect();
+                                        return {x: rect.x, y: rect.y, height: rect.height};
+                                    })
+                                };
+                            }""")
+                            assert layout["display"] == "grid", layout
+                            assert layout["columns"] == 2, layout
+                            boxes = layout["boxes"]
+                            assert len(boxes) == 4 and all(b["height"] >= 44 for b in boxes), layout
+                            assert abs(boxes[0]["y"] - boxes[1]["y"]) < 2, layout
+                            assert abs(boxes[2]["y"] - boxes[3]["y"]) < 2, layout
+                            assert boxes[2]["y"] > boxes[0]["y"] + 40, layout
+                            assert boxes[0]["x"] < boxes[1]["x"], layout
                         page.locator("#gpt-event-list .gpt-event-card").first.wait_for(state="visible")
                         assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                         assert page.locator(".gpt-live-panel").get_attribute("data-source-state") == "ready"
