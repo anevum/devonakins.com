@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   privateDeploymentConfig,
   preparePrivateDeployment,
+  PrivatePreflightFailure,
 } from "../scripts/prepare-private-deploy.mjs";
 
 const base = readFileSync(
@@ -190,6 +191,91 @@ test("public GitHub workflow masks inherited owner values before generating the 
   assert.equal(events.at(-1).event, "written");
   assert.ok(events.slice(0, -1).every(x => x.event === "mask"));
   assert.ok(!marked.includes("false"));
+});
+
+
+test("preflight safely distinguishes 403 scope denials, malformed JSON and provider rejection without leaking details", async () => {
+  const cases = [
+    {
+      response: new Response("provider-token-secret", { status: 403 }),
+      reason: "HTTP_403",
+    },
+    {
+      response: new Response("provider-token-secret", {
+        status: 200, headers: { "Content-Type": "application/json" },
+      }),
+      reason: "INVALID_JSON",
+    },
+    {
+      response: Response.json({
+        success: false, errors: [{ code: 9999, message: "provider-token-secret" }],
+      }),
+      reason: "API_REJECTED",
+    },
+  ];
+  for (const sample of cases) {
+    let writes = 0;
+    await assert.rejects(
+      preparePrivateDeployment({
+        env: {
+          CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
+          CLOUDFLARE_API_TOKEN: "synthetic-ci-credential",
+        },
+        write: async () => { writes++; },
+        fetcher: async () => sample.response,
+      }),
+      error => error instanceof PrivatePreflightFailure &&
+        error.stage === "DEPLOYMENTS_READ" &&
+        error.reason === sample.reason &&
+        !JSON.stringify(error).includes("provider-token-secret") &&
+        !JSON.stringify(error).includes("synthetic-ci-credential"),
+    );
+    assert.equal(writes, 0);
+  }
+});
+
+test("preflight identifies the active version read and D1 metadata read as independent permission boundaries", async () => {
+  for (const stage of ["ACTIVE_VERSION_READ", "D1_METADATA_READ"]) {
+    let writes = 0;
+    await assert.rejects(
+      preparePrivateDeployment({
+        env: {
+          CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
+          CLOUDFLARE_API_TOKEN: "synthetic-ci-credential",
+        },
+        read: async () => base,
+        write: async () => { writes++; },
+        fetcher: async (url) => {
+          if (stage === "ACTIVE_VERSION_READ" && url.includes("/versions/"))
+            return new Response("sensitive provider text", { status: 403 });
+          if (stage === "D1_METADATA_READ" && url.includes("/d1/database/"))
+            return new Response("sensitive provider text", { status: 403 });
+          return Response.json({ success: true, result: provider(url) });
+        },
+      }),
+      error => error instanceof PrivatePreflightFailure &&
+        error.stage === stage &&
+        error.reason === "HTTP_403" &&
+        !error.message.includes("sensitive provider text"),
+    );
+    assert.equal(writes, 0);
+  }
+});
+
+test("preflight classifies network failure without echoing transport exception", async () => {
+  await assert.rejects(
+    preparePrivateDeployment({
+      env: {
+        CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
+        CLOUDFLARE_API_TOKEN: "synthetic-ci-credential",
+      },
+      fetcher: async () => { throw Error("SENSITIVE_TRANSPORT_TOKEN"); },
+    }),
+    error => error instanceof PrivatePreflightFailure &&
+      error.stage === "DEPLOYMENTS_READ" &&
+      error.reason === "NETWORK_OR_TIMEOUT" &&
+      !JSON.stringify(error).includes("SENSITIVE_TRANSPORT_TOKEN"),
+  );
 });
 
 test("provider failures create no deployment file and expose no provider response or credential", async () => {

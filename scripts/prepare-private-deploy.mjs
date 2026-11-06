@@ -3,6 +3,15 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+export class PrivatePreflightFailure extends Error {
+  constructor(stage, reason) {
+    super("Private deployment preflight blocked");
+    this.name = "PrivatePreflightFailure";
+    this.stage = stage;
+    this.reason = reason;
+  }
+}
+
 const privateGates = [
   "PRESENCE_PUBLIC_RELEASE_APPROVED",
   "LISTENING_PUBLIC_RELEASE_APPROVED",
@@ -120,46 +129,62 @@ export async function preparePrivateDeployment({
   const token = env.CLOUDFLARE_API_TOKEN;
   if (!/^[a-f0-9]{32}$/.test(account || "") || !token)
     throw Error("Dedicated Cloudflare CI credentials required");
-  async function get(path) {
-    const response = await fetcher(
-      "https://api.cloudflare.com/client/v4/accounts/" + account + path,
-      {
-        headers: {
-          Authorization: "Bearer " + token,
-          Accept: "application/json",
+  async function get(path, stage) {
+    let response;
+    try {
+      response = await fetcher(
+        "https://api.cloudflare.com/client/v4/accounts/" + account + path,
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+            Accept: "application/json",
+          },
+          redirect: "error",
+          signal: AbortSignal.timeout(10000),
         },
-        redirect: "error",
-        signal: AbortSignal.timeout(10000),
-      },
-    );
+      );
+    } catch {
+      throw new PrivatePreflightFailure(stage, "NETWORK_OR_TIMEOUT");
+    }
     if (!response.ok)
-      throw Error("Private deployment preflight request failed");
-    const data = await response.json();
+      throw new PrivatePreflightFailure(stage, "HTTP_" + response.status);
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new PrivatePreflightFailure(stage, "INVALID_JSON");
+    }
     if (data.success !== true)
-      throw Error("Private deployment preflight unavailable");
+      throw new PrivatePreflightFailure(stage, "API_REJECTED");
     return data.result;
   }
   // /settings follows the most recently *uploaded* version, which is not
   // necessarily deployed. A CI upload can lack private bindings entirely.
   const script = "/workers/scripts/devonakins-personal";
-  const deployments = await get(script + "/deployments");
+  const deployments = await get(script + "/deployments", "DEPLOYMENTS_READ");
   const active = deployments?.deployments?.[0];
   if (active?.versions?.length !== 1 ||
       active.versions[0].percentage !== 100 ||
       !/^[a-f0-9-]{36}$/.test(active.versions[0].version_id || ""))
-    throw Error("A single fully deployed Worker version is required");
+    throw new PrivatePreflightFailure("DEPLOYMENTS_VALIDATE", "SINGLE_100_PERCENT_VERSION_REQUIRED");
   const version = await get(
     script + "/versions/" + active.versions[0].version_id,
+    "ACTIVE_VERSION_READ",
   );
   const settings = { bindings: version?.resources?.bindings };
   const binding = settings?.bindings?.find(
     (b) => b.type === "d1" && b.name === "LISTENING_DB",
   );
   if (!/^[a-f0-9-]{36}$/.test(binding?.id || ""))
-    throw Error("Dedicated database binding required");
-  const database = await get("/d1/database/" + binding.id);
+    throw new PrivatePreflightFailure("ACTIVE_BINDINGS_VALIDATE", "DEDICATED_D1_MISSING");
+  const database = await get("/d1/database/" + binding.id, "D1_METADATA_READ");
   const base = await read("wrangler.jsonc", "utf8");
-  const config = privateDeploymentConfig(base, settings, database);
+  let config;
+  try {
+    config = privateDeploymentConfig(base, settings, database);
+  } catch {
+    throw new PrivatePreflightFailure("PRIVATE_CONFIG_VALIDATE", "BINDING_OR_DB_MISMATCH");
+  }
   // Wrangler prints plain-text Worker binding values during deployment.
   // Protect owner configuration from appearing in public Actions logs.
   if (env.GITHUB_ACTIONS === "true") {
@@ -180,9 +205,15 @@ if (
         "Private deployment configuration prepared; sharing remains off.",
       ),
     )
-    .catch(() => {
+    .catch((error) => {
+      // Never echo API response bodies, headers, account values or token text.
+      // A stable stage and status distinguishes missing token scopes from drift.
+      const code = error instanceof PrivatePreflightFailure
+        ? " Stage=" + error.stage + " Reason=" + error.reason + "."
+        : "";
       console.error(
-        "Private deployment preflight failed. Verify the dedicated runtime binding, owner settings, disclosure gates and CI permissions.",
+        "Private deployment preflight failed." + code +
+        " Verify the dedicated runtime binding, owner settings, disclosure gates and CI permissions.",
       );
       process.exitCode = 1;
     });
