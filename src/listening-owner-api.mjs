@@ -2,6 +2,13 @@
 import { renderListeningOwner } from "./listening-owner-page.mjs";
 import { startSpotifyAuth } from "./listening-oauth-start.mjs";
 import { completeSpotifyAuth } from "./listening-oauth-callback.mjs";
+import { secureRandom } from "./listening-crypto.mjs";
+import {
+  probeSpotify,
+  SpotifyPause,
+  SpotifyProbeSuperseded,
+} from "./listening-playback-probe.mjs";
+import { validSpotifyClientId } from "./listening-oauth-start.mjs";
 import {
   isListeningOwner,
   boundDatabase,
@@ -58,6 +65,76 @@ async function updateVisibility(request, env, now) {
     .run();
   return ownerJson(ownerStatus(await ownerRow(env.LISTENING_DB), env));
 }
+/** Explicit owner-only probe: never publishes, caches, or stores track metadata. */
+async function previewPlayback(env, now, fetcher, clock) {
+  const db = env.LISTENING_DB;
+  const account = await ownerRow(db);
+  if (
+    !validSpotifyClientId(env.SPOTIFY_CLIENT_ID) ||
+    !account?.refresh_cipher ||
+    account.reauth_required ||
+    account.reauth_due <= now
+  )
+    return ownerError("Spotify connection needs authorization", 409);
+  if (account.blocked_until > now)
+    return ownerError("Spotify is temporarily unavailable", 429);
+  const lease = secureRandom(16);
+  const claimed = await db.prepare(
+    "UPDATE listening_account SET lease_id=?,lease_until=? WHERE id=1 AND revision=? AND connection_key=? AND refresh_cipher IS NOT NULL AND reauth_required=0 AND (lease_id IS NULL OR lease_until<?)",
+  ).bind(lease, now + 22_000, account.revision, account.connection_key, now).run();
+  if (claimed.meta?.changes !== 1)
+    return ownerError("Spotify connection is busy; try again", 409);
+  try {
+    const result = await probeSpotify(
+      { ...account, show_details: 1 },
+      env,
+      now,
+      fetcher,
+      async (next) => {
+        const saved = await db.prepare(
+          "UPDATE listening_account SET access_cipher=?,refresh_cipher=?,access_expires=? WHERE id=1 AND lease_id=? AND revision=? AND refresh_cipher=? AND connection_key=?",
+        ).bind(
+          next.accessCipher, next.refreshCipher, next.expiresAt,
+          lease, account.revision, account.refresh_cipher, account.connection_key,
+        ).run();
+        return saved.meta?.changes === 1;
+      },
+    );
+    // A disconnect or owner preference revision invalidates delayed responses.
+    const current = await ownerRow(db);
+    if (
+      current?.lease_id !== lease ||
+      current.revision !== account.revision ||
+      current.connection_key !== account.connection_key ||
+      !current.refresh_cipher
+    )
+      return ownerError("Private preview was cancelled", 409);
+    const projection = result.projection;
+    return ownerJson({
+      mode: projection.mode,
+      updatedAt: projection.updatedAt,
+      track: projection.mode === "playing" ? projection.track ?? null : null,
+      private: true,
+    });
+  } catch (error) {
+    if (error instanceof SpotifyPause) {
+      await db.prepare(
+        "UPDATE listening_account SET blocked_until=?,reauth_required=CASE WHEN ?=1 THEN 1 ELSE reauth_required END,public_enabled=CASE WHEN ?=1 THEN 0 ELSE public_enabled END WHERE id=1 AND revision=? AND lease_id=?",
+      ).bind(now + error.delayMs, Number(error.reconnect), Number(error.reconnect), account.revision, lease).run();
+      return ownerError(
+        error.reconnect ? "Reconnect Spotify to continue" : "Spotify is temporarily unavailable",
+        error.reconnect ? 409 : 503,
+      );
+    }
+    if (error instanceof SpotifyProbeSuperseded)
+      return ownerError("Private preview was cancelled", 409);
+    return ownerError("Private Spotify playback test unavailable");
+  } finally {
+    await db.prepare(
+      "UPDATE listening_account SET lease_id=NULL,lease_until=0 WHERE id=1 AND lease_id=?",
+    ).bind(lease).run();
+  }
+}
 async function removeConnection(env) {
   // Invalidate unused AND in-flight authorizations before clearing credentials.
   // The callback's conditional commit cannot then restore this connection.
@@ -99,6 +176,8 @@ export function createListeningOwnerApi({
         return ownerError("Cross-site operation denied", 403);
       if (path === "/api/listening/oauth/start")
         return startSpotifyAuth(env, now);
+      if (path === "/api/listening/admin/preview")
+        return previewPlayback(env, now, fetcher, clock);
       if (path === "/api/listening/admin/settings")
         return updateVisibility(request, env, now);
       if (path === "/api/listening/admin/disconnect")
