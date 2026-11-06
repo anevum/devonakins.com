@@ -262,6 +262,25 @@ test("preflight identifies the active version read and D1 metadata read as indep
   }
 });
 
+test("a real-provider-style D1 401 blocks deployment after successful Worker reads", async () => {
+  const calls = [];
+  let writes = 0;
+  await assert.rejects(preparePrivateDeployment({
+    env: { CLOUDFLARE_ACCOUNT_ID: "a".repeat(32), CLOUDFLARE_API_TOKEN: "synthetic" },
+    read: async () => base,
+    write: async () => { writes++; },
+    fetcher: async url => {
+      calls.push(url);
+      if (url.includes("/d1/database/"))
+        return Response.json({ success: false, errors: [{ code: 10000, message: "Authentication error" }] }, { status: 401 });
+      return Response.json({ success: true, result: provider(url) });
+    },
+  }), error => error instanceof PrivatePreflightFailure &&
+    error.stage === "D1_METADATA_READ" && error.reason === "HTTP_401");
+  assert.equal(calls.length, 3);
+  assert.equal(writes, 0);
+});
+
 test("preflight classifies network failure without echoing transport exception", async () => {
   await assert.rejects(
     preparePrivateDeployment({

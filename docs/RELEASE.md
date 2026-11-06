@@ -111,6 +111,55 @@ the noindex V2 preview, portrait asset, true 404, and www redirect.
 Workflows are source preparation until a manually dispatched run reports
 success and the intended live site is independently observed.
 
+## Private release preflight: D1 authorization prerequisite
+
+The private deployment preflight reads the active deployment, that version's
+bindings, and the dedicated database metadata before writing an ignored 0600
+release configuration. It does not query account data, migrate tables, or read
+the encryption secret. Keep this gate enabled.
+
+Cloudflare's endpoint permission requirements are separate:
+
+| Preflight stage | API read | Permission accepted |
+| --- | --- | --- |
+| DEPLOYMENTS_READ | Worker deployments | Workers Scripts Read or existing Workers Scripts Edit |
+| ACTIVE_VERSION_READ | Active Worker version | Workers Scripts Read or existing Workers Scripts Edit |
+| D1_METADATA_READ | Dedicated D1 database metadata | Account → D1 → Read (D1 Edit is unnecessary for this read) |
+
+The deployment token still needs the existing Worker deployment and route
+permissions. Do not remove them or substitute broader account administration.
+
+On November 6, 2026, protected workflow run
+[42305780328](https://github.com/devonalanakins/devonakins.com/actions/runs/42305780328)
+at `823433129581a10b8c9451b1799cdd58f1f2e742` built successfully and passed
+135 Node tests, then stopped with `Stage=D1_METADATA_READ Reason=HTTP_401`.
+Both Worker reads had succeeded. An independent authorized provider connection
+confirmed that the database identity and disabled replication matched the
+preflight requirements. This isolates the unmet authorization at the CI token's
+D1 read boundary; it does not prove which policy entry is missing or mis-scoped.
+No deployment was attempted.
+
+Resolution requires owner approval because it expands CI access. In Cloudflare,
+open **My Profile → API Tokens**, edit the token used by this repository's
+`CLOUDFLARE_API_TOKEN` Actions secret, add **Account → D1 → Read**, and restrict
+Account Resources to the existing production account. For an account-owned token,
+use that account's **Manage Account → Account API Tokens** screen instead.
+This is account-level D1 read access, not a database-only grant; the preflight
+itself reads metadata for only `devonakins-listening-private`. Review the resource
+scope before saving. Do not grant D1 Edit, change Access, rotate the Spotify
+encryption key, reconnect Spotify, or remove the metadata check to work around it.
+If a replacement token is necessary, store its value only in the existing GitHub
+Actions secret, never in source, chat, logs, or this document.
+
+After the owner-approved change, dispatch the protected workflow on main with
+the exact tested main SHA. Verify every preflight stage, actual deployment,
+`/_health` source SHA, retained bindings, closed disclosure flags, Access
+behavior, and a private real-account playback check. A failed run remains
+RELEASE_NO_GO; do not promote an upload-only Cloudflare build around this gate.
+
+References: [D1 database metadata API](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/get/),
+[API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/).
+
 
 ## V1.1.1 ambient motion refinement — source candidate
 
