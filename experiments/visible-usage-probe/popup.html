@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visible Usage Probe</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <main>
+    <div class="eyebrow">LOCAL EXPERIMENT / OPT-IN</div>
+    <h1>Visible usage probe</h1>
+    <p>Read one number you select from a visible ChatGPT usage page every five seconds. No video, screenshots, conversations, or network upload.</p>
+    <label for="metric">Metric displayed on the page</label>
+    <select id="metric">
+      <option value="work_codex_credits_remaining">Work/Codex credits remaining</option>
+      <option value="work_codex_credits_used">Work/Codex credits used</option>
+      <option value="work_codex_remaining_percent">Work/Codex remaining percentage</option>
+      <option value="work_codex_used_percent">Work/Codex used percentage</option>
+    </select>
+    <div class="actions"><button id="begin" type="button">Select visible number</button><button id="stop" type="button" class="secondary">Stop and clear</button></div>
+    <section aria-labelledby="status-heading" class="result">
+      <h2 id="status-heading">Capture state</h2>
+      <p id="status" role="status" aria-live="polite">Checking local state...</p>
+      <div id="reading" class="reading" aria-live="polite">No value collected</div>
+      <div id="timestamps"></div>
+      <button id="copy" type="button" class="secondary" disabled>Copy local reading</button>
+      <label for="manual" class="sr-only">Report for manual copying</label><textarea id="manual" readonly hidden></textarea>
+    </section>
+    <small>Only the selected number is sampled. If the tab closes, hides, or the element disappears, the reading becomes stale. The observation time is not OpenAI's source update time. This does not connect to devonakins.com or work in the standalone Desktop app.</small>
+  </main><script src="popup.js"></script>
+</body></html>
