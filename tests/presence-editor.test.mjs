@@ -87,6 +87,7 @@ test('VS Code companion sends no document metadata, stays paused on startup and 
   assert.ok(heartbeat);assert.deepEqual(Object.keys(JSON.parse(heartbeat.init.body)).sort(),['active','observedAt','projectSlug','version']);
   assert.equal(JSON.parse(heartbeat.init.body).projectSlug,'merit');assert.equal(heartbeat.init.redirect,'error');
   assert.equal(JSON.stringify([...globals]).includes('T'.repeat(43)),false);assert.ok([...secrets.values()][0].includes('T'.repeat(43)));
-  time+=121000;tick();await new Promise(resolve=>setTimeout(resolve,0));assert.equal(JSON.parse(requests.at(-1).init.body).active,false);
+  const callsBeforeIdle = requests.length;time+=60000;tick();await new Promise(resolve=>setTimeout(resolve,0));assert.equal(requests.length,callsBeforeIdle,"idle timer must not mint a fresh edit timestamp");
+  time+=61000;tick();await new Promise(resolve=>setTimeout(resolve,0));assert.equal(JSON.parse(requests.at(-1).init.body).active,false);
   client.dispose();
 });

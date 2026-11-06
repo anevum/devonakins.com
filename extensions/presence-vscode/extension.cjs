@@ -17,6 +17,7 @@ function createCompanion(
     expires = 0,
     lastEdit = 0,
     lastSent = 0,
+    lastSharedEdit = 0,
     enabled = false,
     busy = false,
     project = null,
@@ -52,7 +53,14 @@ function createCompanion(
     return response.json();
   }
   async function send(active) {
-    if (busy || !token || expires <= clock()) return false;
+    if (
+      busy ||
+      !token ||
+      expires <= clock() ||
+      (active && (!lastEdit || lastEdit <= lastSharedEdit))
+    )
+      return false;
+    const observed = active ? lastEdit : clock();
     busy = true;
     try {
       await post(
@@ -61,11 +69,12 @@ function createCompanion(
           version: 1,
           active,
           projectSlug: project,
-          observedAt: new Date(clock()).toISOString(),
+          observedAt: new Date(observed).toISOString(),
         },
         token,
       );
       lastSent = clock();
+      if (active) lastSharedEdit = observed;
       say(active ? "editor active" : "paused");
       return true;
     } catch {
@@ -109,6 +118,7 @@ function createCompanion(
           JSON.stringify({ token, expires, projects }),
         );
         enabled = false;
+        lastSharedEdit = 0;
         say("paired, paused");
         await api.window.showInformationMessage(
           "Paired. Enable editor activity in the private website controls, then choose Resume Sharing here.",

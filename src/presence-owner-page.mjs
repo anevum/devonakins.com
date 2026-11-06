@@ -6,7 +6,7 @@ export function renderPresenceOwner() {
 <link rel="stylesheet" href="/v2/listening-owner.css"><link rel="stylesheet" href="/v2/presence.css"></head><body>
 <a class="skip" href="#main">Skip to controls</a><header class="topbar"><a class="wordmark" href="/">DEVON ALAN AKINS <span>/ CONTROL ROOM</span></a><a class="return" href="/owner/listening/">SPOTIFY CONNECTION ↗</a></header>
 <main class="container" id="main"><div class="eyebrow">PRIVATE / OWNER SESSION</div>
-<h1>Your work.<br><em>Your signal.</em></h1><p class="intro">Start a short session from any device. Remote sessions are labeled owner-declared. Nothing here observes your editor or conversations.</p>
+<h1>Your work.<br><em>Your signal.</em></h1><p class="intro">Start a short session from any device. Remote sessions are labeled owner-declared. Editor activity requires the separately paired companion below. Conversations are never observed.</p>
 <div class="grid"><section class="card" aria-labelledby="session-title"><h2 id="session-title">Development session</h2>
 <label class="presence-field">Public project<select id="presence-project"><option value="">No public project</option></select></label>
 <label class="presence-field">Expires after<select id="presence-duration"><option value="15">15 minutes</option><option value="30">30 minutes</option></select></label>

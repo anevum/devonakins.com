@@ -2,7 +2,7 @@
 .presence-field select{width:100%;min-height:46px;padding:10px;border:1px solid #4e596b;border-radius:8px;background:#111722;color:#f1f3f6;font:inherit}
 .presence-field select:focus-visible,.presence-stop:focus-visible{outline:2px solid #8ec5d3;outline-offset:4px}
 .presence-stop{background:#713a34!important;color:#fff!important}
-#presence-preview{line-height:1.7;text-transform:capitalize;overflow-wrap:anywhere}
+#presence-preview{line-height:1.7;overflow-wrap:anywhere}
 .presence-studio{display:grid;gap:20px}
 .presence-studio-state{font-size:clamp(24px,4vw,48px);line-height:1.15;color:#e4c3a8;margin:12px 0}
 .presence-studio-source{color:#b7c6d7;font-size:14px;line-height:1.6}
