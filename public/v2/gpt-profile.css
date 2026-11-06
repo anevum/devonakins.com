@@ -125,3 +125,8 @@
 .gpt-diagnostic-actions button {min-height:44px;padding:11px 15px;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;color:#f4e2d5;border:1px solid rgba(228,173,142,.53);background:rgba(135,89,87,.21);}
 .gpt-diagnostic-actions button:hover,.gpt-diagnostic-actions button:focus-visible {border-color:#eed3bd;background:rgba(135,89,87,.36);outline-offset:3px;}
 #gpt-copy-status {color:#aebfd0;font-size:11px;line-height:1.6;}
+
+/* iOS Safari/manual clipboard fallback: reveal only the already sanitized report. */
+.gpt-diagnostic-manual {flex-basis:100%;width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height:110px;padding:12px;border:1px solid rgba(174,200,214,.45);border-radius:6px;color:#ebedf1;background:rgba(11,17,28,.94);font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;}
+.gpt-diagnostic-manual:focus-visible {outline:2px solid #eed3bd;outline-offset:3px;}
+.gpt-diagnostic-manual[hidden] {display:none;}

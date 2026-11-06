@@ -159,6 +159,7 @@ export function renderPublicGptProfile(input) {
       <div id="gpt-diagnostic-actions" class="gpt-diagnostic-actions" hidden>
         <button type="button" id="gpt-copy-diagnostics">Copy diagnostics</button>
         <span id="gpt-copy-status" role="status" aria-live="polite"></span>
+        <textarea id="gpt-diagnostic-manual" class="gpt-diagnostic-manual" aria-label="Diagnostics report to select and copy manually" rows="5" readonly hidden></textarea>
       </div>
     </section>`;
   return '<div class="gpt-profile" id="gpt-profile">' +

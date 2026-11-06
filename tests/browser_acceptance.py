@@ -522,6 +522,23 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             assert "Retry eligible (UTC): " in copied
                             assert "historical snapshot (not live)" in copied
                             assert "do not leak" not in copied
+                            assert page.locator("#gpt-diagnostic-manual").is_hidden()
+                            # Safari-style denial must expose the same sanitized report for
+                            # manual text selection instead of leaving an inert button.
+                            page.evaluate("""() => {
+                                Object.defineProperty(navigator, 'clipboard', {
+                                    configurable: true,
+                                    value: {writeText: async () => {throw new Error('denied');}},
+                                });
+                            }""")
+                            page.locator("#gpt-copy-diagnostics").click()
+                            manual = page.locator("#gpt-diagnostic-manual")
+                            assert manual.is_visible()
+                            assert "Clipboard blocked" in page.locator("#gpt-copy-status").inner_text()
+                            assert "Reason: rate-limited" in manual.input_value()
+                            assert "historical snapshot (not live)" in manual.input_value()
+                            assert "do not leak" not in manual.input_value()
+                            assert manual.evaluate("e => e.selectionStart === 0 && e.selectionEnd === e.value.length")
                             assert "do not leak" not in page.locator("#gpt-profile").inner_text()
                             public_fixture["development"].clear()
                             public_fixture["development"].update(original_development)
@@ -531,6 +548,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             """)
                             assert page.locator("#gpt-event-list .gpt-event-card").count() == 3
                             assert page.locator("#gpt-diagnostic-actions").is_hidden()
+                            assert page.locator("#gpt-diagnostic-manual").is_hidden()
+                            assert page.locator("#gpt-diagnostic-manual").input_value() == ""
                         assert "Skills & workflows" in page.locator("#gpt-profile").inner_text()
                         assert "Activity graph" in page.locator("#gpt-profile").inner_text()
                         assert "Profile insights" in page.locator("#gpt-profile").inner_text()

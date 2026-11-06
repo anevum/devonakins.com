@@ -390,6 +390,11 @@ function renderPublicActivity() {
   if (actions) actions.hidden = publicActivityState !== "unavailable";
   const copyStatus = document.querySelector<HTMLElement>("#gpt-copy-status");
   if (copyStatus) copyStatus.textContent = "";
+  const manual = document.querySelector<HTMLTextAreaElement>("#gpt-diagnostic-manual");
+  if (manual) {
+    manual.hidden = true;
+    manual.value = "";
+  }
   const visible = publicActivity.filter((event) =>
     publicActivityFilter === "all" || event.kind === publicActivityFilter);
   const fragment = document.createDocumentFragment();
@@ -441,12 +446,25 @@ document.querySelector<HTMLButtonElement>("#gpt-copy-diagnostics")?.addEventList
     "ChatGPT usage statistics: historical snapshot (not live)",
   ].join("\n");
   const status = document.querySelector<HTMLElement>("#gpt-copy-status");
+  const manual = document.querySelector<HTMLTextAreaElement>("#gpt-diagnostic-manual");
+  if (manual) {
+    manual.hidden = true;
+    manual.value = "";
+  }
   try {
     if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
     await navigator.clipboard.writeText(report);
     if (status) status.textContent = "Diagnostics copied.";
   } catch {
-    if (status) status.textContent = "Clipboard unavailable. Use the reason and retry time shown above.";
+    if (manual) {
+      manual.value = report;
+      manual.hidden = false;
+      manual.focus();
+      manual.select();
+      if (status) status.textContent = "Clipboard blocked. Select and copy the report below.";
+    } else if (status) {
+      status.textContent = "Clipboard unavailable. Read the reason and retry time above.";
+    }
   }
 });
 
