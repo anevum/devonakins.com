@@ -36,7 +36,9 @@ function render(data) {
   account = data;
   const connected = !!data.connected;
   const allowed = !!data.publishingAllowed;
-  label("connection-state", connected ? "CONNECTED" : "NOT CONNECTED");
+  const appReady = data.spotifyAppConfigured === true;
+  $("spotify-setup").hidden = appReady;
+  label("connection-state", connected ? "CONNECTED" : appReady ? "NOT CONNECTED" : "SETUP REQUIRED");
   label(
     "detail-status",
     connected
@@ -51,7 +53,9 @@ function render(data) {
       ? data.reauthorizationRequired
         ? "Your connection needs Spotify authorization again."
         : "Connected securely. Playback can be read regardless of the device you are using."
-      : "Authorize Spotify to read your currently playing track from any supported device.",
+      : appReady
+        ? "Authorize Spotify to read your currently playing track from any supported device."
+        : "Create and configure your Spotify developer app before connecting.",
   );
   label("reauth-date", fmt(data.reauthorizeBy));
   label(
@@ -67,7 +71,7 @@ function render(data) {
   $("connect").textContent = connected
     ? "Reconnect Spotify"
     : "Connect Spotify";
-  $("connect").disabled = processing;
+  $("connect").disabled = processing || !appReady;
   $("disconnect").disabled = processing || !connected;
   $("public-status").checked = !!data.publicEnabled;
   $("track-details").checked = !!data.showDetails;
@@ -85,7 +89,9 @@ async function refresh() {
       message(
         result.connected
           ? "Connection ready. Sharing is under your control."
-          : "Connect Spotify when you are ready.",
+          : result.spotifyAppConfigured
+            ? "Connect Spotify when you are ready."
+            : "Spotify developer app setup is required before connecting.",
       );
   } catch {
     message(
