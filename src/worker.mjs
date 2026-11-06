@@ -16,7 +16,7 @@ export function createHandler(assets, release, options = {}) {
   const failureTtlMs = 10 * 60_000;
   const maxTtlMs = 4 * 60 * 60_000;
   // Bump cache key when the sanitized format or validation contract changes.
-  const cacheKey = new Request("https://devonakins.com/__cache/public-github-v3");
+  const cacheKey = new Request("https://devonakins.com/__cache/public-github-v4");
   let lastGithub = null;
   let pendingGithub = null;
   let failureStreak = 0;
@@ -36,7 +36,7 @@ export function createHandler(assets, release, options = {}) {
           if (hit?.ok) {
             const saved = await hit.json();
             const expiresAt = Date.parse(saved?.expiresAt);
-            if (saved?.version === 3 && Number.isFinite(expiresAt) &&
+            if (saved?.version === 4 && Number.isFinite(expiresAt) &&
                 expiresAt > atMs && expiresAt <= atMs + maxTtlMs &&
                 validPublicGithubSignal(saved.value, at) &&
                 atMs - Date.parse(saved.value.checkedAt) <= maxTtlMs) {
@@ -48,6 +48,7 @@ export function createHandler(assets, release, options = {}) {
       }
       let value;
       let ttlMs = successfulTtlMs;
+      let failureReason = "network-error";
       try {
         const response = await githubFetch(
           "https://api.github.com/users/devonalanakins/events/public?per_page=30",
@@ -61,24 +62,40 @@ export function createHandler(assets, release, options = {}) {
           },
         );
         if (!response.ok) {
+          const limited = response.status === 429 ||
+            (response.status === 403 &&
+              (response.headers.get("x-ratelimit-remaining") === "0" ||
+                response.headers.has("retry-after")));
+          failureReason = limited ? "rate-limited"
+            : response.status === 403 ? "access-denied" : "provider-error";
           ttlMs = response.status === 403 || response.status === 429
             ? githubCooldownMs(response, at, failureStreak + 1)
             : failureTtlMs;
           throw new Error("Public activity provider unavailable");
         }
-        value = projectPublicGithubEvents(await response.json(), at);
+        try {
+          value = projectPublicGithubEvents(await response.json(), at);
+        } catch {
+          failureReason = "invalid-response";
+          throw new Error("Invalid public activity response");
+        }
         failureStreak = 0;
-      } catch {
-        value = unavailablePublicGithub(at);
+      } catch (error) {
+        if (failureReason === "network-error" &&
+            (error?.name === "TimeoutError" || error?.name === "AbortError"))
+          failureReason = "timeout";
         failureStreak = Math.min(failureStreak + 1, 6);
         if (ttlMs === successfulTtlMs) ttlMs = failureTtlMs;
+        value = unavailablePublicGithub(
+          at, failureReason, new Date(atMs + ttlMs).toISOString(),
+        );
       }
       const expiresAt = atMs + ttlMs;
       lastGithub = {expiresAt, value};
       if (edgeCache) {
         try {
           await edgeCache.put(cacheKey, new Response(JSON.stringify({
-            version: 3, expiresAt: new Date(expiresAt).toISOString(), value,
+            version: 4, expiresAt: new Date(expiresAt).toISOString(), value,
           }), {
             headers: {
               "Content-Type": "application/json; charset=utf-8",

@@ -77,8 +77,8 @@ assert.equal(publicValue.gpt.asOf, snapshot.asOf);
 assert.equal(publicValue.gpt.count, snapshot.count);
 assert.equal(publicValue.gpt.approximate, true);
 assert.deepEqual(Object.keys(publicValue.development).sort(),
-  ["checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
-   "recentActivity", "scope", "source", "status"]);
+  ["checkedAt", "failureReason", "freshness", "latestActivityAt", "latestActivityKind",
+   "recentActivity", "retryAt", "scope", "source", "status"]);
 assert.equal(publicValue.development.source, "GitHub public events API");
 assert.equal(publicValue.development.scope, "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity");
 assert.ok(Array.isArray(publicValue.development.recentActivity));
@@ -99,10 +99,16 @@ assert.ok(Math.abs(Date.now() - timestamp) < 10 * 60_000,
   "provider check time must be recent");
 if (publicValue.development.freshness === "unavailable") {
   assert.equal(publicValue.development.status, "unavailable");
+  assert.ok(["rate-limited", "access-denied", "provider-error",
+    "invalid-response", "timeout", "network-error"].includes(publicValue.development.failureReason));
+  const retry = Date.parse(publicValue.development.retryAt);
+  assert.ok(Number.isFinite(retry) && retry >= timestamp && retry <= timestamp + 4 * 60 * 60_000);
   assert.equal(publicValue.development.latestActivityAt, null);
   assert.equal(publicValue.development.latestActivityKind, null);
   assert.deepEqual(publicValue.development.recentActivity, []);
 } else {
+  assert.equal(publicValue.development.failureReason, null);
+  assert.equal(publicValue.development.retryAt, null);
   assert.ok(["available", "no-recent-public-development"]
     .includes(publicValue.development.status));
   if (publicValue.development.status === "available") {

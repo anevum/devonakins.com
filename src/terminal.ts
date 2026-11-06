@@ -337,6 +337,28 @@ let publicActivity: PublicActivity[] = [];
 let publicActivityState: PublicActivityState = "unavailable";
 let publicActivityFilter: "all" | PublicActivity["kind"] = "all";
 let lastPublicTelemetryCheckedAt: string | null = null;
+let publicFailureReason: string | null = null;
+let publicRetryAt: string | null = null;
+
+const publicFailureLabels: Record<string, string> = {
+  "rate-limited": "GitHub is limiting unauthenticated public requests.",
+  "access-denied": "GitHub declined this public-data request.",
+  "provider-error": "The GitHub public API returned an error.",
+  "invalid-response": "GitHub returned data the site could not safely use.",
+  "timeout": "The request to GitHub timed out.",
+  "network-error": "The public GitHub endpoint could not be reached.",
+};
+function publicFailureMessage() {
+  const reason = publicFailureReason && publicFailureLabels[publicFailureReason]
+    ? publicFailureLabels[publicFailureReason]
+    : "The public GitHub source is temporarily unavailable.";
+  const retry = publicRetryAt
+    ? " Retry is permitted after " + new Date(publicRetryAt).toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    }) + "."
+    : "";
+  return reason + retry + " GPT statistics remain historical.";
+}
 
 function validPublicActivity(value: unknown, now = Date.now()): value is PublicActivity[] {
   if (!Array.isArray(value) || value.length > 8) return false;
@@ -391,7 +413,7 @@ function renderPublicActivity() {
     }) + "."
     : "";
   status.textContent = (publicActivityState === "unavailable"
-    ? "GitHub source unavailable. No event data is presented as live."
+    ? publicFailureMessage() + " No event data is presented as live."
     : publicActivityState === "empty"
       ? "No qualifying public events among the latest 30 public GitHub profile events."
       : visible.length === 0
@@ -422,6 +444,8 @@ async function checkPublicTelemetry() {
   let nextEvents: PublicActivity[] = [];
   let nextState: PublicActivityState = "unavailable";
   let nextCheckedAt: string | null = null;
+  let nextReason: string | null = null;
+  let nextRetry: string | null = null;
   try {
     const response = await fetch("/api/telemetry/public", {
       cache: "no-store", credentials: "omit",
@@ -450,6 +474,20 @@ async function checkPublicTelemetry() {
         checkedTime < Date.now() - 4 * 60 * 60_000 - 60_000)
       throw new Error("Stale or invalid public source check time");
     nextCheckedAt = checkedAt as string;
+    const reason = dev.failureReason;
+    const retry = dev.retryAt;
+    if (dev.freshness === "current") {
+      if (reason !== null || retry !== null) throw new Error("Contradictory public source metadata");
+    } else {
+      const validReasons = Object.keys(publicFailureLabels);
+      const retryTime = typeof retry === "string" ? Date.parse(retry) : NaN;
+      if (!validReasons.includes(String(reason)) || !Number.isFinite(retryTime) ||
+          new Date(retryTime).toISOString() !== retry ||
+          retryTime < checkedTime || retryTime > checkedTime + 4 * 60 * 60_000)
+        throw new Error("Invalid public source retry metadata");
+      nextReason = reason as string;
+      nextRetry = retry as string;
+    }
     if (dev.freshness === "current" && dev.status === "available") {
       const kind = dev.latestActivityKind;
       const when = dev.latestActivityAt;
@@ -473,8 +511,11 @@ async function checkPublicTelemetry() {
       nextState = "empty";
       brief = "PUBLIC GITHUB / NO RECENT VISIBLE EVENT - GPT STATS DATED";
       expanded = "No recent qualifying public GitHub event in the latest 30 public profile events. Private development and ChatGPT usage are not represented.";
-    } else if (!(dev.freshness === "unavailable" && dev.status === "unavailable" &&
-        (dev.recentActivity as PublicActivity[]).length === 0)) {
+    } else if (dev.freshness === "unavailable" && dev.status === "unavailable" &&
+        dev.latestActivityAt === null && dev.latestActivityKind === null &&
+        (dev.recentActivity as PublicActivity[]).length === 0) {
+      expanded = publicFailureLabels[nextReason!] + " The site will retry automatically.";
+    } else {
       throw new Error("Contradictory public source state");
     }
   } catch {
@@ -483,6 +524,8 @@ async function checkPublicTelemetry() {
     publicActivity = nextEvents;
     publicActivityState = nextState;
     lastPublicTelemetryCheckedAt = nextCheckedAt;
+    publicFailureReason = nextReason;
+    publicRetryAt = nextRetry;
     renderPublicActivity();
     if (note && note.textContent !== brief) note.textContent = brief;
     if (mobile && mobile.textContent !== brief) mobile.textContent = brief;

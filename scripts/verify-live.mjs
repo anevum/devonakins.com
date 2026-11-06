@@ -104,9 +104,17 @@ assert.ok(Number.isFinite(Date.parse(telemetry.development.checkedAt)),
   "public GitHub source must include a checked-at timestamp");
 if (telemetry.development.freshness === "unavailable") {
   assert.equal(telemetry.development.status, "unavailable");
+  assert.ok(["rate-limited", "access-denied", "provider-error",
+    "invalid-response", "timeout", "network-error"].includes(telemetry.development.failureReason));
+  const retryAt = Date.parse(telemetry.development.retryAt);
+  const checkedAt = Date.parse(telemetry.development.checkedAt);
+  assert.ok(Number.isFinite(retryAt) && retryAt >= checkedAt &&
+    retryAt <= checkedAt + 4 * 60 * 60_000);
   assert.equal(telemetry.development.latestActivityAt, null);
   assert.deepEqual(telemetry.development.recentActivity, []);
 } else {
+  assert.equal(telemetry.development.failureReason, null);
+  assert.equal(telemetry.development.retryAt, null);
   assert.ok(["available", "no-recent-public-development"].includes(telemetry.development.status));
   if (telemetry.development.status === "available") {
     assert.ok(telemetry.development.recentActivity.length > 0);

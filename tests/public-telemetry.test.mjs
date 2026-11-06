@@ -55,6 +55,8 @@ test("public activity reduces event payload to allowlisted kind and UTC time", (
   assert.equal(result.latestActivityKind, "push");
   assert.equal(result.latestActivityAt, "2026-11-05T07:58:00.000Z");
   assert.equal(result.status, "available");
+  assert.equal(result.failureReason, null);
+  assert.equal(result.retryAt, null);
   assert.doesNotMatch(JSON.stringify(result), /do-not-publish|example-private|commit messages|payload|actor/);
   assert.equal(result.checkedAt, date.toISOString());
   assert.equal(projectPublicGithubEvents([], date).status, "no-recent-public-development");
@@ -81,6 +83,9 @@ test("public event timeline is bounded, sanitized and cache-poisoning resistant"
     recentActivity: [...result.recentActivity].reverse()}, date), false);
   assert.equal(validPublicGithubSignal({...result, latestActivityKind: "release"}, date), false);
   assert.deepEqual(unavailablePublicGithub(date).recentActivity, []);
+  assert.equal(validPublicGithubSignal(unavailablePublicGithub(date), date), true);
+  assert.equal(validPublicGithubSignal({...unavailablePublicGithub(date), retryAt: "not-a-date"}, date), false);
+  assert.equal(validPublicGithubSignal({...unavailablePublicGithub(date), failureReason: "unknown"}, date), false);
 });
 
 test("same-origin telemetry endpoint caches a provider read while preserving sources", async () => {
@@ -125,7 +130,10 @@ test("provider errors and malformed responses fail closed and never fabricate GP
       now, cache: null, githubFetch: async () => response.clone(),
     });
     const result = await (await request(site)).json();
-    assert.deepEqual(result.development, unavailablePublicGithub(date));
+    assert.equal(result.development.status, "unavailable");
+    assert.deepEqual(result.development.recentActivity, []);
+    assert.ok(["access-denied", "invalid-response"].includes(result.development.failureReason));
+    assert.equal(validPublicGithubSignal(result.development, date), true);
     assert.equal(result.gpt.freshness, "historical");
     assert.equal(result.gpt.asOf, "2026-11-04");
     assert.doesNotMatch(JSON.stringify(result), /rate limited|invalid response/);
@@ -204,6 +212,8 @@ test("unavailable public source is negatively cached through provider cooldown",
   const first = createHandler(publicAssets, {version: "test"}, options);
   const firstResult = await (await request(first)).json();
   assert.equal(firstResult.development.status, "unavailable");
+  assert.equal(firstResult.development.failureReason, "rate-limited");
+  assert.equal(firstResult.development.retryAt, new Date(date.getTime() + 30 * 60_000).toISOString());
   assert.equal(remoteCalls, 1);
   clock += 20 * 60_000;
   const laterIsolate = createHandler(publicAssets, {version: "test"}, options);
@@ -226,7 +236,7 @@ test("invalid cached values cannot inject extra fields or silently appear fresh"
   assert.equal(validPublicGithubSignal({...projected, latestActivityKind: "unknown"}, date), false);
   assert.equal(validPublicGithubSignal({...projected, checkedAt: "tomorrow"}, date), false);
   const poison = new Response(JSON.stringify({
-    version: 3,
+    version: 4,
     expiresAt: new Date(date.getTime() + 240_000).toISOString(),
     value: {...projected, repository: "private-repository-name"},
   }), {headers: {"Content-Type":"application/json"}});
@@ -241,6 +251,24 @@ test("invalid cached values cannot inject extra fields or silently appear fresh"
   assert.equal(calls, 1, "invalid edge cache is rejected and provider consulted");
   assert.equal(result.development.status, "available");
   assert.doesNotMatch(JSON.stringify(result), /private-repository-name|repository/);
+});
+
+test("provider failures publish only bounded classification and retry time", async () => {
+  const statuses = [
+    [new Response("do not leak", {status: 403}), "access-denied"],
+    [new Response("private token", {status: 403, headers: {"x-ratelimit-remaining": "0"}}), "rate-limited"],
+    [new Response("rate limited", {status: 429}), "rate-limited"],
+    [new Response("oops", {status: 503}), "provider-error"],
+  ];
+  for (const [response, expected] of statuses) {
+    const site = createHandler(publicAssets, {version: "test"}, {
+      now, cache: null, githubFetch: async () => response.clone(),
+    });
+    const payload = await (await request(site)).json();
+    assert.equal(payload.development.failureReason, expected);
+    assert.equal(validPublicGithubSignal(payload.development, date), true);
+    assert.doesNotMatch(JSON.stringify(payload), /do not leak|private token|rate limited|oops/i);
+  }
 });
 
 test("concurrent first requests deduplicate upstream provider calls", async () => {

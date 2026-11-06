@@ -10,6 +10,9 @@ const types = new Map([
   ["ReleaseEvent", "release"],
 ]);
 const publicGithubScope = "Up to eight qualifying events from the latest 30 public GitHub profile events; excludes private activity";
+const publicFailureReasons = new Set([
+  "rate-limited", "access-denied", "provider-error", "invalid-response", "timeout", "network-error",
+]);
 const iso = value => typeof value === "string" && !Number.isNaN(Date.parse(value))
   ? new Date(value).toISOString() : null;
 const safeDay = value => typeof value === "string" &&
@@ -55,19 +58,32 @@ export function projectPublicGithubEvents(events, now = new Date()) {
     freshness: "current",
     checkedAt: now.toISOString(),
     status: observed.length ? "available" : "no-recent-public-development",
+    failureReason: null,
+    retryAt: null,
     latestActivityAt: observed[0]?.at ?? null,
     latestActivityKind: observed[0]?.kind ?? null,
     recentActivity: observed,
   };
 }
 
-export function unavailablePublicGithub(now = new Date()) {
+export function unavailablePublicGithub(
+  now = new Date(), reason = "network-error",
+  retryAt = new Date(now.getTime() + 10 * 60_000).toISOString(),
+) {
+  if (!publicFailureReasons.has(reason) ||
+      typeof retryAt !== "string" || !Number.isFinite(Date.parse(retryAt)) ||
+      new Date(retryAt).toISOString() !== retryAt ||
+      Date.parse(retryAt) < now.getTime() ||
+      Date.parse(retryAt) > now.getTime() + 4 * 60 * 60_000)
+    throw new Error("Invalid public provider retry classification");
   return {
     source: "GitHub public events API",
     scope: publicGithubScope,
     freshness: "unavailable",
     checkedAt: now.toISOString(),
     status: "unavailable",
+    failureReason: reason,
+    retryAt,
     latestActivityAt: null,
     latestActivityKind: null,
     recentActivity: [],
@@ -82,8 +98,8 @@ export function unavailablePublicGithub(now = new Date()) {
 export function validPublicGithubSignal(value, now = new Date()) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const keys = [
-    "checkedAt", "freshness", "latestActivityAt", "latestActivityKind",
-    "recentActivity", "scope", "source", "status",
+    "checkedAt", "failureReason", "freshness", "latestActivityAt", "latestActivityKind",
+    "recentActivity", "retryAt", "scope", "source", "status",
   ].sort();
   if (Object.keys(value).sort().join("|") !== keys.join("|") ||
       value.source !== "GitHub public events API" ||
@@ -107,11 +123,19 @@ export function validPublicGithubSignal(value, now = new Date()) {
         timestamp > now.getTime() + 60_000 || timestamp > previous) return false;
     previous = timestamp;
   }
-  if (value.freshness === "unavailable")
+  if (value.freshness === "unavailable") {
+    const retryMs = typeof value.retryAt === "string" ? Date.parse(value.retryAt) : NaN;
     return value.status === "unavailable" &&
+      publicFailureReasons.has(value.failureReason) &&
+      Number.isFinite(retryMs) &&
+      new Date(retryMs).toISOString() === value.retryAt &&
+      retryMs >= Date.parse(value.checkedAt) &&
+      retryMs <= Date.parse(value.checkedAt) + 4 * 60 * 60_000 &&
       value.latestActivityAt === null && value.latestActivityKind === null &&
       value.recentActivity.length === 0;
-  if (value.freshness !== "current") return false;
+  }
+  if (value.failureReason !== null || value.retryAt !== null ||
+      value.freshness !== "current") return false;
   if (value.status === "no-recent-public-development")
     return value.latestActivityAt === null && value.latestActivityKind === null &&
       value.recentActivity.length === 0;

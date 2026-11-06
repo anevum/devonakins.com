@@ -411,7 +411,8 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                             "development": {
                                 "source": "GitHub public events API", "freshness": "current",
                                 "checkedAt": clock.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-                                "status": "available", "latestActivityAt": events[0]["at"],
+                                "status": "available", "failureReason": None, "retryAt": None,
+                                "latestActivityAt": events[0]["at"],
                                 "latestActivityKind": events[0]["kind"], "recentActivity": events,
                             },
                         }
