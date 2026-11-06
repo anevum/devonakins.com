@@ -99,6 +99,152 @@ async function connect(api, env) {
   return { state, cookie };
 }
 
+test("owner Spotify readiness is private and missing app setup cannot start OAuth", async () => {
+  const { env, db, close } = await fixture();
+  const api = createListeningOwnerApi();
+  const statusRequest = req("/api/listening/admin/status");
+  try {
+    assert.equal((await api(statusRequest, env, {})).status, 403);
+    const configured = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(configured.spotifyAppConfigured, true);
+    assert.equal(configured.connected, false);
+    assert.doesNotMatch(JSON.stringify(configured), new RegExp(clientId));
+    delete env.SPOTIFY_CLIENT_ID;
+    const missing = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(missing.spotifyAppConfigured, false);
+    assert.equal(missing.connected, false);
+    assert.equal(
+      (await api(ownerPost("/api/listening/oauth/start"), env, ctx)).status,
+      503,
+    );
+    const queued = await db
+      .prepare("SELECT COUNT(*) AS total FROM listening_oauth_attempt")
+      .first();
+    assert.equal(queued.total, 0);
+    env.SPOTIFY_CLIENT_ID = "invalid";
+    const invalid = await (await api(statusRequest, env, ctx)).json();
+    assert.equal(invalid.spotifyAppConfigured, false);
+    const page = await api(req("/owner/listening/"), env, ctx);
+    const html = await page.text();
+    assert.match(html, /id="spotify-setup" hidden/);
+    assert.match(html, /https:\/\/devonakins.com\/api\/listening\/oauth\/callback/);
+    assert.match(html, /developer.spotify.com\/dashboard/);
+  } finally {
+    close();
+  }
+});
+
+test("manual owner playback check never enables or persists public listening", async () => {
+  const f = await fixture();
+  let playbackCalls = 0;
+  const fetcher = async (url) => {
+    if (url.includes("accounts.spotify.com")) {
+      return Response.json({
+        token_type: "Bearer", scope: "user-read-currently-playing",
+        access_token: access, refresh_token: refresh, expires_in: 3600,
+      });
+    }
+    playbackCalls++;
+    return Response.json(track());
+  };
+  const api = createListeningOwnerApi({ fetcher, clock: () => now });
+  try {
+    await connect(api, f.env);
+    assert.equal((await api(ownerPost("/api/listening/admin/preview"), f.env, {})).status, 403);
+    assert.equal((await api(req("/api/listening/admin/preview"), f.env, ctx)).status, 405);
+    assert.equal((await api(req("/api/listening/admin/preview", {
+      method: "POST", headers: { Origin: "https://other.example" },
+    }), f.env, ctx)).status, 403);
+    const preview = await api(ownerPost("/api/listening/admin/preview"), f.env, ctx);
+    assert.equal(preview.status, 200);
+    assert.equal(preview.headers.get("Cache-Control"), "private, no-store, max-age=0");
+    assert.equal(preview.headers.get("CDN-Cache-Control"), "no-store");
+    const body = await preview.json();
+    assert.equal(body.private, true);
+    assert.equal(body.mode, "playing");
+    assert.equal(body.track.title, "Fixture song");
+    assert.equal(body.track.artist, "Fixture artist");
+    assert.doesNotMatch(JSON.stringify(body), /mock_(access|refresh)/);
+    const state = await f.db.prepare(
+      "SELECT public_enabled,show_details,projection_json,checked_at,refresh_cipher FROM listening_account WHERE id=1",
+    ).first();
+    assert.equal(state.public_enabled, 0);
+    assert.equal(state.show_details, 0);
+    assert.equal(state.projection_json, null);
+    assert.equal(state.checked_at, now);
+    assert.ok(state.refresh_cipher);
+    const anotherIsolate = createListeningOwnerApi({ fetcher, clock: () => now });
+    assert.equal((await anotherIsolate(ownerPost("/api/listening/admin/preview"), f.env, ctx)).status, 429);
+    assert.equal(playbackCalls, 1);
+  } finally {
+    f.close();
+  }
+});
+
+test("manual owner playback check handles no current Spotify track without publishing", async () => {
+  const f = await fixture();
+  const api = createListeningOwnerApi({
+    clock: () => now,
+    fetcher: async (url) => url.includes("accounts.spotify.com")
+      ? Response.json({
+          token_type: "Bearer", scope: "user-read-currently-playing",
+          access_token: access, refresh_token: refresh, expires_in: 3600,
+        })
+      : new Response(null, { status: 204 }),
+  });
+  try {
+    assert.equal((await api(ownerPost("/api/listening/admin/preview"), f.env, ctx)).status, 409);
+    await connect(api, f.env);
+    const result = await api(ownerPost("/api/listening/admin/preview"), f.env, ctx);
+    assert.equal(result.status, 200);
+    assert.deepEqual(Object.keys(await result.json()).sort(), ["mode","private","track","updatedAt"]);
+    const row = await f.db.prepare(
+      "SELECT public_enabled,projection_json,refresh_cipher FROM listening_account WHERE id=1",
+    ).first();
+    assert.equal(row.public_enabled, 0);
+    assert.equal(row.projection_json, null);
+    assert.ok(row.refresh_cipher);
+  } finally {
+    f.close();
+  }
+});
+
+test("disconnect invalidates in-flight private playback and never returns a stale track", async () => {
+  const f = await fixture();
+  let resolvePlayback, notify;
+  const entered = new Promise(resolve => { notify = resolve; });
+  const fetcher = async (url) => {
+    if (url.includes("accounts.spotify.com")) {
+      return Response.json({
+        token_type: "Bearer", scope: "user-read-currently-playing",
+        access_token: access, refresh_token: refresh, expires_in: 3600,
+      });
+    }
+    notify();
+    return new Promise(resolve => { resolvePlayback = resolve; });
+  };
+  const api = createListeningOwnerApi({ fetcher, clock: () => now });
+  try {
+    await connect(api, f.env);
+    const pending = api(ownerPost("/api/listening/admin/preview"), f.env, ctx);
+    await entered;
+    assert.equal((await api(ownerPost("/api/listening/admin/disconnect"), f.env, ctx)).status, 200);
+    resolvePlayback(Response.json(track()));
+    const preview = await pending;
+    assert.equal(preview.status, 409);
+    assert.doesNotMatch(JSON.stringify(await preview.json()), /Fixture song|mock_refresh/);
+    const row = await f.db.prepare(
+      "SELECT refresh_cipher,projection_json,public_enabled,lease_id FROM listening_account WHERE id=1",
+    ).first();
+    assert.equal(row.refresh_cipher, null);
+    assert.equal(row.projection_json, null);
+    assert.equal(row.public_enabled, 0);
+    assert.equal(row.lease_id, null);
+  } finally {
+    f.close();
+  }
+});
+
 test("only matching Cloudflare Access identity can reach the owner UI", async () => {
   const { env, close } = await fixture();
   const api = createListeningOwnerApi();

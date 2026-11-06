@@ -786,12 +786,15 @@ def check_owner_control(browser, engine, origin, output, axe_source):
         label = f"owner-{engine}-{width}x{height}"
         try:
             page.route("**/owner/listening/", lambda route: route.fulfill(status=200,content_type="text/html; charset=utf-8",body=markup))
+            spotify_status = {
+                "connected": True, "spotifyAppConfigured": True,
+                "reauthorizationRequired": False,
+                "publishingAllowed": False, "publicEnabled": False,
+                "showDetails": False, "reauthorizeBy": "2027-05-05T00:00:00.000Z",
+            }
             page.route("**/api/listening/admin/status", lambda route: route.fulfill(
-                status=200, content_type="application/json", body=json.dumps({
-                    "connected": True, "reauthorizationRequired": False,
-                    "publishingAllowed": False, "publicEnabled": False,
-                    "showDetails": False, "reauthorizeBy": "2027-05-05T00:00:00.000Z"
-                })
+                status=200, content_type="application/json",
+                body=json.dumps(spotify_status)
             ))
             page.goto(origin + "/owner/listening/",wait_until="load")
             page.wait_for_function("""() =>
@@ -810,6 +813,46 @@ def check_owner_control(browser, engine, origin, output, axe_source):
             })""")
             assert geometry["overflow"] <= 1, (label, "horizontal overflow", geometry)
             assert geometry["button"]["width"] >= 80, (label, "tiny touch control", geometry)
+            assert page.locator("#spotify-setup").is_hidden()
+            assert page.locator("#preview-playback").is_enabled()
+            # The private test is manual and uses no public listening endpoint.
+            preview_fixture = {
+                "private": True, "mode": "playing", "updatedAt": "2026-11-06T21:00:00.000Z",
+                "track": {"title": "Synthetic track", "artist": "<unsafe artist>"},
+            }
+            page.route("**/api/listening/admin/preview", lambda route: route.fulfill(
+                status=200, content_type="application/json", body=json.dumps(preview_fixture)
+            ))
+            page.locator("#preview-playback").click()
+            page.wait_for_function("""() =>
+              document.querySelector('#preview-status')?.textContent?.includes('Synthetic track')
+            """)
+            assert "<unsafe artist>" in page.locator("#preview-status").inner_text()
+            assert page.locator("#preview-status img").count() == 0
+            assert "nothing was published" in page.locator("#preview-status").inner_text()
+            preview_fixture.update({"mode": "off_air", "track": None})
+            page.locator("#preview-playback").click()
+            page.wait_for_function("""() =>
+              document.querySelector('#preview-status')?.textContent?.includes('No active Spotify track')
+            """)
+            assert page.locator("#preview-playback").is_enabled()
+            page.unroute("**/api/listening/admin/preview")
+            # An unconfigured Spotify app must never offer a dead OAuth action.
+            spotify_status.update({"connected": False, "spotifyAppConfigured": False})
+            page.reload(wait_until="load")
+            page.wait_for_function("""() =>
+              document.querySelector('#connection-state')?.textContent === 'SETUP REQUIRED'
+            """)
+            assert page.locator("#connect").is_disabled()
+            assert page.locator("#preview-playback").is_disabled()
+            assert page.locator("#spotify-setup").is_visible()
+            assert "SPOTIFY_CLIENT_ID" in page.locator("#spotify-setup").inner_text()
+            assert page.locator("#spotify-setup code").first.inner_text() == (
+                "https://devonakins.com/api/listening/oauth/callback"
+            )
+            assert page.evaluate("document.documentElement.scrollWidth - innerWidth") <= 1, (
+                label, "setup guidance overflow"
+            )
             if axe_source:
                 page.add_script_tag(content=axe_source)
                 violations = page.evaluate("""async () => {

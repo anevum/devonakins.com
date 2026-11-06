@@ -36,7 +36,9 @@ function render(data) {
   account = data;
   const connected = !!data.connected;
   const allowed = !!data.publishingAllowed;
-  label("connection-state", connected ? "CONNECTED" : "NOT CONNECTED");
+  const appReady = data.spotifyAppConfigured === true;
+  $("spotify-setup").hidden = appReady;
+  label("connection-state", connected ? "CONNECTED" : appReady ? "NOT CONNECTED" : "SETUP REQUIRED");
   label(
     "detail-status",
     connected
@@ -51,7 +53,9 @@ function render(data) {
       ? data.reauthorizationRequired
         ? "Your connection needs Spotify authorization again."
         : "Connected securely. Playback can be read regardless of the device you are using."
-      : "Authorize Spotify to read your currently playing track from any supported device.",
+      : appReady
+        ? "Authorize Spotify to read your currently playing track from any supported device."
+        : "Create and configure your Spotify developer app before connecting.",
   );
   label("reauth-date", fmt(data.reauthorizeBy));
   label(
@@ -67,8 +71,9 @@ function render(data) {
   $("connect").textContent = connected
     ? "Reconnect Spotify"
     : "Connect Spotify";
-  $("connect").disabled = processing;
+  $("connect").disabled = processing || !appReady;
   $("disconnect").disabled = processing || !connected;
+  $("preview-playback").disabled = processing || !connected || !!data.reauthorizationRequired;
   $("public-status").checked = !!data.publicEnabled;
   $("track-details").checked = !!data.showDetails;
   $("public-status").disabled = processing || !connected || !allowed;
@@ -85,7 +90,9 @@ async function refresh() {
       message(
         result.connected
           ? "Connection ready. Sharing is under your control."
-          : "Connect Spotify when you are ready.",
+          : result.spotifyAppConfigured
+            ? "Connect Spotify when you are ready."
+            : "Spotify developer app setup is required before connecting.",
       );
   } catch {
     message(
@@ -97,6 +104,7 @@ async function refresh() {
       "public-status",
       "track-details",
       "save-settings",
+      "preview-playback",
     ].forEach((id) => ($(id).disabled = true));
   }
 }
@@ -158,6 +166,27 @@ $("save-settings").addEventListener("click", () =>
         : "Public listening signal disabled.",
     );
   }, "Your visibility settings could not be saved."),
+);
+$("preview-playback").addEventListener("click", () =>
+  action(async () => {
+    label("preview-status", "Checking your active Spotify playback privately…");
+    let data;
+    try {
+      data = await requestJSON("/api/listening/admin/preview", { method: "POST" });
+    } catch (error) {
+      label("preview-status", "Private check unavailable. Playback may need to be restarted, or Spotify may be temporarily limiting requests.");
+      throw error;
+    }
+    if (data.private !== true)
+      throw new Error("Private preview response invalid");
+    if (data.mode === "playing" && data.track) {
+      label("preview-status", `Now playing: ${data.track.title} — ${data.track.artist}. Private check only; nothing was published.`);
+    } else if (data.mode === "off_air") {
+      label("preview-status", "No active Spotify track was reported. Start a song on your phone or another device and check again in a minute.");
+    } else {
+      label("preview-status", "Spotify playback is not available for this private check.");
+    }
+  }, "Private playback check could not be completed. Try again shortly."),
 );
 void refresh();
 
