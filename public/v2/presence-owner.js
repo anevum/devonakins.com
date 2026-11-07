@@ -12,6 +12,8 @@ function notice(text) {
 }
 function lock(value) {
   document.querySelectorAll("button,input,select").forEach((node) => {
+    // Concurrent workspace controls own their request lock and disclosure gate.
+    if (node.closest('[aria-labelledby="reporters-title"]')) return;
     node.disabled = value;
   });
   if (!value && state && !state.publishingAllowed)
