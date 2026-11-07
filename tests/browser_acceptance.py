@@ -820,11 +820,39 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                 cloud["privatePreview"] = {"state":"no-signal","source":None,"project":None,"asOf":None,"expiresAt":None,"checkpoint":None}
             route.fulfill(status=200,content_type="application/json",body=json.dumps(cloud))
         page.route("**/api/presence/owner?channel=cloud",cloud_respond)
+        task_state = {"publishingAllowed":False,"sources":[],"preview":{"tasks":[]}}
+        task_writes = []
+        def task_respond(route):
+            if route.request.method == "POST":
+                data = route.request.post_data_json
+                task_writes.append(data)
+                task_state["sources"] = [{"id":"synthetic-source","source":data["source"],"projectSlug":data["projectSlug"],"revision":0,"enabled":False}]
+                route.fulfill(status=200,content_type="application/json",body=json.dumps({"token":"synthetic-private-token"}))
+                return
+            if route.request.method == "DELETE":
+                task_writes.append(route.request.post_data_json)
+                task_state["sources"] = []
+            route.fulfill(status=200,content_type="application/json",body=json.dumps(task_state))
+        page.route("**/api/presence/owner?channel=tasks",task_respond)
         try:
             page.route("**/owner/presence/",lambda route:route.fulfill(status=200,content_type="text/html; charset=utf-8",body=markup))
             page.goto(origin+"/owner/presence/",wait_until="load")
             page.locator("#session-start").wait_for(state="visible")
             page.wait_for_function("!document.querySelector('#session-start').disabled")
+            page.wait_for_function("document.querySelector('#task-project').options.length === 2")
+            # Exercise both real scripts together. Their similarly named handlers
+            # must not send workspace credentials/actions to the legacy owner API.
+            page.select_option("#task-project","merit")
+            page.locator("#task-connect").click()
+            page.wait_for_function("!document.querySelector('#task-credential').hidden")
+            assert task_writes == [{"action":"connect","source":"chatgpt-work","projectSlug":"merit"}]
+            assert writes == [], "Workspace connect reached the legacy owner handler"
+            assert page.locator("#task-token").input_value() == "synthetic-private-token"
+            page.wait_for_function("document.querySelector('#task-sources button') !== null")
+            assert page.get_by_role("button",name="Share approved project",exact=True).is_disabled()
+            page.locator("#task-dismiss").click()
+            assert page.locator("#task-token").input_value() == ""
+            assert page.locator("#task-credential").is_hidden()
             page.select_option("#presence-project","merit")
             page.locator("#session-start").click()
             page.wait_for_function("document.querySelector('#presence-notice').textContent === 'Saved.'")
@@ -833,6 +861,10 @@ def check_presence_control(browser, engine, origin, output, axe_source):
             page.wait_for_function("document.querySelector('#presence-notice').textContent.includes('Broadcasting stopped')")
             assert writes[-1]["action"] == "off" and writes[-1]["revision"] == 1
             assert not page.locator("#presence-enabled").is_checked()
+            assert page.get_by_role("button",name="Share approved project",exact=True).is_disabled(), "Legacy controls unlocked a gated workspace action"
+            page.get_by_role("button",name="Revoke workspace",exact=True).click()
+            page.wait_for_function("document.querySelector('#task-sources').children.length === 0")
+            assert task_writes[-1] == {"kind":"source","id":"synthetic-source"}
             # Stop must remain usable while an earlier save is still pending.
             # Late successful and failed responses must not replace its state
             # or its confirmed shutdown message.
