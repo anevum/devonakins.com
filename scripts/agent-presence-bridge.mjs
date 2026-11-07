@@ -21,9 +21,16 @@ export function classifyAgentEvent(event) {
   }
   if (type === 'agent.session.requires_action')
     return { state: 'waiting', terminal: false };
-  if (type === 'error' || type === 'agent.session.failed' ||
+  // SSE transport errors require reading saved session state before
+  // diagnosing the turn. Do not falsely claim a provider-verified failure.
+  if (type === 'error')
+    return { state: 'unverified-disconnect', terminal: true };
+  if (type === 'agent.session.failed' ||
       type === 'agent.session.environment.failed')
     return { state: 'failed', terminal: true };
+  if (type === 'agent.session.in_progress' ||
+      (type === 'agent.session.turn.in_progress' && event.turn?.subagent_id === null))
+    return { state: 'running', terminal: false };
   if (type.startsWith('agent.session.turn.') &&
       !type.startsWith('agent.session.turn.output_text.done'))
     return { state: 'progress', terminal: false };
@@ -79,24 +86,35 @@ export async function syncAgentTurnPresence({
   }
 
   await safeSend('running');
-  for await (const event of events) {
-    const outcome = classifyAgentEvent(event);
-    if (!outcome) continue;
-    if (outcome.terminal) {
-      await safeSend(outcome.state);
-      return { outcome: outcome.state, deliveryFailures };
-    }
-    if (outcome.state === 'waiting') {
-      if (state !== 'waiting') {
-        state = 'waiting';
-        await safeSend('waiting');
+  try {
+    for await (const event of events) {
+      const outcome = classifyAgentEvent(event);
+      if (!outcome) continue;
+      if (outcome.state === 'unverified-disconnect')
+        return { outcome: 'unverified-disconnect', deliveryFailures };
+      if (outcome.terminal) {
+        await safeSend(outcome.state);
+        return { outcome: outcome.state, deliveryFailures };
       }
-    } else if (state === 'running' && clock() - lastAttempt >= heartbeatMs) {
-      // Real, current stream activity only. A disconnected or silent stream
-      // cannot keep the public page alive; the server TTL expires naturally.
-      await safeSend('running');
+      if (outcome.state === 'waiting') {
+        if (state !== 'waiting') {
+          state = 'waiting';
+          await safeSend('waiting');
+        }
+      } else if (outcome.state === 'running' && state === 'waiting') {
+        // Resume only on an explicit provider in_progress event. A delayed
+        // text delta may arrive while input is still required.
+        state = 'running';
+        await safeSend('running');
+      } else if (state === 'running' && clock() - lastAttempt >= heartbeatMs) {
+        // Real, current stream activity only. Silent streams are not kept alive.
+        await safeSend('running');
+      }
     }
+  } catch {
+    // The controller must recover saved session state. A broken event stream
+    // does not establish an agent outcome; let the public TTL expire.
+    return { outcome: 'unverified-disconnect', deliveryFailures };
   }
-  // A stream disconnect is NOT proof the agent failed, stopped or completed.
   return { outcome: 'unverified-disconnect', deliveryFailures };
 }
