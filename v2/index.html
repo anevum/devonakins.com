@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/v2/project-identities.css?v=1">
   <link rel="stylesheet" href="/v2/listening.css?v=1">
   <link rel="stylesheet" href="/v2/presence.css?v=1">
+  <link rel="stylesheet" href="/v2/live-signal.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -39,6 +40,11 @@
       <div class="topbar-center" aria-hidden="true"><span class="line"></span>EST. 1993<span class="line"></span></div>
       <div class="topbar-right"><button type="button" class="mobile-light" id="mobile-light" data-light-control aria-label="Cycle portrait lighting. Current: amber" title="Portrait lighting"><span class="mobile-light-orb" aria-hidden="true"></span></button><span class="system-dot" aria-hidden="true"></span><span class="system-word">SYSTEM ONLINE</span><time id="system-clock" aria-label="Local device time">--:--</time></div>
     </header>
+    <section class="live-signal" aria-label="Live signals">
+      <div class="signal-cell signal-work" data-work-signal data-active="quiet"><span class="signal-caption"><i aria-hidden="true"></i>CURRENT WORK</span><strong data-signal-work>No current work</strong><small data-signal-work-detail>No fresh development signal</small></div>
+      <a class="signal-cell signal-spotify" href="/listening/" data-signal-spotify-link><span class="signal-art"><img data-signal-art alt="" width="44" height="44" referrerpolicy="no-referrer" hidden><span aria-hidden="true">♪</span></span><span class="signal-track-copy"><img class="signal-spotify-logo" src="/v2/spotify-full-logo-white.png" alt="Spotify" width="64" height="19"><strong data-signal-track>Listening privately</strong><small data-signal-artist>Spotify sharing off</small><progress data-playback-progress aria-label="Spotify playback progress" hidden></progress></span></a>
+      <a class="signal-cell signal-gpt" href="/gpt/"><span class="signal-caption">GPT ACTIVITY</span><strong data-signal-gpt>—</strong><small data-signal-gpt-detail>Work / Codex · Not connected</small></a>
+    </section>
     <div class="body-grid">
       <nav class="rail" role="tablist" aria-label="Interface sections" aria-orientation="vertical">
         <span class="rail-heading" aria-hidden="true">INDEX / 01–06</span>
@@ -56,28 +62,12 @@
             <div class="eyebrow"><span class="eyebrow-line"></span>THE WORK OF A HUMAN IN PROGRESS <span class="eyebrow-index">/ 001</span></div>
             <p class="hero-overline">FATHER. AUTHOR. INDEPENDENT ENGINEER.</p>
             <h1>Devon<span class="title-secondary">Alan</span><span class="title-last">Akins<span class="title-period">.</span></span></h1>
-            <p class="hero-description">I raise two boys, write original worlds, and build open-source software. My current work explores trustworthy AI engineering, language design, and useful systems for everyday life.</p>
+            <p class="hero-description">I raise two boys, write original worlds, and build open-source software. My work explores trustworthy AI, language design, and useful systems.</p>
             <div class="hero-actions">
               <button type="button" class="action action-primary" data-view-target="work">Explore the work <span aria-hidden="true">↗</span></button>
               <button type="button" class="action action-quiet" data-view-target="writing">Enter the worlds <span aria-hidden="true">→</span></button>
             </div>
-            <div class="hero-feature" role="group" aria-label="Active development">
-              <div class="focus-heading"><h2>Active development</h2><span>SELECTED WORK / 02</span></div>
-              <div class="focus-grid">
-                <a class="hero-feature-link focus-project-merit" href="/work/merit/" aria-label="Merit — open-source engineering integrity, in development">
-                  <span class="focus-project-index" aria-hidden="true">01</span>
-                  <span class="focus-project-copy"><strong class="project-wordmark project-wordmark-merit"><img src="/v2/identity/merit.svg" alt="Merit" width="580" height="112" decoding="async"></strong><small>Evidence-led software verification</small></span>
-                  <span class="focus-project-state focus-project-active">Active</span>
-                  <span class="focus-project-arrow" aria-hidden="true">↗</span>
-                </a>
-                <a class="hero-feature-link focus-project-rhen-language" href="/work/rhen-language/" aria-label="Rhen — experimental human-first programming language">
-                  <span class="focus-project-index" aria-hidden="true">02</span>
-                  <span class="focus-project-copy"><strong class="project-wordmark project-wordmark-rhen"><img src="/v2/identity/rhen.svg" alt="Rhen" width="560" height="112" decoding="async"></strong><small>Human-first programming language</small></span>
-                  <span class="focus-project-state focus-project-research">Research</span>
-                  <span class="focus-project-arrow" aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </div>
+            <section class="in-motion" aria-labelledby="motion-title"><div class="motion-heading"><h2 id="motion-title">In motion.</h2><a href="/studio/">Live Studio ↗</a></div><ol data-motion-feed><li data-kind="quiet"><span><strong>Between signals</strong><small>Awaiting verified activity</small></span></li></ol></section>
             <div class="hero-foot"><span class="fine-rule"></span><span>ENGINEERING / WRITING / RESEARCH / FAMILY</span></div>
           </div>
         </section>
@@ -152,7 +142,7 @@
             </div>
             <div class="listening-grid">
               <article class="listening-card listening-current" aria-labelledby="listening-card-label">
-                <div class="listening-card-header"><span id="listening-card-label">01 / THE SIGNAL</span><a class="spotify-attribution" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer"><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="90" height="27" decoding="async"></a><span class="listening-status" id="listening-state">OFF AIR</span></div>
+                <div class="listening-card-header"><span id="listening-card-label">01 / THE SIGNAL</span><a class="spotify-attribution" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer"><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="90" height="27" decoding="async"></a><span class="listening-status" id="listening-state">NO PLAYBACK</span></div>
                 <div class="listening-current-body">
                   <div class="listening-cover" aria-hidden="true"><div class="listening-vinyl"><i></i></div><img id="listening-cover-image" alt="" loading="lazy" decoding="async" hidden></div>
                   <div class="listening-current-copy">
@@ -162,7 +152,7 @@
                     <a id="listening-open-track" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer" hidden>Listen on Spotify <span aria-hidden="true">↗</span></a>
                   </div>
                 </div>
-                <div class="listening-card-bottom"><span>SPOTIFY / READ-ONLY SIGNAL</span><span id="listening-updated-at">PUBLIC SHARING OFF</span></div>
+                <progress class="listening-progress" data-playback-progress aria-label="Spotify playback progress" hidden></progress><div class="listening-card-bottom"><span>SPOTIFY / READ-ONLY SIGNAL</span><span id="listening-updated-at">PUBLIC SHARING OFF</span></div>
               </article>
               <article class="listening-card listening-collections">
                 <div class="listening-card-header"><span>02 / CURATED PLAYLISTS</span><a class="spotify-attribution" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer"><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="90" height="27" decoding="async"></a><span id="listening-playlist-state">PRIVATE BY DEFAULT</span></div>
@@ -187,20 +177,20 @@
         <div class="telemetry-ring" aria-hidden="true"><div class="inner-ring"></div><img class="portrait-mini" src="/v2/crossed-arms.webp" alt="" width="72" height="72" loading="lazy"></div>
         <div class="telemetry-readout" data-feed-state="loading">
           <div class="feed-beam" aria-hidden="true"><span></span></div>
-          <span class="readout-kicker">GPT / ACTIVITY STREAM</span>
-          <h2>Token activity</h2>
+          <span class="readout-kicker">GPT / SOURCE STATUS</span>
+          <h2>Verified usage</h2>
           <p class="readout-value" id="usage-value">—</p>
-          <p class="readout-status" id="usage-status" role="status" aria-live="polite">Reading profile snapshot</p>
-          <p class="readout-date" id="usage-date">SNAPSHOT / —</p>
+          <p class="readout-status" id="usage-status" role="status" aria-live="polite">No connected usage source</p>
+          <p class="readout-date" id="usage-date">WORK / CODEX</p>
           <p class="readout-development" id="mobile-development-activity" role="status" aria-live="polite">PUBLIC GITHUB / CHECKING</p>
-          <button type="button" id="refresh-usage" class="refresh-button">Refresh snapshot <span aria-hidden="true">↻</span></button>
+          <button type="button" id="refresh-usage" class="refresh-button">Refresh sources <span aria-hidden="true">↻</span></button>
           <a href="/gpt/" class="telemetry-profile-link" aria-label="View profile — full GPT activity and skills"><span class="telemetry-profile-label">View profile</span><span class="telemetry-profile-arrow" aria-hidden="true">↗</span></a>
         </div>
-        <p class="telemetry-note" id="development-activity" role="status" aria-live="polite">PUBLIC GITHUB / Checking development signal. GPT figures remain historical.</p>
+        <p class="telemetry-note" id="development-activity" role="status" aria-live="polite">PUBLIC GITHUB / Checking development signal. Historical captures are in the GPT profile.</p>
         <div class="telemetry-bottom"><span>PORTRAIT LIGHT</span><button type="button" class="engine-button" id="shift-light" data-light-control aria-label="Cycle portrait lighting. Current: amber">SHIFT LIGHT</button><span id="scene-caption" class="engine-status">EDITORIAL / ADAPTIVE</span></div>
       </aside>
     </div>
-    <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><a href="/studio/" class="presence-ticker" id="presence-ticker" aria-label="Presence: not broadcasting. Open Live Studio."><span class="presence-beat" aria-hidden="true"></span><span class="presence-ticker-label" id="presence-ticker-label">NOT BROADCASTING</span><span class="presence-ticker-detail" id="presence-ticker-detail" hidden></span></a><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>
+    <footer class="statusbar"><div><span class="tiny-square" aria-hidden="true"></span> PERSONAL SPACE <span class="bar-separator">/</span> INDEPENDENT WORK</div><a href="/studio/" class="presence-ticker" id="presence-ticker" aria-label="Presence: not broadcasting. Open Live Studio."><span class="presence-beat" aria-hidden="true"></span><span class="presence-ticker-label" id="presence-ticker-label">NOT BROADCASTING</span><span class="presence-ticker-detail" id="presence-ticker-detail" hidden></span></a><a class="soundtrack-ticker" href="/listening/" data-signal-spotify-link><span data-soundtrack>Listening</span><img src="/v2/spotify-full-logo-white.png" alt="Spotify" width="52" height="16"></a><div class="footer-controls"><button type="button" id="motion-toggle" aria-pressed="true">MOTION ON</button><span class="footer-slash">/</span><span>NO TRACKING COOKIES</span></div><div class="statusbar-end">© 2026 DEVON ALAN AKINS <span class="status-trace" aria-hidden="true"></span></div></footer>
   </div>
   <div id="announcement" class="announcement" role="status" aria-live="polite"></div>
   <noscript><div class="nojs">JavaScript is required to switch preview panels. The <a href="/">current homepage</a> and <a href="/work/">work archive</a> remain usable.</div></noscript>

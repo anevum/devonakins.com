@@ -8,6 +8,10 @@ import {createCloudPresenceApi, publicCloudPresence} from './cloud-presence-api.
 import {createListeningCollections} from './listening-collections.mjs';
 import {presenceResponse} from './spotify-presence.mjs';
 
+import {createActivityTasksApi} from './activity-tasks.mjs';
+import {createLiveSignal} from './live-signal.mjs';
+import {projectActivityHistory,validActivityHistory} from './activity-history.mjs';
+
 export const securityHeaders = {
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.scdn.co; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
@@ -24,6 +28,8 @@ export function createHandler(assets, release, options = {}) {
     return new Response(head ? null : response.body,{status:response.status,headers});
   };
   const decoded = new Map();
+  let activityHistory = [];
+  const taskApi=createActivityTasksApi({clock:()=> (options.now || (()=>new Date()))().getTime()});
   const readDbPresence = createD1PresenceReader();
   const ownerApi = createListeningOwnerApi();
   const presenceOwnerApi = createPresenceOwnerApi({readListening:readDbPresence,clock: () => (options.now || (()=>new Date()))().getTime()});
@@ -60,6 +66,7 @@ export function createHandler(assets, release, options = {}) {
                 expiresAt > atMs && expiresAt <= atMs + maxTtlMs &&
                 validPublicGithubSignal(saved.value, at) &&
                 atMs - Date.parse(saved.value.checkedAt) <= maxTtlMs) {
+              activityHistory=validActivityHistory(saved.activities,atMs);
               lastGithub = {expiresAt, value: saved.value};
               return saved.value;
             }
@@ -94,7 +101,9 @@ export function createHandler(assets, release, options = {}) {
           throw new Error("Public activity provider unavailable");
         }
         try {
-          value = projectPublicGithubEvents(await response.json(), at);
+          const raw=await response.json();
+          value = projectPublicGithubEvents(raw, at);
+          activityHistory=projectActivityHistory(raw,atMs);
         } catch {
           failureReason = "invalid-response";
           throw new Error("Invalid public activity response");
@@ -106,6 +115,7 @@ export function createHandler(assets, release, options = {}) {
           failureReason = "timeout";
         failureStreak = Math.min(failureStreak + 1, 6);
         if (ttlMs === successfulTtlMs) ttlMs = failureTtlMs;
+        activityHistory=[];
         value = unavailablePublicGithub(
           at, failureReason, new Date(atMs + ttlMs).toISOString(),
         );
@@ -115,7 +125,7 @@ export function createHandler(assets, release, options = {}) {
       if (edgeCache) {
         try {
           await edgeCache.put(cacheKey, new Response(JSON.stringify({
-            version: 4, expiresAt: new Date(expiresAt).toISOString(), value,
+            version: 4, expiresAt: new Date(expiresAt).toISOString(), value, activities:activityHistory,
           }), {
             headers: {
               "Content-Type": "application/json; charset=utf-8",
@@ -132,6 +142,7 @@ export function createHandler(assets, release, options = {}) {
       pendingGithub = null;
     }
   };
+  const liveSignal=createLiveSignal({readListening:readDbPresence,clock:()=>now().getTime(),readGithub:async()=>{await githubSignal(now());return activityHistory;}});
   const snapshot = async () => {
     if (!historicalSnapshot) {
       historicalSnapshot = (async () => {
@@ -173,6 +184,7 @@ export function createHandler(assets, release, options = {}) {
       // merely with a hidden UI route. No Access identity = no account action.
       if (url.pathname === OBSERVATION_READ_PATH || url.pathname === OBSERVATION_WRITE_PATH)
         return handleObservationRequest(request, env, now(), securityHeaders);
+      if(url.pathname.startsWith('/api/activity/tasks/') || (url.pathname==='/api/presence/owner' && url.search==='?channel=tasks')) return secured(await taskApi(request,env,ctx));
       if(url.pathname.startsWith('/api/presence/editor/'))return secured(await editorApi(request,env,ctx));
       if(url.pathname.startsWith('/api/presence/cloud/') || (url.pathname === '/api/presence/owner' && url.search === '?channel=cloud'))
         return secured(await cloudApi(request,env,ctx));
@@ -222,6 +234,10 @@ export function createHandler(assets, release, options = {}) {
       if (url.pathname === '/api/presence/cloud') {
         const headers={...securityHeaders,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','CDN-Cache-Control':'no-store'};
         return new Response(request.method === 'HEAD' ? null : JSON.stringify(await publicCloudPresence(env,()=>now().getTime())),{headers});
+      }
+      if(url.pathname==='/api/activity/v4') {
+        const headers={...securityHeaders,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','CDN-Cache-Control':'no-store'};
+        return new Response(request.method==='HEAD'?null:JSON.stringify(await liveSignal(env)),{headers});
       }
       if (url.pathname === "/_health")
         return new Response(

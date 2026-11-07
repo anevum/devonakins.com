@@ -34,8 +34,8 @@ test("project wordmarks are first-party, legible vector paths with text alternat
       assert.ok(html.includes('alt="' + name + '"'), name + " image must have an accessible alternative");
     }
     assert.doesNotMatch(html, /Phatcake|src="[^"]*phatcake/i);
-    assert.equal((html.match(/src="\/v2\/identity\/merit\.svg"/g) || []).length, 2);
-    assert.equal((html.match(/src="\/v2\/identity\/rhen\.svg"/g) || []).length, 2);
+    assert.equal((html.match(/src="\/v2\/identity\/merit\.svg"/g) || []).length, 1);
+    assert.equal((html.match(/src="\/v2\/identity\/rhen\.svg"/g) || []).length, 1);
   }
 });
 

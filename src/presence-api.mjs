@@ -47,7 +47,7 @@ export function presenceInput(row, env, at) {
     publicEnabled: publicApproved(env) && row?.public_enabled === 1,
     shareListening: row?.share_listening === 1,
     allowedProjects: approvedProjects(row),
-    privateOverride: row?.private_work === 1 && (active || manual),
+    privateOverride: row?.private_work === 1,
     manual: manual
       ? {
           approved: true,

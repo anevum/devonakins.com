@@ -1,7 +1,7 @@
 {
   "name": "devonakins-presence",
   "displayName": "DevonAkins Presence",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "devonalanakins",
   "description": "Opt-in minimal editor activity for your personal website.",
   "license": "MIT",
@@ -28,7 +28,7 @@
       },
       {
         "command": "devonPresence.project",
-        "title": "Devon Presence: Select Public Project"
+        "title": "Devon Presence: Configure Project Detection"
       },
       {
         "command": "devonPresence.resume",

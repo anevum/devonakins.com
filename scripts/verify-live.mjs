@@ -52,14 +52,30 @@ assert.doesNotMatch(markup, /V2 PREVIEW|name="robots" content="noindex/);
 assert.match(markup, /id="usage-value"/, "compact GPT activity stream is present");
 assert.match(markup, /href="\/gpt\/"/, "home stream links to detailed GPT profile");
 assert.doesNotMatch(markup, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage metric");
-assert.match(markup, /class="hero-feature" role="group" aria-label="Active development"/, "curated home development showcase");
-assert.match(markup, /<h2>Active development<\/h2>/, "development heading");
-assert.match(markup, /class="focus-grid"/, "responsive work grid");
+assert.match(markup, /class="in-motion"/, "live activity feed");
+assert.match(markup, /data-signal-work/, "current work in ribbon");
+assert.match(markup, /data-signal-track/, "Spotify in ribbon");
+assert.match(markup, /data-signal-gpt/, "scoped GPT data state");
+assert.doesNotMatch(markup, /≈2\.7B|focus-grid/, "obsolete homepage headline/cards removed");
 assert.doesNotMatch(markup, /ACTIVE ENGINEERING \/ OPEN SOURCE|LANGUAGE RESEARCH \/ PROPOSED/, "deprecated cramped copy removed");
 assert.match(markup, /aria-label="View profile — full GPT activity and skills"/, "GPT stream has an accessible profile action");
 for (const path of ["/work/merit/", "/work/rhen-language/"]) {
   assert.ok(markup.includes('href="' + path + '"'), path + " homepage feature link");
 }
+
+// V4 deployment must preserve private defaults; no account data is published by release.
+const liveSignalResponse=await request('/api/activity/v4',{cache:'no-store'});
+assert.equal(liveSignalResponse.status,200);
+assert.match(liveSignalResponse.headers.get('cache-control')||'',/no-store/);
+assert.match(liveSignalResponse.headers.get('cdn-cache-control')||'',/no-store/);
+const liveSignal=await liveSignalResponse.json();
+assert.equal(liveSignal.version,4);
+assert.equal(liveSignal.work.visibility,'hidden');
+assert.equal(liveSignal.spotify.mode,'hidden');
+assert.equal(liveSignal.gpt.count,null);
+assert.equal(liveSignal.gpt.state,'disconnected');
+assert.deepEqual(liveSignal.remote.tasks,[]);
+assert.deepEqual(liveSignal.recent,[]);
 
 // Compare the public snapshot to the exact static artifact included in this
 // build. This verifies both the content and the Worker JSON response type.

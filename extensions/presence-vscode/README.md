@@ -1,9 +1,7 @@
 # DevonAkins Presence
 
 An optional, paused-by-default VS Code companion for the owner's personal site.
-It does not inspect or send document text, names, paths, repository information,
-window titles, prompts or clipboard data. Only the existence of a focused text
-edit, a deliberately selected public project and an observation timestamp are sent.
+It matches the edited document to the built-in Git extension's origin remote locally, and sends only an approved catalog slug, focused-edit observation and timestamp. Unknown/private repositories produce no project name. No text, filenames, paths, raw Git metadata, prompts or clipboard data are transmitted.
 Edits made through editor commands can also produce an activity event; this is
 editor-observed activity, not proof of human keystrokes or productivity.
 
@@ -14,10 +12,10 @@ editor-observed activity, not proof of human keystrokes or productivity.
 2. Visit your protected website `/owner/presence/` on your phone or computer.
    Create a pairing code. Paste it only into **Devon Presence: Pair Editor** in
    VS Code's command palette. It expires after five minutes and is one-use.
-3. Select a public project or **No public project**. Enable paired editor activity
+3. Automatic approved-project detection is the default. An explicit manual override remains available. Enable paired editor activity
    in the private website controls, then run **Devon Presence: Resume Sharing**.
 4. Focused edits can now produce an expiring heartbeat at most once per minute.
-   Merely leaving VS Code open does not count. Pairing lasts 24 hours; restart
+   Merely leaving VS Code open does not count. Pairing lasts 30 days; restart
    always returns the companion to paused.
 
 The token is kept in VS Code SecretStorage; only the selected public slug is
@@ -48,3 +46,5 @@ this directory with VS Code's `--extensionDevelopmentPath` development option.
 The Node suite tests the request boundary against real SQLite and exercises this
 module with simulated VS Code events and SecretStorage. A real desktop extension
 host, owner pairing and signed-in account are separate acceptance checks.
+
+Version 0.2.0 adds automatic allowlisted GitHub project mapping using the built-in Git API. Credentials are independently revocable and expire after 30 days; a restart still pauses reporting until Resume Sharing.

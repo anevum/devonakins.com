@@ -161,7 +161,7 @@ test("V2 immersive preview is a noindex, accessible, internal-origin-only page",
     assert.match(html, new RegExp('id="tab-' + view + '"'));
     assert.match(html, new RegExp('id="panel-' + view + '"'));
   }
-  assert.match(html, /Reading profile snapshot/);
+  assert.match(html, /No connected usage source/);
   assert.doesNotMatch(html, /api\.openai\.com|sk-[a-zA-Z0-9]{20,}|chatgpt\.com\/api\//);
   assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
 
@@ -254,9 +254,9 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.match(html, /aria-label="View profile — full GPT activity and skills"/);
   assert.match(html, /<span class="telemetry-profile-label">View profile<\/span>/);
   assert.match(html, /class="feed-beam"/);
-  assert.match(html, /Reading profile snapshot/);
+  assert.match(html, /No connected usage source/);
   assert.doesNotMatch(html, /Owner-reported · Not live tracking\./);
-  assert.match(html, /class="hero-feature" role="group"/);
+  assert.match(html, /class="in-motion"/);
   assert.match(html, /class="telemetry-profile-link"[^>]*href="\/gpt\/"|href="\/gpt\/" class="telemetry-profile-link"/);
   assert.doesNotMatch(html, /id="home-usage-value"|class="hero-usage"/, "no duplicate homepage panel");
   assert.equal((html.match(/id="usage-value"/g) || []).length, 1);
@@ -305,9 +305,7 @@ test("homepage has one compact GPT stream and one detailed profile route", async
   assert.match(profileHtml, /href="\/v2\/gpt-profile\.css"/);
   assert.doesNotMatch(profileHtml, /data-private|backend-api\/wham/);
   const client = await readFile("src/terminal.ts", "utf8");
-  assert.match(client, /void checkUsage\(\)/);
-  assert.match(client, /record\.metric !== "work-codex-tokens"/);
-  assert.match(client, /record\.approximate !== true/);
+  assert.match(client, /startLiveSignal\(applyPresence\)/);
   assert.doesNotMatch(client, /home-usage-value|home-usage-date/);
   assert.doesNotMatch(client, /backend-api\/wham|api\.openai\.com/);
   assert.match((await (await get("/v2/gpt-profile.css")).text()), /\.gpt-profile-identity/);
@@ -326,7 +324,7 @@ test("production verifier requires the exact built version and public snapshot",
   assert.ok(verifier.includes('"/api/telemetry/public"'), "production verifier checks public telemetry endpoint");
   assert.ok(verifier.includes('telemetry.gpt.freshness'), "historical GPT provenance checked after deployment");
   assert.ok(verifier.includes('telemetry.development.source'), "separate public GitHub source checked after deployment");
-  assert.ok(verifier.includes('class="hero-feature" role="group"'));
+  assert.ok(verifier.includes('class="in-motion"'));
   const { projects } = await import("../src/content.mjs");
   assert.ok(verifier.includes('projects.map(({ slug, title }) => ["/work/" + slug + "/", title])'),
     "verification must dynamically include every public portfolio project");
@@ -405,16 +403,14 @@ test("rendered public source and contact routes contain only current GitHub iden
 
 test("current engineering showcase distinguishes Merit, Rhen language and RHEN markets", async () => {
   const home = await (await get("/")).text();
-  assert.match(home, /class="hero-feature" role="group" aria-label="Active development"/);
-  assert.match(home, /<h2>Active development<\/h2>/);
-  assert.match(home, /class="focus-grid"/);
-  assert.match(home, /class="focus-project-state focus-project-active">Active<\/span>/);
-  assert.match(home, /class="focus-project-state focus-project-research">Research<\/span>/);
+  assert.match(home, /class="in-motion"/);
+  assert.match(home, /data-motion-feed/);
+  assert.match(home, /CURRENT WORK/);
+  assert.match(home, /data-signal-track/);
+  assert.match(home, /data-signal-gpt/);
+  assert.doesNotMatch(home, /focus-grid|focus-project-state|≈2\.7B/);
   assert.ok(home.includes('href="/work/merit/"'));
   assert.ok(home.includes('href="/work/rhen-language/"'));
-  assert.match(home, /Evidence-led software verification/);
-  assert.match(home, /Human-first programming language/);
-  assert.doesNotMatch(home, /Development currently paused/);
   const archive = await (await get("/work/")).text();
   for (const slug of ["merit", "rhen-language", "vesper", "squelch", "brandicade", "rhen"]) {
     assert.ok(archive.includes('href="/work/' + slug + '/"'), slug);
