@@ -103,3 +103,41 @@ test('active event stream permits spaced heartbeats, not a timer-driven false si
   assert.equal(result.outcome,'completed');
   assert.deepEqual(calls,['running','running','completed']);
 });
+
+test('transport error event is unverified, never a fabricated failed turn', async () => {
+  const calls = [];
+  const outcome = await syncAgentTurnPresence({
+    events: stream({type:'error',error:{message:'PRIVATE_NETWORK_CREDENTIAL'}}),
+    file:'/private/task1.json',projectSlug:'mizvo',
+    report:async ({state})=>calls.push(state),
+  });
+  assert.equal(outcome.outcome,'unverified-disconnect');
+  assert.deepEqual(calls,['running']);
+});
+
+test('only explicit resumed processing ends a waiting state', async () => {
+  const calls=[];
+  const outcome=await syncAgentTurnPresence({
+    events:stream(
+      {type:'agent.session.requires_action'},
+      {type:'agent.session.turn.output_text.delta',delta:'possibly delayed'},
+      {type:'agent.session.in_progress'},
+      root('agent.session.turn.completed'),
+    ),
+    file:'/private/task1.json',projectSlug:'mizvo',
+    report:async ({state})=>calls.push(state),
+  });
+  assert.equal(outcome.outcome,'completed');
+  assert.deepEqual(calls,['running','waiting','running','completed']);
+});
+
+test('stream exception remains unverified and does not leak sensitive exception detail', async () => {
+  async function* interrupted(){yield {type:'agent.session.turn.output_text.delta'};throw new Error('SECRET_SESSION_ID');}
+  const calls=[];
+  const outcome=await syncAgentTurnPresence({
+    events:interrupted(),file:'/private/task1.json',
+    report:async ({state})=>calls.push(state),
+  });
+  assert.equal(outcome.outcome,'unverified-disconnect');
+  assert.deepEqual(calls,['running']);
+});
