@@ -27,7 +27,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      # Only tested default-branch work may receive the scoped reporter secret.
+      # PRs and other branches run the same tests without any reporter credential.
+      - name: Test and report private CI activity (trusted main push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DEVON_ACTIVITY_SOURCE_TOKEN: ${{ secrets.DEVON_ACTIVITY_SOURCE_TOKEN }}
+        run: node scripts/activity-run.mjs -- npm test
+      - name: Test without reporter credentials (PRs and other branches)
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: npm test
       - name: Package optional editor companion (PR only)
         if: github.event_name == 'pull_request'
         working-directory: extensions/presence-vscode
