@@ -30,6 +30,18 @@ The reporter creates a fixed-field private task on the existing site and emits a
 
 This does **not** install a universal GitHub/ChatGPT agent observer or enable public sharing. All release/owner/project gates stay unchanged; the optional source can be revoked from the existing owner page.
 
+## Authenticated agent-turn bridge — source-only candidate
+
+The optional `scripts/agent-activity.mjs` adapter accepts **one already-authorized root turn's authenticated async event stream** from a private controller. It uses the *current* concurrent `/api/activity/tasks/start` and `/api/activity/tasks/signal` routes rather than the older singleton cloud pairing API. The controller—not this adapter—must authenticate to the provider, create and submit the turn, subscribe to events, inspect the saved terminal outcome after network interruptions, and independently verify any generated artifacts or tests.
+
+Call `reportAgentTurnActivity({ events, projectSlug, sourceToken })` only from the trusted controller. Choose one `codex` or `chatgpt-work` scoped workspace connection through the owner Access page, then inject its one-time token into the runner's private secret storage as `DEVON_ACTIVITY_SOURCE_TOKEN` (not GitHub source's token and never in source, issues, logs or public markup). The adapter rejects nonallowlisted projects and a task start that reports the wrong source, project, token format, or expiration.
+
+The reporter maps only a root-turn terminal event to `completed`, `failed`, or `cancelled`; it preserves `waiting` versus resumed `running` when genuine provider events arrive after the backend's 20-second nonterminal cooldown. Long-running progress checkpoints require *real incoming events*, not a repeating timer. It transmits only fixed state, optional null checkpoint, sequence number and UTC observation time. It ignores provider event bodies, prompts, session IDs, error messages, tool output, API usage totals and source paths. `completed` means **the provider turn ended**—not that source code, CI, deployment, or a user-facing task succeeded.
+
+A stream error, early EOF, delivery failure or missing credential does not synthesize a verified completed or failed turn. Unconfirmed reporting errors use a fixed private warning marker. The already-created task then expires from the public/live projection after 120 seconds without fresh evidence. The adapter uses the existing 24-hour task identity under a 30-day revocable workspace source, with no new DB schema, Worker deployment or public-release permission. Existing GPT profile analytics remain disconnected.
+
+**Acceptance still required:** validate the exact provider event contract from a genuine authorized root turn, wire this adapter into an actual private dispatcher, perform a source-scoped connection/revocation test, and verify a real pause/resume/terminal sequence with short-lived data. Fixture-driven tests of this source-only adapter do **not** establish a working autonomous ChatGPT account feed or true Work/Codex usage analytics. The earlier [PR #52](https://github.com/devonalanakins/devonakins.com/pull/52) was written against the legacy singleton bridge and should not be merged as-is over this V4 integration.
+
 ## API and retention
 
 - `GET/HEAD /api/activity/v4`: same-origin, no-store aggregate, no credentials. Fresh editor, independent tasks, permitted Spotify, catalog history and disconnected GPT contract. Existing endpoints remain compatible.
