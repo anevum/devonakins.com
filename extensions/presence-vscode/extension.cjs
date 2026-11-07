@@ -210,6 +210,10 @@ function createCompanion(
         projects = nextProjects;
         if (!projects.includes(project)) project = null;
         enabled = false;
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
+        if (disposed || generation !== currentGeneration) return;
         lastSharedEdit = 0;
         lastObserved = 0;
         say("paired, paused");
@@ -250,7 +254,17 @@ function createCompanion(
         say("pairing required");
         return;
       }
-      generation++;
+      const currentGeneration = ++generation;
+      try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", true),
+        );
+      } catch {
+        say("could not save sharing preference");
+        return;
+      }
+      if (disposed || forgetting || generation !== currentGeneration || !token)
+        return;
       enabled = true;
       lastEdit = 0;
       say("waiting for edit");
@@ -261,7 +275,15 @@ function createCompanion(
       enabled = false;
       lastEdit = 0;
       say("paused");
-      await send(false);
+      const stop = send(false);
+      try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
+      } catch {
+        say("paused; could not save startup preference");
+      }
+      await stop;
       if (generation === currentGeneration)
         say("paused; public signal expires within two minutes if disconnected");
     },
@@ -276,6 +298,9 @@ function createCompanion(
       token = null;
       expires = 0;
       try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
         await changeSecret(() => context.secrets.delete(SECRET));
         say("pairing forgotten");
       } catch {
@@ -344,7 +369,9 @@ function createCompanion(
           context.globalState.get("automaticProject") !== false;
         const saved = context.globalState.get("publicProject");
         project = !automaticProject && projects.includes(saved) ? saved : null;
-        say("paired, paused");
+        enabled = context.globalState.get("sharingEnabled") === true;
+        lastEdit = 0;
+        say(enabled ? "waiting for edit" : "paired, paused");
       }
     } catch {
       if (generation === currentGeneration) say("pairing required");

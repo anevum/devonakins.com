@@ -1,6 +1,6 @@
 # DevonAkins Presence
 
-An optional, paused-by-default VS Code companion for the owner's personal site.
+An optional, initially paused VS Code companion for the owner's personal site.
 It matches the edited document to the built-in Git extension's origin remote locally, and sends only an approved catalog slug, focused-edit observation and timestamp. Unknown/private repositories produce no project name. No text, filenames, paths, raw Git metadata, prompts or clipboard data are transmitted.
 Edits made through editor commands can also produce an activity event; this is
 editor-observed activity, not proof of human keystrokes or productivity.
@@ -16,7 +16,7 @@ editor-observed activity, not proof of human keystrokes or productivity.
    in the private website controls, then run **Devon Presence: Resume Sharing**.
 4. Focused edits can now produce an expiring heartbeat at most once per minute.
    Merely leaving VS Code open does not count. Pairing lasts 30 days; restart
-   always returns the companion to paused.
+   restores your last explicit Resume/Pause preference. No signal is sent until a new focused edit.
 
 The token is kept in VS Code SecretStorage; only the selected public slug is
 stored in ordinary global state. The token can update only the minimal editor
@@ -47,4 +47,4 @@ The Node suite tests the request boundary against real SQLite and exercises this
 module with simulated VS Code events and SecretStorage. A real desktop extension
 host, owner pairing and signed-in account are separate acceptance checks.
 
-Version 0.2.0 adds automatic allowlisted GitHub project mapping using the built-in Git API. Credentials are independently revocable and expire after 30 days; a restart still pauses reporting until Resume Sharing.
+Version 0.2.0 adds automatic allowlisted GitHub project mapping using the built-in Git API. Credentials are independently revocable and expire after 30 days; a restart remembers explicit sharing opt-in and still waits for a real edit. Pause Sharing persists across restarts.
