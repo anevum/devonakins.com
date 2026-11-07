@@ -77,6 +77,7 @@ export function startLiveSignal(onPlayback: (data: unknown) => void) {
   let latest: any = null,
     busy = false,
     epoch = 0;
+  const feedRows = new Map<string, HTMLLIElement>();
   const render = () => {
     const at = Date.now(),
       v = latest?.version === 4 && fresh(latest, at, 65000) ? latest : null;
@@ -278,25 +279,42 @@ export function startLiveSignal(onPlayback: (data: unknown) => void) {
         kind: "quiet",
       });
     if (feed) {
-      const key = JSON.stringify(entries.slice(0, 3));
-      if (feed.getAttribute("data-content") !== key) {
-        feed.setAttribute("data-content", key);
-        feed.replaceChildren(
-          ...entries.slice(0, 3).map((e) => {
-            const row = document.createElement("li");
-            row.dataset.kind = e.kind;
-            const a = document.createElement(e.href ? "a" : "span");
-            if (e.href) (a as HTMLAnchorElement).href = e.href;
-            const title = document.createElement("strong"),
-              detail = document.createElement("small");
-            title.textContent = e.title;
-            detail.textContent = e.detail;
-            a.append(title, detail);
-            row.append(a);
-            return row;
-          }),
-        );
+      const desired: HTMLLIElement[] = [],
+        used = new Set<string>(),
+        duplicates = new Map<string, number>();
+      for (const e of entries.slice(0, 3)) {
+        const stem = JSON.stringify([e.kind, e.title, e.href || ""]),
+          index = duplicates.get(stem) || 0,
+          key = stem + index;
+        duplicates.set(stem, index + 1);
+        used.add(key);
+        let row = feedRows.get(key);
+        if (!row) {
+          row = document.createElement("li");
+          row.dataset.kind = e.kind;
+          const content = document.createElement(e.href ? "a" : "span");
+          if (e.href) (content as HTMLAnchorElement).href = e.href;
+          content.append(
+            document.createElement("strong"),
+            document.createElement("small"),
+          );
+          row.append(content);
+          feedRows.set(key, row);
+        }
+        const title = row.querySelector("strong")!,
+          detail = row.querySelector("small")!;
+        if (title.textContent !== e.title) title.textContent = e.title;
+        if (detail.textContent !== e.detail) detail.textContent = e.detail;
+        desired.push(row);
       }
+      desired.forEach((row, index) => {
+        if (feed.children[index] !== row)
+          feed.insertBefore(row, feed.children[index] || null);
+      });
+      for (const child of Array.from(feed.children))
+        if (!desired.includes(child as HTMLLIElement)) child.remove();
+      for (const key of feedRows.keys())
+        if (!used.has(key)) feedRows.delete(key);
     }
   };
   async function refresh() {

@@ -722,7 +722,7 @@ function applyPresence(candidate: unknown) {
       /^https:\/\/i\.scdn\.co\/image\/[A-Za-z0-9]+$/.test(image);
     if (allowed && image) {
       listeningArtwork.referrerPolicy = "no-referrer";
-      listeningArtwork.src = image;
+      if(listeningArtwork.getAttribute("src")!==image) listeningArtwork.src = image;
       listeningArtwork.hidden = false;
     } else {
       listeningArtwork.hidden = true;
