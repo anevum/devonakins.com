@@ -19,7 +19,12 @@ function createCompanion(
     lastSent = 0,
     lastSharedEdit = 0,
     enabled = false,
-    busy = false,
+    inFlight = null,
+    generation = 0,
+    lastObserved = 0,
+    forgetting = false,
+    disposed = false,
+    secretOperations = Promise.resolve(),
     project = null,
     projects = [];
   const status = api.window.createStatusBarItem(
@@ -30,7 +35,13 @@ function createCompanion(
   status.text = "Presence: paused";
   status.show();
   const say = (text) => {
-    status.text = "Presence: " + text;
+    if (!disposed) status.text = "Presence: " + text;
+  };
+  // Keep a delayed credential save ahead of a later Forget Pairing deletion.
+  const changeSecret = (operation) => {
+    const next = secretOperations.then(operation);
+    secretOperations = next.catch(() => {});
+    return next;
   };
   async function post(path, body, bearer) {
     const response = await fetcher(ORIGIN + path, {
@@ -53,45 +64,79 @@ function createCompanion(
     return response.json();
   }
   async function send(active) {
+    const currentGeneration = generation;
+    const bearer = token;
+    // A stop must follow a pending active request. Aborting it does not prove
+    // that the server did not accept it, and skipping it leaves activity live.
+    if (!active) while (inFlight) await inFlight;
     if (
-      busy ||
+      disposed ||
+      currentGeneration !== generation ||
+      token !== bearer ||
       !token ||
       expires <= clock() ||
-      (active && (!lastEdit || lastEdit <= lastSharedEdit))
+      (active &&
+        (!enabled ||
+          inFlight ||
+          !lastEdit ||
+          lastEdit <= Math.max(lastSharedEdit, lastObserved)))
     )
       return false;
-    const observed = active ? lastEdit : clock();
-    busy = true;
+    // The server rejects replayed timestamps, including a pause in the same
+    // millisecond as the last edit. Only stop signals may advance by one ms.
+    const observed = active ? lastEdit : Math.max(clock(), lastObserved + 1);
+    lastObserved = observed;
+    const current = () =>
+      !disposed && generation === currentGeneration && token === bearer;
+    const request = (async () => {
+      try {
+        await post(
+          "/api/presence/editor/heartbeat",
+          {
+            version: 1,
+            active,
+            projectSlug: project,
+            observedAt: new Date(observed).toISOString(),
+          },
+          bearer,
+        );
+        if (current()) {
+          lastSent = clock();
+          if (active) lastSharedEdit = observed;
+          say(active ? "editor active" : "paused");
+        }
+        return true;
+      } catch {
+        if (current()) say("not connected");
+        return false;
+      }
+    })();
+    inFlight = request;
     try {
-      await post(
-        "/api/presence/editor/heartbeat",
-        {
-          version: 1,
-          active,
-          projectSlug: project,
-          observedAt: new Date(observed).toISOString(),
-        },
-        token,
-      );
-      lastSent = clock();
-      if (active) lastSharedEdit = observed;
-      say(active ? "editor active" : "paused");
-      return true;
-    } catch {
-      say("not connected");
-      return false;
+      return await request;
     } finally {
-      busy = false;
+      if (inFlight === request) inFlight = null;
     }
   }
   const actions = {
     async pair() {
+      if (disposed || forgetting) return;
+      const currentGeneration = ++generation;
+      enabled = false;
+      lastEdit = 0;
+      say("pairing, paused");
+      await send(false);
+      if (disposed || generation !== currentGeneration) return;
       const code = await api.window.showInputBox({
         prompt: "Paste the one-time code from your private presence controls",
         password: true,
         ignoreFocusOut: true,
       });
-      if (!code) return;
+      if (disposed || generation !== currentGeneration) return;
+      if (!code) {
+        say(token ? "paired, paused" : "pairing required");
+        return;
+      }
       if (!/^[A-Za-z0-9_-]{43}$/.test(code)) {
         await api.window.showErrorMessage("Invalid pairing code.");
         return;
@@ -100,30 +145,44 @@ function createCompanion(
         const data = await post("/api/presence/editor/claim", {
           pairCode: code,
         });
+        if (disposed || generation !== currentGeneration) return;
         if (
           typeof data.token !== "string" ||
           !/^[A-Za-z0-9_-]{43}$/.test(data.token) ||
           !Array.isArray(data.projects)
         )
           throw Error("Invalid pairing");
-        token = data.token;
-        expires = Date.parse(data.expiresAt);
-        projects = data.projects.filter(
+        const nextExpires = Date.parse(data.expiresAt);
+        const nextProjects = data.projects.filter(
           (v) => typeof v === "string" && /^[a-z0-9-]{1,40}$/.test(v),
         );
-        if (!Number.isFinite(expires) || expires <= clock())
+        if (!Number.isFinite(nextExpires) || nextExpires <= clock())
           throw Error("Expired pairing");
-        await context.secrets.store(
-          SECRET,
-          JSON.stringify({ token, expires, projects }),
-        );
+        await changeSecret(() => {
+          if (disposed || generation !== currentGeneration) return;
+          return context.secrets.store(
+            SECRET,
+            JSON.stringify({
+              token: data.token,
+              expires: nextExpires,
+              projects: nextProjects,
+            }),
+          );
+        });
+        if (disposed || generation !== currentGeneration) return;
+        token = data.token;
+        expires = nextExpires;
+        projects = nextProjects;
+        if (!projects.includes(project)) project = null;
         enabled = false;
         lastSharedEdit = 0;
+        lastObserved = 0;
         say("paired, paused");
         await api.window.showInformationMessage(
           "Paired. Enable editor activity in the private website controls, then choose Resume Sharing here.",
         );
       } catch {
+        if (disposed || generation !== currentGeneration) return;
         token = null;
         enabled = false;
         say("pairing failed");
@@ -149,28 +208,46 @@ function createCompanion(
       }
     },
     async resume() {
-      if (!token || expires <= clock()) {
+      if (disposed || forgetting || !token || expires <= clock()) {
         say("pairing required");
         return;
       }
+      generation++;
       enabled = true;
       lastEdit = 0;
       say("waiting for edit");
     },
     async pause() {
+      if (disposed || forgetting) return;
+      const currentGeneration = ++generation;
       enabled = false;
       lastEdit = 0;
+      say("paused");
       await send(false);
-      say("paused; public signal expires within two minutes if disconnected");
+      if (generation === currentGeneration)
+        say("paused; public signal expires within two minutes if disconnected");
     },
     async disconnect() {
+      if (disposed || forgetting) return;
+      forgetting = true;
+      generation++;
       enabled = false;
       lastEdit = 0;
+      say("forgetting pairing");
       await send(false);
       token = null;
       expires = 0;
-      await context.secrets.delete(SECRET);
-      say("pairing forgotten");
+      try {
+        await changeSecret(() => context.secrets.delete(SECRET));
+        say("pairing forgotten");
+      } catch {
+        say("pairing removal failed");
+        await api.window.showErrorMessage(
+          "Could not remove the saved pairing. Try Forget Pairing again.",
+        );
+      } finally {
+        forgetting = false;
+      }
     },
   };
   const subscriptions = Object.entries(actions).map(([name, fn]) =>
@@ -188,6 +265,7 @@ function createCompanion(
   const timer = setTimer(() => {
     if (!enabled) return;
     if (expires <= clock()) {
+      generation++;
       enabled = false;
       token = null;
       say("pairing expired");
@@ -209,8 +287,10 @@ function createCompanion(
     }
   }, 60000);
   async function restore() {
+    const currentGeneration = generation;
     try {
       const data = JSON.parse((await context.secrets.get(SECRET)) || "null");
+      if (disposed || generation !== currentGeneration) return;
       if (
         data &&
         typeof data.token === "string" &&
@@ -226,10 +306,12 @@ function createCompanion(
         say("paired, paused");
       }
     } catch {
-      say("pairing required");
+      if (generation === currentGeneration) say("pairing required");
     }
   }
   const dispose = () => {
+    disposed = true;
+    generation++;
     enabled = false;
     clearTimer(timer);
     for (const s of subscriptions) s.dispose();

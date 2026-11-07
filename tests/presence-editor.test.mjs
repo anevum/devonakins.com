@@ -21,6 +21,15 @@ function fixture(){
   return{raw,db,env,ctx,editor,owner,req,pair,hb,change,clock,advance(ms=60_000){time+=ms;}};
 }
 const hidden=async()=>Response.json({version:1,mode:'hidden'});
+test('a newer stop clears the real SQLite editor session even within the last edit millisecond',async()=>{
+  const f=fixture();const {token}=await f.pair();
+  await f.change('settings',{enabled:true,privateWork:false,shareListening:false,editorEnabled:true});
+  assert.equal((await f.hb(token)).status,200);
+  assert.equal((await f.hb(token,{active:false})).status,409,'an equal timestamp is a replay');
+  assert.equal((await f.hb(token,{active:false,observedAt:new Date(f.clock()+1).toISOString()})).status,200);
+  const state=await f.db.prepare('SELECT * FROM presence_state WHERE id=1').first();
+  assert.equal(state.session_source,null);assert.equal(state.session_until,0);assert.equal(state.project_slug,null);
+});
 test('editor routes stay disabled by default and pairing requires trusted owner plus Origin',async()=>{
   const f=fixture();const request=f.req('/api/presence/editor/pairing');
   assert.equal((await f.editor(request,{...f.env,PRESENCE_EDITOR_ENABLED:undefined},ctx)).status,404);

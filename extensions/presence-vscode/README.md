@@ -31,6 +31,12 @@ also removes the local token. Use **Disconnect editor** in the private website
 controls to revoke the server credential. **Stop all broadcasting** hides all
 signals and invalidates the editor pairing, including delayed requests.
 
+Version 0.1.1 waits for any in-flight heartbeat before sending a stop signal.
+Delayed responses cannot restore an active status after pause, pairing changes,
+or shutdown. Forget Pairing also orders credential deletion after any pending
+save, so an earlier pairing request cannot restore the forgotten credential.
+The website's Disconnect editor control remains the server-side revocation path.
+
 This companion requires a running VS Code session for new observed edits. Remote
 development from an iPhone uses the separate owner-declared session controls.
 Neither route requires a laptop to remain running for Spotify account playback.
