@@ -4,6 +4,7 @@ import { createListeningOwnerApi } from "./listening-owner-api.mjs";
 import {handleObservationRequest, OBSERVATION_READ_PATH, OBSERVATION_WRITE_PATH} from './gpt-observation-bridge.mjs';
 import {createPresenceOwnerApi, publicPresence, listeningDisclosure} from './presence-api.mjs';
 import {createPresenceEditorApi} from './presence-editor-api.mjs';
+import {createCloudPresenceApi, publicCloudPresence} from './cloud-presence-api.mjs';
 import {createListeningCollections} from './listening-collections.mjs';
 import {presenceResponse} from './spotify-presence.mjs';
 
@@ -27,6 +28,7 @@ export function createHandler(assets, release, options = {}) {
   const ownerApi = createListeningOwnerApi();
   const presenceOwnerApi = createPresenceOwnerApi({readListening:readDbPresence,clock: () => (options.now || (()=>new Date()))().getTime()});
   const editorApi = createPresenceEditorApi({clock:()=> (options.now || (()=>new Date()))().getTime()});
+  const cloudApi = createCloudPresenceApi({clock:()=> (options.now || (()=>new Date()))().getTime()});
   const collectionsApi = createListeningCollections({clock:()=> (options.now || (()=>new Date()))().getTime()});
   const now = options.now || (() => new Date());
   const githubFetch = options.githubFetch || fetch;
@@ -172,6 +174,8 @@ export function createHandler(assets, release, options = {}) {
       if (url.pathname === OBSERVATION_READ_PATH || url.pathname === OBSERVATION_WRITE_PATH)
         return handleObservationRequest(request, env, now(), securityHeaders);
       if(url.pathname.startsWith('/api/presence/editor/'))return secured(await editorApi(request,env,ctx));
+      if(url.pathname.startsWith('/api/presence/cloud/') || (url.pathname === '/api/presence/owner' && url.search === '?channel=cloud'))
+        return secured(await cloudApi(request,env,ctx));
       if(url.pathname==='/api/listening/admin/collections')return secured(await collectionsApi.owner(request,env,ctx));
       if (url.pathname === '/owner/presence' || url.pathname === '/owner/presence/' || url.pathname === '/api/presence/owner') {
         const result = await presenceOwnerApi(request, env, ctx);
@@ -214,6 +218,10 @@ export function createHandler(assets, release, options = {}) {
         if (request.method === 'HEAD') return new Response(null,{headers});
         const data=await publicPresence(env,readDbPresence,()=>now().getTime());
         return new Response(JSON.stringify(data),{headers});
+      }
+      if (url.pathname === '/api/presence/cloud') {
+        const headers={...securityHeaders,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','CDN-Cache-Control':'no-store'};
+        return new Response(request.method === 'HEAD' ? null : JSON.stringify(await publicCloudPresence(env,()=>now().getTime())),{headers});
       }
       if (url.pathname === "/_health")
         return new Response(
