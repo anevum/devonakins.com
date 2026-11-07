@@ -2,6 +2,8 @@
 
 # Devon Akins — personal website
 
+Cloud task presence: [private pairing, reporter, and disclosure contract](docs/CLOUD_PRESENCE.md).
+
 > **Public documentation note · November 4, 2026:** The source contains a public personal website and a manually maintained ChatGPT profile mirror. Screenshot-derived statistics are snapshots, not an authenticated live analytics feed. Deployment status must be verified against the actual Cloudflare Worker.
 
 [Website](https://devonakins.com) · [Current reviews](https://github.com/devonalanakins/devonakins.com/pulls)

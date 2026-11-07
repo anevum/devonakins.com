@@ -1,3 +1,4 @@
+import {startCloudPresence} from "./cloud-presence-client";
 // Public rendering only. This does not collect development activity.
 const labels: Record<string, string> = {
   "not-broadcasting": "Not broadcasting",
@@ -182,6 +183,7 @@ async function refresh() {
   }
 }
 export function startLivePresence() {
+  startCloudPresence();
   void refresh();
   const poll = window.setInterval(() => {
     void refresh();

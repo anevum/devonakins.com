@@ -5,6 +5,8 @@ let busy = false;
 let pending = 0;
 let operationSequence = 0;
 let confirmedStopOperation = 0;
+let cloudState = null;
+let cloudGeneration = 0;
 function notice(text) {
   el("presence-notice").textContent = text;
 }
@@ -14,6 +16,8 @@ function lock(value) {
   });
   if (!value && state && !state.publishingAllowed)
     el("presence-enabled").disabled = true;
+  if (!value && (!cloudState || !cloudState.publishingAllowed))
+    el("cloud-enabled").disabled = true;
   // Emergency stop stays available while a slower ordinary save is pending.
   if (state) el("presence-off").disabled = false;
 }
@@ -106,8 +110,16 @@ async function mutate(action, extra = {}) {
       throw new Error(data.error || "Change was not saved.");
     }
     const current = render(data);
-    if (current && action === "off")
+    if (current && action === "off") {
       confirmedStopOperation = Math.max(confirmedStopOperation, operation);
+      cloudGeneration++;
+      clearCloudCode();
+      cloudState = null;
+      el("cloud-preview").textContent =
+        "Task disconnected by Stop all broadcasting.";
+      el("cloud-confirmed").textContent = "No current task signal.";
+      el("cloud-enabled").checked = false;
+    }
     if (current && operation >= confirmedStopOperation)
       notice(
         action === "off"
@@ -214,3 +226,123 @@ async function editorPairing(method) {
 }
 el("editor-pair").onclick = () => editorPairing("POST");
 el("editor-unpair").onclick = () => editorPairing("DELETE");
+
+const cloudEndpoint = "/api/presence/owner?channel=cloud";
+function clearCloudCode() {
+  el("cloud-code-wrap").hidden = true;
+  el("cloud-pair-code").value = "";
+}
+function renderCloud(data) {
+  cloudState = data;
+  el("cloud-enabled").checked = data.enabled;
+  el("cloud-enabled").disabled = busy || !data.publishingAllowed;
+  const view = data.privatePreview;
+  const names = {
+    running: "Task running",
+    waiting: "Waiting for input",
+    completed: "Task completed",
+    failed: "Task failed",
+    cancelled: "Task cancelled",
+    unknown: "Signal expired — task state unknown",
+    "no-signal": "No current task signal",
+  };
+  const source =
+    view.source === "codex"
+      ? "Codex"
+      : view.source === "chatgpt-work"
+        ? "ChatGPT Work"
+        : null;
+  const fresh = view.expiresAt && Date.parse(view.expiresAt) > Date.now();
+  el("cloud-preview").textContent =
+    (view.expiresAt && !fresh
+      ? names.unknown
+      : names[view.state] || names["no-signal"]) +
+    (fresh && source ? " · " + source : "") +
+    (fresh && view.project ? " · " + view.project : "");
+  el("cloud-confirmed").textContent =
+    (view.asOf
+      ? "Last confirmed " + new Date(view.asOf).toLocaleTimeString() + ". "
+      : "") +
+    (fresh && view.checkpoint
+      ? "Task-reported checkpoint: " +
+        view.checkpoint.replaceAll("-", " ") +
+        ". "
+      : "") +
+    "Task reports are separate from verified test results and your own presence.";
+  el("cloud-notice").textContent = data.paired
+    ? "Task paired. Public sharing " +
+      (data.enabled && data.publishingAllowed
+        ? "selected; global visibility also applies."
+        : "off.")
+    : "No cloud task is connected.";
+}
+async function cloudRequest(method = "GET", body) {
+  if (busy && method !== "GET") return;
+  const generation = cloudGeneration;
+  if (method !== "GET") {
+    pending++;
+    busy = true;
+    lock(true);
+    clearCloudCode();
+  }
+  try {
+    const response = await fetch(cloudEndpoint, {
+      method,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    if (!response.headers.get("Content-Type")?.includes("application/json"))
+      throw Error("Reload and sign in to use cloud controls.");
+    const data = await response.json();
+    if (!response.ok)
+      throw Error(data.error || "Cloud connection unavailable.");
+    if (generation !== cloudGeneration) return;
+    if (data.pairCode) {
+      el("cloud-pair-code").value = data.pairCode;
+      el("cloud-code-wrap").hidden = false;
+      el("cloud-pair-code").focus();
+      el("cloud-pair-code").select();
+      const code = data.pairCode;
+      window.setTimeout(() => {
+        if (el("cloud-pair-code").value === code) clearCloudCode();
+      }, 300000);
+    }
+    if (method === "GET") renderCloud(data);
+    else await cloudRequest();
+  } catch (error) {
+    if (generation === cloudGeneration)
+      el("cloud-notice").textContent =
+        error.message || "Cloud connection unavailable.";
+  } finally {
+    if (method !== "GET") {
+      pending--;
+      busy = pending > 0;
+      lock(busy || !state);
+    }
+  }
+}
+el("cloud-pair").onclick = () =>
+  cloudRequest("POST", { action: "pair", source: el("cloud-source").value });
+el("cloud-disconnect").onclick = () => {
+  cloudGeneration++;
+  return cloudRequest("DELETE");
+};
+el("cloud-refresh").onclick = () => cloudRequest();
+el("cloud-save").onclick = () =>
+  cloudState &&
+  cloudRequest("POST", {
+    action: "settings",
+    enabled: el("cloud-enabled").checked,
+    revision: cloudState.revision,
+  });
+void cloudRequest();
+window.setInterval(() => {
+  if (cloudState) renderCloud(cloudState);
+  if (!document.hidden && !busy) void cloudRequest();
+}, 30000);

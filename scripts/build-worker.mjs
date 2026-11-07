@@ -67,6 +67,7 @@ for (const module of [
   "listening-owner-api", "listening-playback-probe", "listening-d1-presence",
   "presence-model", "presence-api", "presence-owner-page", "gpt-observation-bridge",
   "presence-preferences", "presence-editor-api",
+  "cloud-presence-model", "cloud-presence-api",
   "listening-collections",
 ]) {
   await writeFile(".release/" + module + ".mjs", await readFile("src/" + module + ".mjs"));

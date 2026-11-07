@@ -6,6 +6,7 @@ information, cookies, metrics, credentials or production endpoints.
 """
 import argparse
 import base64
+from datetime import datetime, timezone, timedelta
 import json
 import os
 import re
@@ -917,6 +918,21 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                     return
             route.fulfill(status=200,content_type="application/json",body=json.dumps(state))
         page.route("**/api/presence/owner",respond)
+        cloud = {"revision":0,"enabled":False,"publishingAllowed":False,"paired":False,
+            "privatePreview":{"state":"no-signal","source":None,"project":None,"asOf":None,"expiresAt":None,"checkpoint":None}}
+        cloud_writes = []
+        def cloud_respond(route):
+            if route.request.method == "POST":
+                data = route.request.post_data_json
+                cloud_writes.append(data)
+                if data["action"] == "pair":
+                    route.fulfill(status=200,content_type="application/json",body=json.dumps({"pairCode":"synthetic-cloud-pairing-code","expiresAt":"2099-01-01T00:00:00.000Z"}))
+                    return
+            if route.request.method == "DELETE":
+                cloud["paired"] = False
+                cloud["privatePreview"] = {"state":"no-signal","source":None,"project":None,"asOf":None,"expiresAt":None,"checkpoint":None}
+            route.fulfill(status=200,content_type="application/json",body=json.dumps(cloud))
+        page.route("**/api/presence/owner?channel=cloud",cloud_respond)
         try:
             page.route("**/owner/presence/",lambda route:route.fulfill(status=200,content_type="text/html; charset=utf-8",body=markup))
             page.goto(origin+"/owner/presence/",wait_until="load")
@@ -969,11 +985,78 @@ def check_presence_control(browser, engine, origin, output, axe_source):
                     runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}
                 })).violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))""")
                 assert not violations, (engine,width,violations)
+            assert page.locator("#cloud-enabled").is_disabled()
+            page.locator("#cloud-pair").click()
+            page.wait_for_function("!document.querySelector('#cloud-code-wrap').hidden")
+            assert page.locator("#cloud-pair-code").input_value() == "synthetic-cloud-pairing-code"
+            assert cloud_writes[-1] == {"action":"pair","source":"codex"}
+            now = datetime.now(timezone.utc)
+            stamp = lambda value: value.isoformat(timespec="milliseconds").replace("+00:00","Z")
+            cloud["paired"] = True
+            cloud["privatePreview"] = {"state":"running","source":"codex","project":"Mizvo","asOf":stamp(now),"expiresAt":stamp(now+timedelta(seconds=120)),"checkpoint":"testing"}
+            page.locator("#cloud-refresh").click()
+            page.wait_for_function("document.querySelector('#cloud-preview').textContent.includes('Task running')")
+            assert "Mizvo" in page.locator("#cloud-preview").inner_text()
+            assert "Task-reported checkpoint: testing" in page.locator("#cloud-confirmed").inner_text()
+            cloud["privatePreview"]["state"] = "unknown"
+            cloud["privatePreview"]["expiresAt"] = None
+            cloud["privatePreview"]["project"] = None
+            cloud["privatePreview"]["checkpoint"] = None
+            page.locator("#cloud-refresh").click()
+            page.wait_for_function("document.querySelector('#cloud-preview').textContent.includes('state unknown')")
+            page.locator("#cloud-disconnect").click()
+            page.wait_for_function("document.querySelector('#cloud-preview').textContent.includes('No current task signal')")
+            assert page.locator("#cloud-code-wrap").is_hidden()
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
             assert not errors,errors
             output.mkdir(parents=True,exist_ok=True)
             page.screenshot(path=str(output/f"presence-owner-{engine}-{width}.png"),full_page=True)
             results.append({"engine":engine,"viewport":[width,height],"presence_owner":"passed","axe":"passed" if axe_source else "not-run"})
             print(f"PASS presence-owner-{engine}-{width}: session, delayed success/error shutoff races, reflow, accessibility")
+        finally:
+            context.close()
+    return results
+
+
+def check_cloud_studio(browser, engine, origin, output, axe_source):
+    if not origin:
+        return []
+    results = []
+    for width,height in [(320,700),(390,844),(1440,900)]:
+        context = browser.new_context(viewport={"width":width,"height":height},reduced_motion="reduce")
+        context.route("**/*", lambda route: route.continue_() if route.request.url.startswith(origin) else route.abort())
+        page = context.new_page()
+        errors = []
+        page.on("pageerror",lambda error:errors.append(str(error)))
+        now = datetime.now(timezone.utc)
+        stamp = lambda value:value.isoformat(timespec="milliseconds").replace("+00:00","Z")
+        signal = {"version":1,"visibility":"public","state":"running","source":"codex","project":"Mizvo","checkpoint":"testing","asOf":stamp(now),"expiresAt":stamp(now+timedelta(seconds=120))}
+        page.route("**/api/presence/cloud",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(signal)))
+        try:
+            page.goto(origin+"/studio/",wait_until="load")
+            page.wait_for_function("document.querySelector('[data-cloud-presence]')?.textContent.includes('Task running')")
+            assert "Mizvo" in page.locator('[data-cloud-presence]').inner_text()
+            assert "Task-reported" in page.locator('[data-cloud-source]').inner_text()
+            assert "NOT BROADCASTING" == page.locator('#presence-ticker-label').inner_text()
+            # Expired evidence with an otherwise valid payload is unknown.
+            signal.update({"asOf":stamp(now-timedelta(seconds=125)),"expiresAt":stamp(now-timedelta(seconds=5))})
+            page.reload(wait_until="load")
+            page.wait_for_function("document.querySelector('[data-cloud-presence]').textContent === 'Task state unknown'")
+            assert "Mizvo" not in page.locator('[data-cloud-presence]').inner_text()
+            # Never render unexpected payload fields or private text.
+            signal["privateTitle"] = "PRIVATE_SENTINEL"
+            page.reload(wait_until="load")
+            page.wait_for_function("document.querySelector('[data-cloud-presence]').textContent === 'Not broadcasting'")
+            assert "PRIVATE_SENTINEL" not in page.locator('body').inner_text()
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+            if axe_source:
+                page.add_script_tag(content=axe_source)
+                violations=page.evaluate("""async()=> (await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})).violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))""")
+                assert not violations,(engine,width,violations)
+            assert not errors,errors
+            page.screenshot(path=str(output/f"cloud-studio-{engine}-{width}.png"),full_page=True)
+            results.append({"engine":engine,"viewport":[width,height],"cloud_studio":"passed","axe":"passed" if axe_source else "not-run"})
+            print(f"PASS cloud-studio-{engine}-{width}: separate task state, stale signal, strict projection, reflow, accessibility")
         finally:
             context.close()
     return results
@@ -1028,6 +1111,7 @@ def main():
                         check_owner_control(browser, name, origin, args.out, axe_source)
                     )
                     all_results.extend(check_presence_control(browser,name,origin,args.out,axe_source))
+                    all_results.extend(check_cloud_studio(browser,name,origin,args.out,axe_source))
                 finally:
                     browser.close()
     finally:
