@@ -32,6 +32,7 @@ const rows = async (statement) => (await statement.all()).results || [];
 const allowed = (s, o, at) =>
   s &&
   !s.revoked &&
+  ACTIVITY_SOURCES.includes(s.source) &&
   s.token_until > at &&
   s.generation === o?.editor_generation &&
   approvedProjects(o).includes(s.project_slug) &&
@@ -268,13 +269,26 @@ export function createActivityTasksApi({ clock = Date.now } = {}) {
         return ownerError("Reporter authentication required", 401);
       const hash = await digest(auth.slice(7));
       if (u.pathname === "/api/activity/tasks/start") {
-        if (!exactCloudKeys(data, ["version"]) || data.version !== 1)
+        if (
+          !(
+            exactCloudKeys(data, ["version"]) ||
+            (exactCloudKeys(data, ["version", "projectSlug"]) &&
+              typeof data.projectSlug === "string" &&
+              Object.hasOwn(PUBLIC_PRESENCE_PROJECTS, data.projectSlug))
+          ) ||
+          data.version !== 1
+        )
           return ownerError("Invalid start", 400);
         const s = await db
           .prepare("SELECT * FROM activity_sources WHERE token_hash=?")
           .bind(hash)
           .first();
         if (!allowed(s, o, at)) return ownerError("Source unavailable", 401);
+        if (
+          data.projectSlug !== undefined &&
+          data.projectSlug !== s.project_slug
+        )
+          return ownerError("Workspace project scope mismatch", 409);
         await db
           .prepare(
             "DELETE FROM activity_tasks WHERE token_until<=? OR revoked=1 OR EXISTS(SELECT 1 FROM activity_sources WHERE id=activity_tasks.source_id AND (revoked=1 OR generation<>?))",

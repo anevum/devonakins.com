@@ -10,3 +10,7 @@ test('participating wrapper emits only real execution checkpoints and final stat
 test('telemetry outage never prevents the real requested command from running',async()=>{
  let spawned=false;const child=new EventEmitter();const result=runParticipatingTask(['node','example.mjs'],{sourceToken:'S'.repeat(43),stdout:{write(){}},stderr:{write(){}},fetcher:async()=>new Response(null,{status:401}),spawnProcess:()=>{spawned=true;queueMicrotask(()=>child.emit('exit',7,null));return child;}});assert.equal(await result,7);assert.equal(spawned,true);
 });
+test('repository metadata maps only the owner catalog and unknown remotes never create a public task',async()=>{
+ const {projectFromRemote}=await import('../scripts/activity-run.mjs');assert.equal(projectFromRemote('git@github.com:devonalanakins/merit.git'),'merit');assert.equal(projectFromRemote('https://github.com/devonalanakins/rhen.git'),'rhen');assert.equal(projectFromRemote('https://github.com/devonalanakins/private-client.git'),null);assert.equal(projectFromRemote('https://attacker.test/devonalanakins/merit'),null);
+ const child=new EventEmitter();let calls=0;const result=runParticipatingTask(['npm','test'],{sourceToken:'S'.repeat(43),detectProject:()=>({available:true,projectSlug:null}),stdout:{write(){}},stderr:{write(){}},fetcher:async()=>{calls++;throw Error();},spawnProcess:()=>{queueMicrotask(()=>child.emit('exit',0,null));return child;}});assert.equal(await result,0);assert.equal(calls,0);
+});

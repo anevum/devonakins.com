@@ -1,9 +1,37 @@
 #!/usr/bin/env node
 /** Wrap real work once; no timer heartbeats and no command/output content leaves this process. */
-import { spawn } from "node:child_process";
+import { PUBLIC_REPOSITORIES } from "../src/activity-history.mjs";
+import { spawn, execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 const ORIGIN = "https://devonakins.com";
 const secret = (v) => typeof v === "string" && /^[A-Za-z0-9_-]{43}$/.test(v);
+export function projectFromRemote(remote) {
+  if (typeof remote !== "string") return null;
+  const match =
+    /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)devonalanakins\/([a-z0-9.-]+?)(?:\.git)?$/.exec(
+      remote.trim(),
+    );
+  return match && Object.hasOwn(PUBLIC_REPOSITORIES, match[1])
+    ? PUBLIC_REPOSITORIES[match[1]]
+    : null;
+}
+function repositoryProject() {
+  try {
+    const remote = execFileSync(
+      "git",
+      ["config", "--get", "remote.origin.url"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 2000,
+        maxBuffer: 4096,
+      },
+    );
+    return { available: true, projectSlug: projectFromRemote(remote) };
+  } catch {
+    return { available: false, projectSlug: null };
+  }
+}
 export async function activityRequest(path, body, token, fetcher = fetch) {
   if (!secret(token)) throw Error("A valid workspace credential is required.");
   const response = await fetcher(ORIGIN + path, {
@@ -29,6 +57,8 @@ export async function runParticipatingTask(
   command,
   {
     sourceToken = process.env.DEVON_ACTIVITY_SOURCE_TOKEN,
+    detectProject = repositoryProject,
+    sourceTokens = process.env.DEVON_ACTIVITY_SOURCE_TOKENS,
     fetcher = fetch,
     clock = Date.now,
     spawnProcess = spawn,
@@ -75,11 +105,37 @@ export async function runParticipatingTask(
     });
     return pending;
   };
+  let observedProject = { available: false, projectSlug: null };
+  try {
+    observedProject = detectProject();
+  } catch {
+    observedProject = { available: true, projectSlug: null };
+  }
+  if (observedProject.available && !observedProject.projectSlug)
+    sourceToken = null;
+  if (observedProject.projectSlug && sourceTokens) {
+    try {
+      const tokens = JSON.parse(sourceTokens);
+      sourceToken =
+        tokens &&
+        Object.hasOwn(tokens, observedProject.projectSlug) &&
+        secret(tokens[observedProject.projectSlug])
+          ? tokens[observedProject.projectSlug]
+          : null;
+    } catch {
+      sourceToken = null;
+    }
+  }
   if (sourceToken) {
     try {
       task = await activityRequest(
         "/api/activity/tasks/start",
-        { version: 1 },
+        {
+          version: 1,
+          ...(observedProject.available
+            ? { projectSlug: observedProject.projectSlug }
+            : {}),
+        },
         sourceToken,
         fetcher,
       );
@@ -98,7 +154,11 @@ export async function runParticipatingTask(
     shell: false,
     env: Object.fromEntries(
       Object.entries(process.env).filter(
-        ([key]) => key !== "DEVON_ACTIVITY_SOURCE_TOKEN",
+        ([key]) =>
+          ![
+            "DEVON_ACTIVITY_SOURCE_TOKEN",
+            "DEVON_ACTIVITY_SOURCE_TOKENS",
+          ].includes(key),
       ),
     ),
   });

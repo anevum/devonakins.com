@@ -104,8 +104,8 @@
 }
 .signal-spotify-logo {
   object-fit: contain;
-  width: 64px;
-  height: 19px;
+  width: 70px;
+  height: 21px;
 }
 .signal-gpt strong {
   color: #c3b5d3;
@@ -403,7 +403,7 @@ progress[data-playback-progress]::-moz-progress-bar {
     max-width: 115px;
   }
   .soundtrack-ticker img {
-    width: 45px;
+    width: 70px;
   }
   .statusbar {
     gap: 8px;
@@ -646,5 +646,18 @@ progress[data-playback-progress]::-moz-progress-bar {
 @media (max-width: 360px) and (max-height: 640px) {
   .hero-panel h1 {
     font-size: 38px;
+  }
+}
+
+.signal-spotify-logo,
+.soundtrack-ticker img {
+  width: 70px;
+  height: 21px;
+  min-width: 70px;
+  object-fit: contain;
+}
+@media (min-width: 961px) {
+  .signal-art img {
+    border-radius: 8px;
   }
 }

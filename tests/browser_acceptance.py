@@ -968,6 +968,7 @@ def check_live_signal_v4(browser,engine,origin,output,axe_source):
             page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'Merit'")
             assert page.locator('[data-signal-track]').inner_text()=='Synthetic QA soundtrack'
             assert page.locator('[data-signal-gpt]').inner_text()=='—'
+            assert page.locator('.signal-spotify-logo').bounding_box()['width']>=70, 'Spotify logo below official minimum size'
             for selector in ['[data-signal-work]','[data-signal-track]','[data-signal-gpt]']:
                 assert page.locator(selector).evaluate("el=>{const b=el.getBoundingClientRect();return b.width>0&&b.top>=0&&b.bottom<=innerHeight}"),(engine,width,selector)
             assert page.locator('[data-motion-feed] li').count()==3

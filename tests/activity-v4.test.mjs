@@ -96,3 +96,7 @@ test('actual Worker V4 route has bounded hidden defaults, no-store, HEAD and own
  const r=await request('/api/activity/v4');assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'no-store');assert.equal(r.headers.get('CDN-Cache-Control'),'no-store');const data=await r.json();assert.equal(data.version,4);assert.equal(data.gpt.count,null);assert.equal(data.spotify.mode,'hidden');assert.equal(data.work.visibility,'hidden');assert.deepEqual(data.remote.tasks,[]);
  assert.equal(await(await request('/api/activity/v4','HEAD')).text(),'');assert.equal((await request('/api/activity/v4','POST')).status,405);assert.notEqual((await request('/api/presence/owner?channel=tasks')).status,200);
 });
+test('a repository switch cannot report under a differently scoped workspace source',async()=>{
+ const f=fixture(),s=await f.source('merit');const r=await f.api(f.req('/api/activity/tasks/start','POST',{version:1,projectSlug:'rhen'},s.token),f.env);assert.equal(r.status,409);assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM activity_tasks').get().n,0);
+ const good=await f.api(f.req('/api/activity/tasks/start','POST',{version:1,projectSlug:'merit'},s.token),f.env);assert.equal(good.status,200);
+});
