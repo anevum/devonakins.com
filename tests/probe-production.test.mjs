@@ -11,6 +11,12 @@ const origin = 'https://devonakins.com';
 const fixtures = {
   '/_health': { code: 200, type: 'application/json', body: JSON.stringify({ site: 'devonakins.com', version: '1.2.4', commit: expectedCommit }) },
   '/': { code: 200, type: 'text/html', body: '<a href="/work/merit/">Merit</a><a href="/work/rhen-language/">Rhen</a>' },
+  '/api/presence/cloud': { code: 200, type: 'application/json', cache: 'no-store', cdnCache: 'no-store', body: JSON.stringify({
+    version: 1, visibility: 'hidden', state: 'not-broadcasting',
+    source: null, project: null, checkpoint: null, asOf: null, expiresAt: null,
+  }) },
+  '/studio/': { code: 200, type: 'text/html', body: '<main data-live-presence><p data-cloud-presence></p><p data-cloud-source></p></main>' },
+  '/api/presence/owner?channel=cloud': { code: 403, type: 'application/json', body: '{"error":"Owner authentication required"}' },
   '/work/merit/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/merit/">Merit' },
   '/work/rhen-language/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/rhen-language/">Rhen is not a released compiler' },
   '/work/rhen/': { code: 200, type: 'text/html', body: '<link rel="canonical" href="https://devonakins.com/work/rhen/">Vesper Legacy — Market Research' },
@@ -30,6 +36,8 @@ function mock(overrides = {}) {
       status: x.code,
       headers: {
         ...(x.type ? { 'content-type': x.type } : {}),
+        ...(x.cache ? { 'cache-control': x.cache } : {}),
+        ...(x.cdnCache ? { 'cdn-cache-control': x.cdnCache } : {}),
         ...(x.redirect ? { location: x.redirect } : {}),
         ...(url === origin + '/' ? { 'content-security-policy': "default-src 'self'", 'x-content-type-options': 'nosniff' } : {}),
       },
@@ -41,8 +49,8 @@ test('fixed-origin observations validate health, home, canonical pages and query
   const { fetchImpl, seen } = mock();
   const result = await probeProduction({ fetchImpl, expectedCommit });
   assert.equal(result.observation, 'LIVE_HTTP_VERIFIED');
-  assert.equal(result.checks.length, 7);
-  assert.equal(seen.length, 7);
+  assert.equal(result.checks.length, 10);
+  assert.equal(seen.length, 10);
 });
 test('reject stale deployment source commit', async () => {
   const { fetchImpl } = mock();
@@ -93,4 +101,34 @@ test('source ancestry checks require exact known committed SHA', () => {
   assert.equal(verifySourceAncestry(expectedCommit, 'HEAD', run), true);
   assert.deepEqual(calls.map(x => x[1][0]), ['cat-file', 'merge-base']);
   assert.throws(() => verifySourceAncestry('invalid', 'HEAD', run));
+});
+
+test('fail closed when production cloud disclosure is public, malformed or cacheable', async () => {
+  const base = fixtures['/api/presence/cloud'];
+  for (const bad of [
+    { ...base, body: JSON.stringify({ version: 1, visibility: 'public', state: 'running', source: 'codex', project: 'Mizvo', checkpoint: null, asOf: null, expiresAt: null }) },
+    { ...base, body: JSON.stringify({ ...JSON.parse(base.body), internalTaskTitle: 'private' }) },
+    { ...base, body: 'not-json' },
+    { ...base, cache: 'public, max-age=180' },
+    { ...base, cdnCache: '' },
+  ]) {
+    await assert.rejects(
+      probeProduction({ fetchImpl: mock({ '/api/presence/cloud': bad }).fetchImpl, expectedCommit }),
+      /cloud-task disclosure|bounded JSON|must never be cached/i,
+    );
+  }
+});
+test('unauthenticated owner access and separate Studio evidence are mandatory', async () => {
+  const ownerPath = '/api/presence/owner?channel=cloud';
+  await assert.rejects(
+    probeProduction({ fetchImpl: mock({ [ownerPath]: { code: 200, type: 'application/json', body: '{"paired":true}' } }).fetchImpl, expectedCommit }),
+    /Unauthenticated cloud owner controls/,
+  );
+  await assert.rejects(
+    probeProduction({ fetchImpl: mock({ '/studio/': { code: 200, type: 'text/html', body: 'Studio' } }).fetchImpl, expectedCommit }),
+    /distinguish human presence/,
+  );
+  const redirect = { code: 302, type: 'text/html', body: '<html>Cloudflare Access</html>' };
+  const result = await probeProduction({ fetchImpl: mock({ [ownerPath]: redirect }).fetchImpl, expectedCommit });
+  assert.equal(result.checks.find((x) => x.path === ownerPath)?.status, 302);
 });
