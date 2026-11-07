@@ -48,6 +48,48 @@ export async function probeProduction({ fetchImpl = fetch, expectedCommit = null
   for (const href of ['/work/merit/', '/work/rhen-language/']) {
     assert.ok(home.includes(`href="${href}"`), `homepage missing ${href}`);
   }
+  // Production privacy contract: there is no public cloud-task signal
+  // until a separately approved release and explicit owner opt-ins.
+  const cloudResponse = await request('/api/presence/cloud', 200, /application\/json/i);
+  for (const name of ['cache-control', 'cdn-cache-control']) {
+    assert.match(cloudResponse.headers.get(name) || '', /\bno-store\b/i,
+      'Public cloud-task response must never be cached');
+  }
+  let cloud;
+  try {
+    cloud = JSON.parse(await boundedText(cloudResponse, 2048));
+  } catch {
+    // Never print an unexpected body; it could contain private task material.
+    throw new Error('Cloud projection is not valid bounded JSON');
+  }
+  const hiddenCloud = {
+    version: 1, visibility: 'hidden', state: 'not-broadcasting',
+    source: null, project: null, checkpoint: null, asOf: null, expiresAt: null,
+  };
+  if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud) ||
+      Object.keys(cloud).length !== Object.keys(hiddenCloud).length ||
+      !Object.entries(hiddenCloud).every(([key, value]) =>
+        Object.hasOwn(cloud, key) && cloud[key] === value)) {
+    throw new Error('Public cloud-task disclosure is not hidden; review release gates');
+  }
+
+  const studioResponse = await request('/studio/', 200, /text\/html/i);
+  const studio = await boundedText(studioResponse);
+  assert.ok(studio.includes('data-live-presence') &&
+    studio.includes('data-cloud-presence') &&
+    studio.includes('data-cloud-source'),
+    'Public Studio must distinguish human presence from task-reported work');
+
+  // No cookie, Access token or OAuth credential is supplied. A provider login
+  // redirect or a Worker refusal is acceptable; exposing owner JSON is not.
+  const ownerPath = '/api/presence/owner?channel=cloud';
+  const ownerResponse = await fetchImpl(ORIGIN + ownerPath, {
+    redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(15000),
+  });
+  assert.ok([302, 303, 307, 308, 401, 403, 404].includes(ownerResponse.status),
+    'Unauthenticated cloud owner controls must refuse access');
+  results.push({ path: ownerPath, status: ownerResponse.status });
+
   for (const [path, marker] of [
     ['/work/merit/', /Merit/],
     ['/work/rhen-language/', /Rhen/],
