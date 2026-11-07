@@ -93,44 +93,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             page.locator("#panel-home").wait_for(state="visible")
             assert page.locator("#home-usage-value").count() == 0, "redundant homepage statistic remains"
             assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
-            if origin:
-                page.wait_for_function("""() => {
-                    const value = document.querySelector('#usage-value');
-                    const status = document.querySelector('#usage-status');
-                    return value?.textContent?.trim() === '≈2.7B' &&
-                        status?.textContent?.includes('25D STREAK') &&
-                        status?.textContent?.includes('314.2M PEAK');
-                }""")
-                assert page.locator("#usage-date").inner_text().startswith(
-                    "NOV 04, 2026"
-                ), "dated snapshot missing from bottom stream"
-                if (width, height) == (390, 844):
-                    # Falsification: malformed snapshots clear the ONLY stream value;
-                    # returning to a valid snapshot restores it.
-                    snapshot_url = "**/v2/usage-snapshot.json"
-                    page.route(snapshot_url, lambda route: route.fulfill(
-                        status=200, content_type="application/json",
-                        body='{"version":1,"count":-1}'
-                    ))
-                    page.evaluate("document.getElementById('refresh-usage').click()")
-                    page.wait_for_function("""() =>
-                      document.querySelector('#usage-value')?.textContent?.trim() === '—' &&
-                      document.querySelector('#usage-status')?.textContent?.includes('SNAPSHOT UNAVAILABLE')
-                    """)
-                    page.unroute(snapshot_url)
-                    page.evaluate("document.getElementById('refresh-usage').click()")
-                    page.wait_for_function("""() =>
-                      document.querySelector('#usage-value')?.textContent?.trim() === '≈2.7B'
-                    """)
-            else:
-                assert page.locator("#usage-value").inner_text().strip() == "—"
-            if (width, height) in [(390, 700), (390, 844), (1440, 900)]:
-                for selector in ["#usage-value", ".telemetry-profile-link"]:
-                    assert page.locator(selector).evaluate("""el => {
-                      const box = el.getBoundingClientRect();
-                      return box.width > 0 && box.height > 0 &&
-                        box.top >= 0 && box.bottom <= innerHeight;
-                    }"""), "GPT stream element not in initial viewport: " + selector
+            assert page.locator("#usage-value").inner_text().strip() == "—"
+            assert page.locator("#usage-status").inner_text() == "No connected usage source"
+            for selector in ["[data-signal-work]", "[data-signal-track]", "[data-signal-gpt]"]:
+                assert page.locator(selector).evaluate("""el => {const b=el.getBoundingClientRect();return b.width>0 && b.height>0 && b.top>=0 && b.bottom<=innerHeight;}"""), (label,selector)
             assert page.locator(".portrait-figure").evaluate(
                 "el => el.complete && el.naturalWidth > 0"
             ), "portrait failed to decode"
@@ -212,83 +178,11 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "horizontal" if width <= 960 else "vertical"
                 ), observed
 
-            # Detect Safari-style stale CSS: these links must be actual flex cards,
-            # never raw underlined text after an HTML-only update.
-            cards = page.locator(".hero-feature-link")
-            card_style = cards.first.evaluate("""el => {
-              const style = getComputedStyle(el);
-              return {display: style.display, decoration: style.textDecorationLine,
-                      border: parseFloat(style.borderTopWidth)};
-            }""")
-            assert card_style["display"] == "grid" and card_style["decoration"] == "none", (
-                label, "Unstyled project link", card_style
-            )
-            assert card_style["border"] >= 1, (label, "Project card border missing", card_style)
-            profile_style = page.locator(".telemetry-profile-link").evaluate("""el => {
-              const style = getComputedStyle(el);
-              return {display: style.display, decoration: style.textDecorationLine,
-                      border: parseFloat(style.borderTopWidth)};
-            }""")
-            # CSS grid blockifies inline-flex into flex; either is correct.
-            assert profile_style["display"] in ["flex", "inline-flex"], (label, profile_style)
-            assert page.locator(".telemetry-profile-label").inner_text() == "View profile"
-            assert page.locator(".telemetry-profile-link").get_attribute("aria-label") == "View profile — full GPT activity and skills"
-            assert profile_style["decoration"] == "none" and profile_style["border"] >= 1, (
-                label, "GPT profile action has stale/missing styles", profile_style
-            )
-            # Retain Merit/Rhen language highlights and use the Observatory as the only
-            # ChatGPT activity stream.
-            featured = page.locator(".hero-feature")
-            assert featured.is_visible(), "Merit/Rhen language highlights not visible"
-            assert page.locator(".hero-feature-link").count() == 2
-            assert page.locator(".focus-heading h2").inner_text() == "Active development"
-            assert page.locator(".focus-project-state").all_inner_texts() == ["Active", "Research"]
-            assert page.locator(".focus-project-state").first.evaluate(
-                "el => ['inline-flex', 'flex'].includes(getComputedStyle(el).display)"
-            ), "Project status must retain its inline indicator layout"
-            assert "ACTIVE ENGINEERING" not in featured.inner_text()
-            assert "LANGUAGE RESEARCH / PROPOSED" not in featured.inner_text()
-            assert page.locator(".hero-feature-link").nth(0).get_attribute("href") == "/work/merit/"
-            assert page.locator(".hero-feature-link").nth(1).get_attribute("href") == "/work/rhen-language/"
-            assert page.locator(".hero-usage").count() == 0
-            check_overflow("home")
-            # On normal portrait-phone and desktop viewports the featured project
-            # cards must be in the initial panel viewport, not clipped below it.
-            if (width, height) in [(390, 700), (390, 844), (1440, 900)]:
-                # Desktop stays above the fold. Phones may scroll their content
-                # panel, but the cards must be reachable without nav overlap.
-                if width <= 460:
-                    # Compact portrait cards stack to prevent unreadable tiny labels.
-                    assert page.locator(".focus-grid").evaluate(
-                        "el => getComputedStyle(el).gridTemplateColumns.split(' ').length === 1"
-                    ), "Mobile cards must be in a single column"
-                    featured.scroll_into_view_if_needed()
-                # The outer feature wrapper may end exactly at the scroll
-                # boundary while its last visible card still has safe clearance.
-                # Measure the painted card, not the invisible wrapper margin.
-                feature_box = featured.bounding_box()
-                last_card = page.locator(".hero-feature-link").last.bounding_box()
-                panel_box = page.locator("#panel-home").bounding_box()
-                assert feature_box and panel_box and last_card
-                assert feature_box["y"] >= panel_box["y"] - 1, (label, feature_box, panel_box)
-                assert (last_card["y"] + last_card["height"]
-                        <= panel_box["y"] + panel_box["height"] + 1), (
-                    label, "Last Merit/Rhen language card clipped by fixed navigation", last_card, panel_box
-                )
-            if width <= 960:
-                # The GPT stream and navigation remain in their dedicated rows.
-                positions = page.evaluate("""() => {
-                  const nav = document.querySelector('.rail').getBoundingClientRect();
-                  const feed = document.querySelector('.telemetry').getBoundingClientRect();
-                  const link = document.querySelector('.telemetry-profile-link').getBoundingClientRect();
-                  return {navBottom: nav.bottom, feedTop: feed.top, feedBottom: feed.bottom,
-                          linkTop: link.top, linkBottom: link.bottom,
-                          linkRight: link.right, viewport: innerWidth};
-                }""")
-                assert positions["navBottom"] <= positions["feedTop"] + 2, (label, positions)
-                assert positions["linkTop"] >= positions["feedTop"] - 1, (label, positions)
-                assert positions["linkBottom"] <= positions["feedBottom"] + 1, (label, positions)
-                assert positions["linkRight"] <= positions["viewport"] + 1, (label, positions)
+            assert page.locator('.in-motion').is_visible()
+            assert page.locator('.hero-feature-link').count() == 0
+            assert page.locator('.motion-heading h2').inner_text() == 'In motion.'
+            assert page.locator('.live-signal').evaluate("el=>getComputedStyle(el).display") == 'grid'
+            check_overflow('home')
             mobile = width <= 960
             light = page.locator("#mobile-light" if mobile else "#shift-light")
             assert light.is_visible(), "portrait lighting control missing"
@@ -341,7 +235,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
             assert page.locator("#listening-track-title").is_visible()
             assert page.locator("#tab-listening").get_attribute("aria-selected") == "true"
             if origin and (width, height) in [(390, 844), (1440, 900)]:
-                presence_path = "**/api/listening/now"
+                presence_path = "**/api/activity/v4"
                 live_body = json.dumps({
                     "version": 1,
                     "mode": "playing",
@@ -354,7 +248,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     },
                 })
                 page.route(presence_path, lambda route: route.fulfill(
-                    status=200, content_type="application/json", body=live_body
+                    status=200, content_type="application/json", body=json.dumps({"version":4,"asOf":page.evaluate("new Date().toISOString()"),"spotify":json.loads(live_body)})
                 ))
                 page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
                 page.wait_for_function("""() =>
@@ -368,7 +262,7 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                 page.unroute(presence_path)
                 page.route(presence_path, lambda route: route.fulfill(
                     status=200, content_type="application/json",
-                    body='{"version":1,"mode":"hidden","detailsVisible":false}'
+                    body=json.dumps({"version":4,"asOf":page.evaluate("new Date().toISOString()"),"spotify":{"version":1,"mode":"hidden","detailsVisible":False}})
                 ))
                 page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
                 page.wait_for_function("""() =>
@@ -438,17 +332,10 @@ def check(browser, engine, html, css, script, axe_source, output, origin):
                     "el => el.complete && el.naturalWidth > 0"
                 ), "canonical homepage portrait failed to decode"
                 check_overflow("canonical-home")
-                assert page.locator(".hero-feature").is_visible(), "canonical Merit/Rhen language missing"
-                assert page.locator(".focus-project-copy").count() == 2
-                assert page.locator(".hero-usage").count() == 0, "duplicate hero metric"
-                assert page.locator(".telemetry-profile-link").get_attribute("href") == "/gpt/"
-                page.wait_for_function(
-                    """() => document.querySelector('#usage-value')?.textContent?.trim() === '≈2.7B'""",
-                    timeout=7000,
-                )
-                assert "25D STREAK" in page.locator("#usage-status").inner_text()
-                assert "314.2M PEAK" in page.locator("#usage-status").inner_text()
-                assert page.locator("#usage-date").inner_text().startswith("NOV 04, 2026")
+                assert page.locator('.in-motion').is_visible()
+                assert page.locator('[data-signal-gpt]').inner_text() == '—'
+                assert page.locator('#usage-value').inner_text() == '—'
+                assert 'No connected usage source' in page.locator('#usage-status').inner_text()
                 report = page.request.get(origin + "/v2/usage-snapshot.json")
                 assert report.status == 200, "snapshot endpoint failed"
                 assert "application/json" in report.headers.get("content-type", "")
@@ -1062,6 +949,74 @@ def check_cloud_studio(browser, engine, origin, output, axe_source):
     return results
 
 
+def check_live_signal_v4(browser,engine,origin,output,axe_source):
+    if not origin:
+        return []
+    results=[]
+    for width,height in [(320,568),(390,844),(844,320),(768,1024),(1440,900),(1200,700)]:
+        context=browser.new_context(viewport={"width":width,"height":height},reduced_motion="reduce")
+        page=context.new_page()
+        errors=[]
+        page.on('pageerror',lambda e:errors.append(str(e)))
+        now=datetime.now(timezone.utc)
+        iso=lambda delta=0:(now+timedelta(seconds=delta)).isoformat(timespec='milliseconds').replace('+00:00','Z')
+        task=lambda id,project:{"id":id,"source":"codex","project":project,"state":"running","checkpoint":"testing","asOf":iso(),"expiresAt":iso(120)}
+        fixture={"version":4,"asOf":iso(),"work":{"version":1,"visibility":"public","state":"developing","source":"editor-heartbeat","project":"Merit","asOf":iso()},"remote":{"version":1,"visibility":"public","tasks":[task('a','Rhen'),task('b','Mizvo')]},"legacy":None,"spotify":{"version":1,"mode":"playing","detailsVisible":True,"updatedAt":iso(),"playback":{"durationMs":180000,"progressMs":1000},"track":{"title":"Synthetic QA soundtrack","artist":"Synthetic QA artist","url":"https://open.spotify.com/track/1234567890123456789012","image":None}},"recent":[]}
+        page.route('**/api/activity/v4',lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps(fixture)))
+        try:
+            page.goto(origin+'/',wait_until='load')
+            page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'Merit'")
+            assert page.locator('[data-signal-track]').inner_text()=='Synthetic QA soundtrack'
+            assert page.locator('[data-signal-gpt]').inner_text()=='—'
+            assert page.locator('.signal-spotify-logo').bounding_box()['width']>=70, 'Spotify logo below official minimum size'
+            for selector in ['[data-signal-work]','[data-signal-track]','[data-signal-gpt]']:
+                assert page.locator(selector).evaluate("el=>{const b=el.getBoundingClientRect();return b.width>0&&b.top>=0&&b.bottom<=innerHeight}"),(engine,width,selector)
+            assert page.locator('[data-motion-feed] li').count()==3
+            if width==320:
+                assert page.locator('[data-motion-feed]').evaluate("el=>{const p=document.querySelector('#panel-home').getBoundingClientRect(),b=el.getBoundingClientRect();return b.top>=p.top&&b.bottom<=p.bottom+1}"),'320px feed clipped by navigation'
+            refresh=lambda:page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+            fixture['work']['asOf']=iso(-121)
+            fixture['remote']['tasks'][0]['state']='completed'
+            refresh()
+            page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'Mizvo'")
+            assert 'Codex task' in page.locator('[data-signal-work-detail]').inner_text()
+            fixture['remote']['tasks'][1]['asOf']=iso(-121)
+            fixture['remote']['tasks'][1]['expiresAt']=iso(-1)
+            refresh()
+            # visibilitychange intentionally clears old evidence before the request;
+            # await the refreshed work AND soundtrack, not the transient quiet frame.
+            page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'No current work' && document.querySelector('[data-signal-track]').textContent === 'Synthetic QA soundtrack'")
+            assert page.locator('[data-signal-track]').inner_text()=='Synthetic QA soundtrack','music stopped when work stopped'
+            fixture['recent']=[{"project":"DevonStation","projectSlug":"devonstation","kind":"Commit","at":iso(),"url":"https://github.com/devonalanakins/devon-station"}]
+            refresh()
+            history_link=page.locator('[data-motion-feed] a')
+            history_link.wait_for(state='visible')
+            history_link.focus()
+            page.wait_for_timeout(1200)
+            assert history_link.evaluate('el=>document.activeElement===el'),'age updates stole keyboard focus'
+            fixture['spotify']['updatedAt']=iso(-121)
+            refresh()
+            page.wait_for_function("document.querySelector('[data-signal-track]').textContent === 'Playback unavailable'")
+            assert page.locator('.signal-track-copy progress').is_hidden()
+            fixture['spotify']={"version":1,"mode":"off_air","detailsVisible":False,"updatedAt":iso()}
+            refresh()
+            page.wait_for_function("document.querySelector('[data-signal-track]').textContent === 'No active playback'")
+            fixture['spotify']={"version":1,"mode":"hidden","detailsVisible":False}
+            fixture['remote']={"version":1,"visibility":"hidden","tasks":[]}
+            fixture['work']={"version":1,"visibility":"hidden","state":"not-broadcasting","source":"none","project":None,"asOf":None}
+            refresh()
+            page.wait_for_function("document.querySelector('[data-signal-track]').textContent === 'Listening privately'")
+            assert not errors,errors
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth+1')
+            output.mkdir(parents=True,exist_ok=True)
+            page.screenshot(path=str(output/f'live-signal-{engine}-{width}.png'))
+            results.append({"engine":engine,"viewport":[width,height],"v4":"passed","scope":"synthetic provider fixtures"})
+            print(f'PASS live-signal-{engine}-{width}: first viewport, concurrent tasks, completion, expiry, independent playback and privacy')
+        finally:
+            context.close()
+    return results
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=Path("dist"))
@@ -1112,6 +1067,7 @@ def main():
                     )
                     all_results.extend(check_presence_control(browser,name,origin,args.out,axe_source))
                     all_results.extend(check_cloud_studio(browser,name,origin,args.out,axe_source))
+                    all_results.extend(check_live_signal_v4(browser,name,origin,args.out,axe_source))
                 finally:
                     browser.close()
     finally:

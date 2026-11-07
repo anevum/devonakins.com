@@ -31,6 +31,10 @@ export function projectPlayback(payload, showDetails, checkedAt) {
     return base;
 
   const item = payload.item;
+  const duration=Number.isSafeInteger(item.duration_ms) && item.duration_ms>0 && item.duration_ms<=86400000 ? item.duration_ms : null;
+  const progress=Number.isSafeInteger(payload.progress_ms) && payload.progress_ms>=0 && duration!==null && payload.progress_ms<=duration ? payload.progress_ms : null;
+  const playback=progress!==null ? {progressMs:progress,durationMs:duration} : null;
+
   if (!trackIdPattern.test(item.id || "")) return base;
   if (!showDetails) return { ...base, mode: "playing" };
 
@@ -46,6 +50,7 @@ export function projectPlayback(payload, showDetails, checkedAt) {
   return {
     ...base,
     mode: "playing",
+    ...(playback ? {playback} : {}),
     detailsVisible: true,
     track: {
       title,

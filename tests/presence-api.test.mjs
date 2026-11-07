@@ -87,14 +87,14 @@ test('real SQLite state supports session, pause, resume, 15-minute expiration an
   f.advance();assert.equal((await f.write('end')).status,200);
   assert.equal((await publicPresence(f.env,hidden,f.clock)).state,'offline');
 });
-test('music is independent; private mode hides all sources and private status expires',async()=>{
+test('music is independent; private mode hides all sources until owner explicitly clears it',async()=>{
   const f=fixture();await activate(f);
   let calls=0;const music=async()=>{calls++;return Response.json({version:1,mode:'playing',updatedAt:new Date(f.clock()).toISOString()});};
   assert.equal((await publicPresence(f.env,music,f.clock)).state,'in-the-zone');
   f.advance();await f.write('settings',{enabled:true,privateWork:true,shareListening:true});
   const state=await publicPresence(f.env,music,f.clock);assert.equal(state.state,'working-privately');assert.equal(state.project,null);
   assert.equal(calls,1);assert.equal((await listeningDisclosure(f.env)).allowed,false);
-  f.advance(16*60_000);assert.equal((await publicPresence(f.env,music,f.clock)).state,'idle');
+  f.advance(16*60_000);assert.equal((await publicPresence(f.env,music,f.clock)).state,'working-privately');
 });
 test('manual family/sleep states are explicit and expire without restoring old sessions',async()=>{
   const f=fixture();await activate(f);f.advance();

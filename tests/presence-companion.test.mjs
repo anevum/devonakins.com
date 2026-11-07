@@ -22,7 +22,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 const settle = () => new Promise((resolve) => setImmediate(resolve));
-function companion({ transport, readSecret, storeSecret, deleteSecret } = {}) {
+function companion({ transport, readSecret, storeSecret, deleteSecret, globals = new Map() } = {}) {
   let edit;
   let disposed = false;
   const secretValues = new Map();
@@ -77,7 +77,7 @@ function companion({ transport, readSecret, storeSecret, deleteSecret } = {}) {
         secretValues.delete(name);
       },
     },
-    globalState: { get() {}, async update() {} },
+    globalState: { get(name) {return globals.get(name);}, async update(name,value) {globals.set(name,value);} },
   };
   const sandbox = {
     require: () => api,
@@ -283,4 +283,14 @@ test("credential deletion failure is visible and Forget Pairing can be retried",
   assert.equal(f.secretValues.has(key), false);
   assert.match(f.texts.at(-1), /pairing forgotten/);
   f.client.dispose();
+});
+
+
+test("explicit sharing consent survives restart; pause persists and startup never invents an edit",async()=>{
+ const globals=new Map([["sharingEnabled",true]]);
+ const saved=JSON.stringify({token:"T".repeat(43),expires:start+3600000,projects:[]});
+ const first=companion({globals,readSecret:async()=>saved});await first.client.ready;
+ assert.equal(first.signals.length,0);first.edit();await settle();assert.equal(first.signals[0].active,true);
+ await first.client.actions.pause();assert.equal(globals.get("sharingEnabled"),false);first.client.dispose();
+ const second=companion({globals,readSecret:async()=>saved});await second.client.ready;second.edit();await settle();assert.equal(second.signals.length,0);second.client.dispose();
 });

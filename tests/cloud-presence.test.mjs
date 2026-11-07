@@ -373,7 +373,7 @@ test("strict signals reject extra fields, private titles/paths, unknown projects
     "terminal events bypass cooldown",
   );
 });
-test("concurrent out-of-order events cannot overwrite a newer checkpoint", async () => {
+test("concurrent checkpoints have one CAS winner and rejected newer events can retry without allowing replay", async () => {
   const f = fixture();
   const { token } = await f.pair();
   assert.equal((await f.signal(token)).status, 200);
@@ -383,10 +383,15 @@ test("concurrent out-of-order events cannot overwrite a newer checkpoint", async
     f.signal(token, { sequence: 2, checkpoint: "testing" }),
   ]);
   assert.deepEqual(responses.map((r) => r.status).sort(), [200, 409]);
-  assert.equal(
-    f.sql.prepare("SELECT sequence FROM presence_cloud").get().sequence,
-    3,
-  );
+  const winner = responses[0].status===200 ? 3 : 2;
+  assert.equal(f.sql.prepare("SELECT sequence FROM presence_cloud").get().sequence,winner);
+  if(winner===2){
+    f.advance();
+    assert.equal((await f.signal(token,{sequence:3,checkpoint:"reviewing"})).status,200);
+  }
+  f.advance();
+  assert.equal((await f.signal(token,{sequence:2,checkpoint:"testing"})).status,409);
+  assert.equal(f.sql.prepare("SELECT sequence FROM presence_cloud").get().sequence,3);
 });
 test("master stop, disconnect and pairing rotation revoke tokens; re-enabling public sharing cannot resurrect old signals", async () => {
   const f = fixture();

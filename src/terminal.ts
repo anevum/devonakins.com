@@ -1,3 +1,4 @@
+import {startLiveSignal} from './live-signal-client';
 import {renderLivePresence, startLivePresence} from './presence-client';
 import {startCollections} from './listening-collections-client';
 /**
@@ -5,17 +6,6 @@ import {startCollections} from './listening-collections-client';
  * Public display only: no account credentials, private telemetry, analytics,
  * third-party requests, or implicit collection of browser data.
  */
-type UsageSnapshot = {
-  version: 1;
-  metric: "work-codex-tokens";
-  approximate: true;
-  count: number;
-  asOf: string;
-  source: string;
-  attestation: "owner-published";
-  profile?: { stats?: { peakTokens?: number | null; currentStreakDays?: number | null } };
-};
-
 const shell = document.querySelector<HTMLElement>("#interface-shell");
 const tabs = [...document.querySelectorAll<HTMLButtonElement>('.rail-tab[role="tab"]')];
 const panelByName = new Map(
@@ -42,7 +32,6 @@ const routeInitialView = interfaceShell.dataset.initialView ?? "home";
 let announcementTimer = 0;
 let motionPreference: "auto" | "on" | "off" = "auto";
 let pointerFrame = 0;
-let polling = false;
 
 try {
   const saved = localStorage.getItem("devon-v2-motion");
@@ -222,113 +211,13 @@ document.querySelector<HTMLButtonElement>("#copy-email")?.addEventListener("clic
   }
 });
 
-function parseSnapshot(input: unknown): UsageSnapshot {
-  if (!input || typeof input !== "object" || Array.isArray(input))
-    throw new Error("Snapshot must be an object");
-  const record = input as Record<string, unknown>;
-  if (
-    record.version !== 1 ||
-    record.metric !== "work-codex-tokens" ||
-    record.approximate !== true ||
-    record.attestation !== "owner-published" ||
-    typeof record.count !== "number" ||
-    !Number.isSafeInteger(record.count) ||
-    record.count < 0 ||
-    typeof record.asOf !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(record.asOf) ||
-    !Number.isFinite(Date.parse(record.asOf + "T00:00:00Z")) ||
-    typeof record.source !== "string" ||
-    !record.source.trim() ||
-    record.source.length > 100
-  ) throw new Error("Invalid snapshot schema");
-  const date = Date.parse(record.asOf + "T00:00:00Z");
-  if (new Date(date).toISOString().slice(0, 10) !== record.asOf || date > Date.now() + 86_400_000)
-    throw new Error("Invalid snapshot date");
-  // Optional secondary metrics must not be displayed without type validation.
-  if (record.profile !== undefined) {
-    if (!record.profile || typeof record.profile !== "object" || Array.isArray(record.profile))
-      throw new Error("Invalid profile");
-    const stats = (record.profile as Record<string, unknown>).stats;
-    if (!stats || typeof stats !== "object" || Array.isArray(stats))
-      throw new Error("Invalid profile metrics");
-    const fields = stats as Record<string, unknown>;
-    for (const key of ["peakTokens", "currentStreakDays"]) {
-      const value = fields[key];
-      if (value !== null && (!Number.isSafeInteger(value) || Number(value) < 0))
-        throw new Error("Invalid secondary profile metric");
-    }
-  }
-  return record as UsageSnapshot;
-}
-
-function showUsage(snapshot: UsageSnapshot) {
-  const compact = new Intl.NumberFormat("en-US", {
-    notation: "compact", maximumFractionDigits: 2,
-  }).format(snapshot.count);
-  const count = document.querySelector<HTMLElement>("#usage-value");
-  if (count) {
-    count.textContent = "≈" + compact;
-    count.setAttribute("aria-label", "Approximately " +
-      snapshot.count.toLocaleString("en-US") +
-      " Work and Codex tokens in the dated profile snapshot");
-  }
-  const dateLabel = new Date(snapshot.asOf + "T12:00:00Z").toLocaleDateString("en-US", {
-    timeZone: "UTC", month: "short", day: "2-digit", year: "numeric",
-  }).toUpperCase();
-  const stats = snapshot.profile?.stats;
-  const status = document.querySelector<HTMLElement>("#usage-status");
-  const date = document.querySelector<HTMLElement>("#usage-date");
-  const streak = stats?.currentStreakDays;
-  const peak = stats?.peakTokens;
-  if (status) {
-    status.textContent = typeof streak === "number" && typeof peak === "number"
-      ? streak + "D STREAK  ·  " + new Intl.NumberFormat("en-US", {
-          notation: "compact", maximumFractionDigits: 1,
-        }).format(peak) + " PEAK"
-      : "PROFILE SNAPSHOT LOADED";
-  }
-  if (date) date.textContent = dateLabel + " · SNAPSHOT";
-  document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "ready");
-}
-async function checkUsage() {
-  if (polling) return;
-  const button = document.querySelector<HTMLButtonElement>("#refresh-usage");
-  const status = document.querySelector<HTMLElement>("#usage-status");
-  const date = document.querySelector<HTMLElement>("#usage-date");
-  polling = true;
-  if (button) button.disabled = true;
-  document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "loading");
-  try {
-    // Optional owner-maintained public file, never a private account API.
-    const response = await fetch("/v2/usage-snapshot.json", {
-      cache: "no-store",
-      credentials: "omit",
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json")) {
-      throw new Error("Snapshot unavailable");
-    }
-    const snapshot = parseSnapshot(await response.json());
-    showUsage(snapshot);
-  } catch {
-    // One public readout. Clear stale values when the snapshot is invalid.
-    const count = document.querySelector<HTMLElement>("#usage-value");
-    if (count) {
-      count.textContent = "—";
-      count.removeAttribute("aria-label");
-    }
-    if (status) status.textContent = "SNAPSHOT UNAVAILABLE";
-    if (date) date.textContent = "CHECK SOURCE";
-    document.querySelector<HTMLElement>(".telemetry-readout")?.setAttribute("data-feed-state", "unavailable");
-  } finally {
-    polling = false;
-    if (button) button.disabled = false;
-  }
-}
-document.querySelector<HTMLButtonElement>("#refresh-usage")?.addEventListener("click", checkUsage);
-// Load a public, static first-party snapshot once at startup; no private API or polling.
-void checkUsage();
-
+// Historical profile captures live exclusively in the dated /gpt/ archive.
+const usageValue=document.querySelector<HTMLElement>('#usage-value');
+if(usageValue)usageValue.textContent='—';
+const usageStatus=document.querySelector<HTMLElement>('#usage-status');
+if(usageStatus)usageStatus.textContent='No connected usage source';
+const usageDate=document.querySelector<HTMLElement>('#usage-date');
+if(usageDate)usageDate.textContent='WORK / CODEX · SEE DATED PROFILE';
 // The optional owner-approved observation is separate from historical profile
 // totals and public GitHub events. No API tokens or account credentials live here.
 type GptObservation = {
@@ -802,8 +691,8 @@ function applyPresence(candidate: unknown) {
     ? data.track : null;
 
   renderLivePresence();
-  presenceText(listeningState, mode === "playing" ? "ON AIR"
-    : mode === "unavailable" ? "UNAVAILABLE" : "OFF AIR");
+  presenceText(listeningState, mode === "playing" ? "PLAYING"
+    : mode === "unavailable" ? "UNAVAILABLE" : "NO PLAYBACK");
   presenceText(listeningVisibility, mode === "hidden" ? "PRIVATE BY DEFAULT"
     : mode === "unavailable" ? "SIGNAL UNAVAILABLE" : "PUBLIC SIGNAL ENABLED");
   presenceText(listeningKicker, mode === "playing" ? "SPOTIFY / CURRENT PLAYBACK"
@@ -833,7 +722,7 @@ function applyPresence(candidate: unknown) {
       /^https:\/\/i\.scdn\.co\/image\/[A-Za-z0-9]+$/.test(image);
     if (allowed && image) {
       listeningArtwork.referrerPolicy = "no-referrer";
-      listeningArtwork.src = image;
+      if(listeningArtwork.getAttribute("src")!==image) listeningArtwork.src = image;
       listeningArtwork.hidden = false;
     } else {
       listeningArtwork.hidden = true;
@@ -841,41 +730,14 @@ function applyPresence(candidate: unknown) {
     }
   }
 }
-async function refreshPresence() {
-  if (presenceRequestActive || document.hidden) return;
-  presenceRequestActive = true;
-  try {
-    const result = await fetch("/api/listening/now", {
-      credentials: "omit",
-      cache: "no-store",
-      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
-    });
-    if (!result.ok || !result.headers.get("Content-Type")?.includes("application/json"))
-      throw new Error("No public listening projection");
-    const candidate: unknown = await result.json();
-    applyPresence(document.hidden ? null : candidate);
-  } catch {
-    applyPresence(null);
-  } finally {
-    presenceRequestActive = false;
-  }
-}
 startLivePresence();
 startCollections();
-void refreshPresence();
-const presenceTimer = window.setInterval(() => { void refreshPresence(); }, 60_000);
-const playbackAgeTimer = window.setInterval(() => { if (!document.hidden) applyPresence(lastPlayback); }, 5000);
-document.addEventListener("visibilitychange", () => {
-  applyPresence(null);
-  if (!document.hidden) void refreshPresence();
-});
+startLiveSignal(applyPresence);
 
 window.addEventListener("pagehide", (event) => {
   resetPointerDepth();
   if (event.persisted) return;
   window.clearInterval(clockTimer);
   window.clearInterval(publicTelemetryTimer);
-  window.clearInterval(presenceTimer);
-  window.clearInterval(playbackAgeTimer);
   window.clearTimeout(announcementTimer);
 });

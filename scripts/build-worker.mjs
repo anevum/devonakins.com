@@ -50,7 +50,7 @@ try {
   }).trim();
 } catch {}
 const release = {
-  version: "1.2.4",
+  version: "1.3.0",
   session: "DEVONAKINS.BUILD.2026-10-29.001",
   commit,
 };
@@ -67,7 +67,7 @@ for (const module of [
   "listening-owner-api", "listening-playback-probe", "listening-d1-presence",
   "presence-model", "presence-api", "presence-owner-page", "gpt-observation-bridge",
   "presence-preferences", "presence-editor-api",
-  "cloud-presence-model", "cloud-presence-api",
+  "cloud-presence-model", "cloud-presence-api", "activity-tasks", "live-signal", "activity-history",
   "listening-collections",
 ]) {
   await writeFile(".release/" + module + ".mjs", await readFile("src/" + module + ".mjs"));

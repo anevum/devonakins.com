@@ -1,4 +1,4 @@
-/** No workspace paths, titles, text, repo names or window metadata are read. */
+/** Git remotes are matched locally to a fixed public catalog; only its approved slug leaves the editor. */
 const vscode = require("vscode");
 const ORIGIN = "https://devonakins.com";
 const SECRET = "devon-presence-pairing-v1";
@@ -26,6 +26,7 @@ function createCompanion(
     disposed = false,
     secretOperations = Promise.resolve(),
     project = null,
+    automaticProject = true,
     projects = [];
   const status = api.window.createStatusBarItem(
     api.StatusBarAlignment.Right,
@@ -118,6 +119,40 @@ function createCompanion(
       if (inFlight === request) inFlight = null;
     }
   }
+  const publicRepos = {
+    "devonakins.com": "devonakins-com",
+    merit: "merit",
+    rhen: "rhen",
+    mizvo: "mizvo",
+    "devon-station": "devonstation",
+    squelch: "squelch",
+    "anevum-web": "anevum",
+    brandicade: "brandicade",
+    vesper: "vesper",
+    knowledge: "knowledge",
+  };
+  function detectedProject(event) {
+    try {
+      const git = api.extensions
+        ?.getExtension("vscode.git")
+        ?.exports?.getAPI(1);
+      if (!git) return null;
+      const document = event.document;
+      const repo = document?.uri && git.getRepository(document.uri);
+      const remote = repo?.state.remotes.find(
+        (r) => r.name === "origin",
+      )?.fetchUrl;
+      if (typeof remote !== "string") return null;
+      const match =
+        /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)devonalanakins\/([a-z0-9.-]+?)(?:\.git)?$/.exec(
+          remote,
+        );
+      const slug = match && publicRepos[match[1]];
+      return slug && projects.includes(slug) ? slug : null;
+    } catch {
+      return null;
+    }
+  }
   const actions = {
     async pair() {
       if (disposed || forgetting) return;
@@ -175,6 +210,10 @@ function createCompanion(
         projects = nextProjects;
         if (!projects.includes(project)) project = null;
         enabled = false;
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
+        if (disposed || generation !== currentGeneration) return;
         lastSharedEdit = 0;
         lastObserved = 0;
         say("paired, paused");
@@ -194,16 +233,19 @@ function createCompanion(
     async project() {
       const choice = await api.window.showQuickPick(
         [
+          { label: "Automatic from approved GitHub repository", slug: "auto" },
           { label: "No public project", slug: null },
           ...projects.map((slug) => ({ label: slug, slug })),
         ],
         {
           placeHolder:
-            "Choose an explicitly public project. No workspace names are detected.",
+            "Automatically match an approved public repository, or explicitly override it.",
         },
       );
       if (choice) {
-        project = choice.slug;
+        automaticProject = choice.slug === "auto";
+        project = automaticProject ? null : choice.slug;
+        await context.globalState.update("automaticProject", automaticProject);
         await context.globalState.update("publicProject", project);
       }
     },
@@ -212,7 +254,17 @@ function createCompanion(
         say("pairing required");
         return;
       }
-      generation++;
+      const currentGeneration = ++generation;
+      try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", true),
+        );
+      } catch {
+        say("could not save sharing preference");
+        return;
+      }
+      if (disposed || forgetting || generation !== currentGeneration || !token)
+        return;
       enabled = true;
       lastEdit = 0;
       say("waiting for edit");
@@ -223,7 +275,15 @@ function createCompanion(
       enabled = false;
       lastEdit = 0;
       say("paused");
-      await send(false);
+      const stop = send(false);
+      try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
+      } catch {
+        say("paused; could not save startup preference");
+      }
+      await stop;
       if (generation === currentGeneration)
         say("paused; public signal expires within two minutes if disconnected");
     },
@@ -238,6 +298,9 @@ function createCompanion(
       token = null;
       expires = 0;
       try {
+        await changeSecret(() =>
+          context.globalState.update("sharingEnabled", false),
+        );
         await changeSecret(() => context.secrets.delete(SECRET));
         say("pairing forgotten");
       } catch {
@@ -255,8 +318,9 @@ function createCompanion(
   );
   subscriptions.push(
     api.workspace.onDidChangeTextDocument((event) => {
-      // Only the existence of an edit is inspected; no document fields are read.
+      // Metadata stays local: map the edited document to an approved remote. Never inspect text or send paths.
       if (enabled && api.window.state.focused && event.contentChanges.length) {
+        if (automaticProject) project = detectedProject(event);
         lastEdit = clock();
         if (clock() - lastSent >= 60000) void send(true);
       }
@@ -301,9 +365,13 @@ function createCompanion(
         token = data.token;
         expires = data.expires;
         projects = data.projects;
+        automaticProject =
+          context.globalState.get("automaticProject") !== false;
         const saved = context.globalState.get("publicProject");
-        project = projects.includes(saved) ? saved : null;
-        say("paired, paused");
+        project = !automaticProject && projects.includes(saved) ? saved : null;
+        enabled = context.globalState.get("sharingEnabled") === true;
+        lastEdit = 0;
+        say(enabled ? "waiting for edit" : "paired, paused");
       }
     } catch {
       if (generation === currentGeneration) say("pairing required");

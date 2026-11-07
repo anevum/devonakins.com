@@ -98,7 +98,7 @@ export function createPresenceEditorApi({ clock = Date.now } = {}) {
           )
           .bind(
             await digest(token),
-            at + 24 * 60 * 60_000,
+            at + 30 * 24 * 60 * 60_000,
             await digest(data.pairCode),
             at,
           )
@@ -106,7 +106,7 @@ export function createPresenceEditorApi({ clock = Date.now } = {}) {
         if (!result) return ownerError("Pairing expired or unavailable", 403);
         return ownerJson({
           token,
-          expiresAt: new Date(at + 24 * 60 * 60_000).toISOString(),
+          expiresAt: new Date(at + 30 * 24 * 60 * 60_000).toISOString(),
           projects: approvedProjects(await row(db)),
         });
       }

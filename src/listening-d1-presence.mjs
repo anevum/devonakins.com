@@ -40,6 +40,11 @@ function validProjection(raw, now, showDetails) {
       now < observed - 10_000
     )
       return null;
+    if (data.playback !== undefined) {
+      const p=data.playback;
+      if(data.mode!=="playing" || !data.detailsVisible || !p || Object.keys(p).sort().join('|')!=="durationMs|progressMs" || !Number.isSafeInteger(p.durationMs) || p.durationMs<=0 || p.durationMs>86400000 || !Number.isSafeInteger(p.progressMs) || p.progressMs<0 || p.progressMs>p.durationMs) return null;
+      keys.push("playback");
+    }
     if (data.detailsVisible) {
       if (data.mode !== "playing" || !showDetails) return null;
       keys.push("track");
