@@ -982,7 +982,9 @@ def check_live_signal_v4(browser,engine,origin,output,axe_source):
             fixture['remote']['tasks'][1]['asOf']=iso(-121)
             fixture['remote']['tasks'][1]['expiresAt']=iso(-1)
             refresh()
-            page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'No current work'")
+            # visibilitychange intentionally clears old evidence before the request;
+            # await the refreshed work AND soundtrack, not the transient quiet frame.
+            page.wait_for_function("document.querySelector('[data-signal-work]').textContent === 'No current work' && document.querySelector('[data-signal-track]').textContent === 'Synthetic QA soundtrack'")
             assert page.locator('[data-signal-track]').inner_text()=='Synthetic QA soundtrack','music stopped when work stopped'
             fixture['spotify']['updatedAt']=iso(-121)
             refresh()
